@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ComfyUI-Hive</title>
+<style>
+:root {
+  --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #677087; --line: #e1e4ea;
+  --accent: #3b6cf6; --accent-text: #ffffff; --ok: #1f9d55; --warn: #c27c0e; --bad: #d64545; --bubble: #eef2fe;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #12151b; --panel: #1b2029; --text: #e6e9ef; --muted: #98a1b3; --line: #2b3240;
+    --accent: #6d93ff; --accent-text: #0d1220; --ok: #45c07a; --warn: #e3a73f; --bad: #ef6b6b; --bubble: #212a3d;
+  }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
+header h1 { font-size: 17px; margin: 0; }
+header .rig { color: var(--muted); font-size: 13px; }
+header a { color: var(--accent); font-size: 13px; }
+main { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; max-width: 1400px; margin: 0 auto; }
+@media (max-width: 860px) { main { grid-template-columns: 1fr; } }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
+.model { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: pointer; }
+.model.picked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.model .name { font-weight: 600; }
+.model .meta { color: var(--muted); font-size: 12.5px; }
+.model .note { color: var(--warn); font-size: 12.5px; margin-top: 4px; }
+.model .actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.tag { display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.tag.ok { color: var(--ok); border-color: var(--ok); }
+button { font: inherit; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 6px 12px; cursor: pointer; }
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: .5; cursor: default; }
+button.small { padding: 3px 9px; font-size: 13px; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; flex: 1; min-width: 80px; }
+.bar > div { height: 100%; background: var(--accent); width: 0; transition: width .4s; }
+.chat { display: flex; flex-direction: column; min-height: 70vh; }
+.messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 12px; max-height: calc(100vh - 330px); }
+@media (max-width: 860px) { .messages { max-height: none; } }
+.msg { max-width: 92%; border-radius: 10px; padding: 9px 12px; }
+.msg.you { align-self: flex-end; background: var(--bubble); }
+.msg.rig { align-self: flex-start; border: 1px solid var(--line); }
+.msg .who { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
+.msg img, .msg video { max-width: 100%; max-height: 60vh; border-radius: 6px; display: block; margin-top: 6px; }
+.msg img.thumb { max-height: 120px; }
+.msg .error { color: var(--bad); }
+.msg .links { display: flex; gap: 12px; font-size: 13px; margin-top: 6px; }
+.msg .links a { color: var(--accent); }
+.composer { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.tasks { display: flex; gap: 6px; flex-wrap: wrap; }
+.tasks button.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+textarea { font: inherit; width: 100%; min-height: 76px; resize: vertical; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); padding: 8px; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.row label { font-size: 13px; color: var(--muted); display: flex; gap: 4px; align-items: center; }
+.row input[type=number] { width: 84px; font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.hint { color: var(--muted); font-size: 13px; }
+.status { font-size: 13px; color: var(--muted); }
+.status.bad { color: var(--bad); }
+pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: auto; background: var(--bg); padding: 8px; border-radius: 6px; }
+.token { display: flex; gap: 6px; margin-top: 8px; }
+.token input { flex: 1; font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+</style>
+</head>
+<body>
+<header>
+  <h1>ComfyUI-Hive</h1>
+  <span class="rig" id="rig">…</span>
+  <a id="comfy" href="#" target="_blank" rel="noopener">ComfyUI editor</a>
+  <a href="#" id="showlog">Miner log</a>
+</header>
+<main>
+  <section class="panel">
+    <h2>Models for this GPU</h2>
+    <div id="models"></div>
+    <div class="hint" id="hidden"></div>
+    <div id="tokenbox" hidden>
+      <div class="hint">Hugging Face token, for models whose download needs one:</div>
+      <div class="token"><input id="token" type="password" placeholder="hf_..." autocomplete="off"><button class="small" id="savetoken">Save</button></div>
+    </div>
+    <pre class="log" id="log" hidden></pre>
+  </section>
+  <section class="panel chat">
+    <h2 id="chattitle">Chat</h2>
+    <div class="messages" id="messages"></div>
+    <div class="composer">
+      <div class="tasks" id="tasks"></div>
+      <textarea id="prompt" placeholder="Describe what to make…"></textarea>
+      <div class="row" id="settings"></div>
+      <div class="row">
+        <button class="primary" id="go">Generate</button>
+        <span class="status" id="status"></span>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+const TASKS = { t2i: "Text to image", t2v: "Text to video", i2v: "Image to video" };
+const LABELS = { width: "Width", height: "Height", length: "Frames", duration: "Seconds", steps: "Steps", seed: "Seed" };
+let state = null, picked = null, task = null, image = null, shown = new Map();
+
+const $ = id => document.getElementById(id);
+const gb = bytes => (bytes / 1024 ** 3).toFixed(1) + " GB";
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+async function post(path, body) {
+  const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data.error || response.statusText);
+  return data;
+}
+
+function say(text, bad) { $("status").textContent = text || ""; $("status").className = "status" + (bad ? " bad" : ""); }
+
+async function refresh() {
+  try { state = await (await fetch("/api/state")).json(); } catch { $("rig").textContent = "The rig doesn't answer"; return; }
+  const g = state.gpu;
+  $("rig").textContent = (g ? `${g.name}, ${g.vram_gb} GB (${g.used_gb} GB used, ${g.load}% load)` : "no GPU found")
+    + ` · RAM ${state.ram_gb ?? "?"} GB · ${gb(state.disk_free)} free · ComfyUI ${state.state} · ${state.version}`;
+  $("comfy").href = state.comfy_url.replace(/^http:\/\/[^/:]+/, location.protocol + "//" + location.hostname);
+  if (!picked || !state.models.some(m => m.id === picked)) {
+    const remembered = state.settings.model;
+    picked = (state.models.find(m => m.id === remembered) || state.models.find(m => m.installed) || state.models[0] || {}).id || null;
+    if (picked && state.settings.task) task = state.settings.task;
+  }
+  drawModels();
+  drawComposer();
+  drawMessages();
+}
+
+function drawModels() {
+  const box = $("models");
+  box.innerHTML = "";
+  if (!state.models.length) box.innerHTML = `<div class="hint">No model fits this GPU.</div>`;
+  for (const m of state.models) {
+    const d = m.download, busy = d && (d.state === "queued" || d.state === "downloading");
+    const div = document.createElement("div");
+    div.className = "model" + (m.id === picked ? " picked" : "");
+    const tasks = Object.keys(m.tasks).map(t => TASKS[t] || t).join(", ");
+    let actions;
+    if (m.installed) actions = `<span class="tag ok">on this rig</span><button class="small" data-act="delete">Delete</button>`;
+    else if (busy) {
+      const pct = d.total ? Math.floor(100 * d.done / d.total) : 0;
+      actions = `<div class="bar"><div style="width:${pct}%"></div></div><span class="hint">${pct}% · ${(d.speed / 1024 ** 2).toFixed(0)} MB/s</span><button class="small" data-act="cancel-download">Cancel</button>`;
+    } else actions = `<button class="small primary" data-act="download">Download ${gb(m.to_download)}</button>`
+      + (d && d.state === "failed" ? `<div class="note">${esc(d.error)}</div>` : "");
+    div.innerHTML = `<div class="name">${esc(m.name)}</div>
+      <div class="meta">${esc(tasks)} · ${esc(m.variant)} · ${gb(m.size)}</div>
+      ${m.about ? `<div class="meta">${esc(m.about)}</div>` : ""}
+      ${m.variant_note ? `<div class="meta">${esc(m.variant_note)}</div>` : ""}
+      ${m.note ? `<div class="note">${esc(m.note)}</div>` : ""}
+      ${m.gated && !m.installed ? `<div class="note">Download needs a Hugging Face token whose account accepted the license at <a href="${esc(m.gated)}" target="_blank" rel="noopener">${esc(m.gated)}</a></div>` : ""}
+      <div class="actions">${actions}</div>`;
+    div.onclick = e => {
+      const act = e.target.dataset && e.target.dataset.act;
+      if (act) { e.stopPropagation(); modelAction(act, m); return; }
+      picked = m.id; drawModels(); drawComposer();
+    };
+    box.appendChild(div);
+  }
+  $("hidden").textContent = state.hidden ? `${state.hidden} more ${state.hidden === 1 ? "model needs" : "models need"} a bigger GPU than this one.` : "";
+  $("tokenbox").hidden = !state.models.some(m => m.gated && !m.installed);
+  $("token").placeholder = state.has_token ? "a token is saved: type to replace it" : "hf_...";
+}
+
+async function modelAction(act, m) {
+  if (act === "delete" && !confirm(`Delete ${m.name} from this rig? Downloading it again takes ${gb(m.size)}.`)) return;
+  try { await post("/api/" + act, { model: m.id }); say(""); } catch (e) { say(e.message, true); }
+  refresh();
+}
+
+function current() { return state && state.models.find(m => m.id === picked); }
+
+function drawComposer() {
+  const m = current();
+  $("chattitle").textContent = m ? `Chat · ${m.name}` : "Chat";
+  const tasks = m ? Object.keys(m.tasks) : [];
+  if (!tasks.includes(task)) task = tasks[0] || null;
+  const tbox = $("tasks");
+  const key = tasks.join() + task + picked;
+  if (tbox.dataset.key !== key) {
+    tbox.dataset.key = key;
+    tbox.innerHTML = "";
+    for (const t of tasks) {
+      const b = document.createElement("button");
+      b.textContent = TASKS[t] || t;
+      b.className = t === task ? "on" : "";
+      b.onclick = () => { task = t; drawComposer(); };
+      tbox.appendChild(b);
+    }
+    const sbox = $("settings");
+    sbox.innerHTML = "";
+    image = null;
+    for (const item of (m && task ? m.tasks[task] : [])) {
+      if (item.name === "prompt") continue;
+      const label = document.createElement("label");
+      if (item.name === "image") {
+        label.innerHTML = `Image <input type="file" accept="image/png,image/jpeg,image/webp">`;
+        label.querySelector("input").onchange = e => {
+          const file = e.target.files[0];
+          if (!file) { image = null; return; }
+          const reader = new FileReader();
+          reader.onload = () => { image = reader.result; };
+          reader.readAsDataURL(file);
+        };
+      } else {
+        label.innerHTML = `${LABELS[item.name] || item.name} <input type="number" data-name="${item.name}" value="${item.default ?? ""}"
+          ${item.min != null ? `min="${item.min}"` : ""} ${item.max != null ? `max="${item.max}"` : ""} step="${item.step || (item.kind === "float" ? 0.5 : 1)}">`;
+      }
+      sbox.appendChild(label);
+    }
+    const seed = document.createElement("label");
+    seed.innerHTML = `Seed <input type="number" data-name="seed" placeholder="random">`;
+    if (m && task) sbox.appendChild(seed);
+  }
+  const ready = m && m.installed && state.state === "ready";
+  $("go").disabled = !m || !m.installed;
+  if (m && !m.installed) say(`${m.name} isn't on this rig: press Download first.`);
+  else if (m && state.state !== "ready") say(`ComfyUI is ${state.state}; requests wait for it.`);
+  else if ($("status").className === "status") say("");
+}
+
+$("go").onclick = async () => {
+  const m = current();
+  const prompt = $("prompt").value.trim();
+  if (!prompt) { say("Write a prompt", true); return; }
+  const body = { model: m.id, task, prompt };
+  for (const input of $("settings").querySelectorAll("input[type=number]")) if (input.value !== "") body[input.dataset.name] = input.value;
+  if (m.tasks[task].some(i => i.name === "image")) {
+    if (!image) { say("Attach an image", true); return; }
+    body.image = image;
+  }
+  $("go").disabled = true;
+  try { await post("/api/generate", body); say(""); $("prompt").value = ""; }
+  catch (e) { say(e.message, true); }
+  $("go").disabled = false;
+  refresh();
+};
+$("prompt").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("go").click(); });
+
+function media(path) {
+  const url = "/files/" + path.split("/").map(encodeURIComponent).join("/");
+  const ext = path.split(".").pop().toLowerCase();
+  const view = ["mp4", "webm"].includes(ext) ? `<video src="${url}" controls loop playsinline></video>`
+    : ["mp3", "flac", "wav"].includes(ext) ? `<audio src="${url}" controls></audio>` : `<img src="${url}" alt="">`;
+  return `${view}<div class="links"><a href="${url}?download=1">Download</a><a href="${url}" target="_blank" rel="noopener">Open</a></div>`;
+}
+
+function drawMessages() {
+  const box = $("messages");
+  const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  for (const job of state.jobs) {
+    const key = JSON.stringify([job.state, job.step, job.steps, job.outputs.length, job.error, job.note]);
+    let pair = shown.get(job.id);
+    if (pair && pair.key === key) continue;
+    if (!pair) {
+      const you = document.createElement("div");
+      you.className = "msg you";
+      you.innerHTML = `<div class="who">${esc(job.model_name)} · ${esc(TASKS[job.task] || job.task)}</div>${esc(job.prompt)}`
+        + (job.image ? `<div class="hint">with ${esc(job.image)}</div>` : "");
+      const rig = document.createElement("div");
+      rig.className = "msg rig";
+      box.appendChild(you); box.appendChild(rig);
+      pair = { rig };
+      shown.set(job.id, pair);
+    }
+    pair.key = key;
+    let html = `<div class="who">${esc(job.variant)} · seed ${esc(job.seed ?? "random")}</div>`;
+    if (job.state === "queued") html += `Waiting in the queue <button class="small" data-job="${job.id}">Cancel</button>`;
+    else if (job.state === "running") {
+      const pct = job.steps ? Math.floor(100 * job.step / job.steps) : 0;
+      html += job.note ? esc(job.note) : job.steps ? `Step ${job.step}/${job.steps}${job.it_s ? ` · ${job.it_s >= 1 ? job.it_s.toFixed(2) + " it/s" : (1 / job.it_s).toFixed(1) + " s/step"}` : ""}` : "Loading the model…";
+      html += `<div class="row"><div class="bar"><div style="width:${pct}%"></div></div><button class="small" data-job="${job.id}">Stop</button></div>`;
+    } else if (job.state === "done") {
+      const took = job.finished && job.started ? ` in ${Math.round(job.finished - job.started)} s` : "";
+      html += `<div class="hint">Done${took}</div>` + job.outputs.map(media).join("");
+    } else if (job.state === "cancelled") html += `<div class="hint">Cancelled</div>`;
+    else html += `<div class="error">${esc(job.error || "Failed")}</div>`;
+    pair.rig.innerHTML = html;
+    const cancel = pair.rig.querySelector("button[data-job]");
+    if (cancel) cancel.onclick = () => post("/api/cancel", { job: job.id }).then(refresh);
+  }
+  if (atBottom) box.scrollTop = box.scrollHeight;
+}
+
+$("showlog").onclick = async e => {
+  e.preventDefault();
+  const log = $("log");
+  log.hidden = !log.hidden;
+  if (!log.hidden) { log.textContent = await (await fetch("/log")).text(); log.scrollTop = log.scrollHeight; }
+};
+$("savetoken").onclick = async () => {
+  try { await post("/api/token", { token: $("token").value.trim() }); $("token").value = ""; say("Token saved on the rig"); }
+  catch (e) { say(e.message, true); }
+  refresh();
+};
+
+refresh();
+setInterval(refresh, 1500);
+</script>
+</body>
+</html>

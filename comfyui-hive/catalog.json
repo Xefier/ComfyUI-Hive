@@ -1,0 +1,915 @@
+{
+ "comfyui": "v0.45.0",
+ "models": [
+  {
+   "id": "wan2.2-14b",
+   "name": "Wan 2.2 14B",
+   "about": "Text or image to video, 16 fps, with the 4-step speed-up LoRAs.",
+   "tasks": {
+    "t2v": {
+     "workflow": "wan2.2-14b-t2v.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "text"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "width",
+       "min": 256,
+       "max": 1280,
+       "step": 16,
+       "default": 640
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "height",
+       "min": 256,
+       "max": 1280,
+       "step": 16,
+       "default": 640
+      },
+      {
+       "name": "duration",
+       "kind": "float",
+       "param": "duration",
+       "min": 1,
+       "max": 10,
+       "default": 5
+      }
+     ]
+    },
+    "i2v": {
+     "workflow": "wan2.2-14b-i2v.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "prompt"
+      },
+      {
+       "name": "image",
+       "kind": "image"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "width",
+       "min": 256,
+       "max": 1280,
+       "step": 16,
+       "default": 640
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "height",
+       "min": 256,
+       "max": 1280,
+       "step": 16,
+       "default": 640
+      },
+      {
+       "name": "duration",
+       "kind": "float",
+       "param": "duration",
+       "min": 1,
+       "max": 10,
+       "default": 5
+      }
+     ]
+    }
+   },
+   "variants": [
+    {
+     "id": "fp8",
+     "label": "fp8",
+     "min_vram_gb": 15,
+     "files": [
+      "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+      "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
+      "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
+      "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+      "wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
+      "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors",
+      "wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise.safetensors",
+      "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors",
+      "wan_2.1_vae.safetensors"
+     ]
+    }
+   ],
+   "files": {
+    "wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors": {
+     "name": "wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_t2v_high_noise_14B_fp8_scaled.safetensors",
+     "size": 14293923632
+    },
+    "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors": {
+     "name": "wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors",
+     "dir": "loras",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_t2v_lightx2v_4steps_lora_v1.1_high_noise.safetensors",
+     "size": 1226977424
+    },
+    "wan_2.1_vae.safetensors": {
+     "name": "wan_2.1_vae.safetensors",
+     "dir": "vae",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan_2.1_vae.safetensors",
+     "size": 253815318
+    },
+    "wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise.safetensors": {
+     "name": "wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise.safetensors",
+     "dir": "loras",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_t2v_lightx2v_4steps_lora_v1.1_low_noise.safetensors",
+     "size": 1226977424
+    },
+    "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors": {
+     "name": "wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_t2v_low_noise_14B_fp8_scaled.safetensors",
+     "size": 14293923632
+    },
+    "umt5_xxl_fp8_e4m3fn_scaled.safetensors": {
+     "name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+     "dir": "text_encoders",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+     "size": 6735906897
+    },
+    "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors": {
+     "name": "wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_low_noise_14B_fp8_scaled.safetensors",
+     "size": 14294742832
+    },
+    "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors": {
+     "name": "wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
+     "dir": "loras",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_high_noise.safetensors",
+     "size": 1226977424
+    },
+    "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors": {
+     "name": "wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
+     "dir": "loras",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/loras/wan2.2_i2v_lightx2v_4steps_lora_v1_low_noise.safetensors",
+     "size": 1226977424
+    },
+    "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors": {
+     "name": "wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_i2v_high_noise_14B_fp8_scaled.safetensors",
+     "size": 14294742832
+    }
+   }
+  },
+  {
+   "id": "wan2.2-5b",
+   "name": "Wan 2.2 5B",
+   "about": "Smaller Wan: text or image to 720p video at 24 fps.",
+   "tasks": {
+    "t2v": {
+     "workflow": "wan2.2-5b-t2v.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "6.text"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "55.width",
+       "min": 256,
+       "max": 1280,
+       "step": 32,
+       "default": 1280
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "55.height",
+       "min": 256,
+       "max": 1280,
+       "step": 32,
+       "default": 704
+      },
+      {
+       "name": "length",
+       "kind": "int",
+       "param": "55.length",
+       "min": 1,
+       "max": 241,
+       "step": 4,
+       "default": 121
+      }
+     ]
+    },
+    "i2v": {
+     "workflow": "wan2.2-5b-i2v.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "6.text"
+      },
+      {
+       "name": "image",
+       "kind": "image"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "55.width",
+       "min": 256,
+       "max": 1280,
+       "step": 32,
+       "default": 1280
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "55.height",
+       "min": 256,
+       "max": 1280,
+       "step": 32,
+       "default": 704
+      },
+      {
+       "name": "length",
+       "kind": "int",
+       "param": "55.length",
+       "min": 1,
+       "max": 241,
+       "step": 4,
+       "default": 121
+      }
+     ]
+    }
+   },
+   "variants": [
+    {
+     "id": "fp16",
+     "label": "fp16",
+     "min_vram_gb": 11,
+     "files": [
+      "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+      "wan2.2_ti2v_5B_fp16.safetensors",
+      "wan2.2_vae.safetensors"
+     ]
+    }
+   ],
+   "files": {
+    "umt5_xxl_fp8_e4m3fn_scaled.safetensors": {
+     "name": "umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+     "dir": "text_encoders",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.1_ComfyUI_repackaged/resolve/main/split_files/text_encoders/umt5_xxl_fp8_e4m3fn_scaled.safetensors",
+     "size": 6735906897
+    },
+    "wan2.2_ti2v_5B_fp16.safetensors": {
+     "name": "wan2.2_ti2v_5B_fp16.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/diffusion_models/wan2.2_ti2v_5B_fp16.safetensors",
+     "size": 9999658848
+    },
+    "wan2.2_vae.safetensors": {
+     "name": "wan2.2_vae.safetensors",
+     "dir": "vae",
+     "url": "https://huggingface.co/Comfy-Org/Wan_2.2_ComfyUI_Repackaged/resolve/main/split_files/vae/wan2.2_vae.safetensors",
+     "size": 1409400960
+    }
+   }
+  },
+  {
+   "id": "hunyuan-video-1.5",
+   "name": "HunyuanVideo 1.5",
+   "about": "8.3B, text or image to 720p video at 24 fps.",
+   "tasks": {
+    "t2v": {
+     "workflow": "hunyuan-video-1.5-t2v.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "44.text"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "124.width",
+       "min": 256,
+       "max": 1280,
+       "step": 16,
+       "default": 1280
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "124.height",
+       "min": 256,
+       "max": 1280,
+       "step": 16,
+       "default": 720
+      },
+      {
+       "name": "length",
+       "kind": "int",
+       "param": "124.length",
+       "min": 1,
+       "max": 241,
+       "step": 4,
+       "default": 121
+      }
+     ]
+    },
+    "i2v": {
+     "workflow": "hunyuan-video-1.5-i2v.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "44.text"
+      },
+      {
+       "name": "image",
+       "kind": "image"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "78.width",
+       "min": 256,
+       "max": 1280,
+       "step": 16,
+       "default": 1280
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "78.height",
+       "min": 256,
+       "max": 1280,
+       "step": 16,
+       "default": 720
+      },
+      {
+       "name": "length",
+       "kind": "int",
+       "param": "78.length",
+       "min": 1,
+       "max": 241,
+       "step": 4,
+       "default": 121
+      }
+     ]
+    }
+   },
+   "variants": [
+    {
+     "id": "fp16",
+     "label": "fp16",
+     "min_vram_gb": 31,
+     "files": [
+      "byt5_small_glyphxl_fp16.safetensors",
+      "hunyuanvideo1.5_720p_i2v_fp16.safetensors",
+      "hunyuanvideo1.5_720p_t2v_fp16.safetensors",
+      "hunyuanvideo15_vae_fp16.safetensors",
+      "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "sigclip_vision_patch14_384.safetensors"
+     ]
+    },
+    {
+     "id": "fp8",
+     "label": "fp16 weights run as fp8",
+     "min_vram_gb": 15,
+     "note": "The weights are cast to fp8 when loaded, as the template advises for cards under 32 GB.",
+     "set": [
+      [
+       "12",
+       "weight_dtype",
+       "fp8_e4m3fn"
+      ]
+     ],
+     "files": [
+      "byt5_small_glyphxl_fp16.safetensors",
+      "hunyuanvideo1.5_720p_i2v_fp16.safetensors",
+      "hunyuanvideo1.5_720p_t2v_fp16.safetensors",
+      "hunyuanvideo15_vae_fp16.safetensors",
+      "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+      "sigclip_vision_patch14_384.safetensors"
+     ]
+    }
+   ],
+   "files": {
+    "hunyuanvideo15_vae_fp16.safetensors": {
+     "name": "hunyuanvideo15_vae_fp16.safetensors",
+     "dir": "vae",
+     "url": "https://huggingface.co/Comfy-Org/HunyuanVideo_1.5_repackaged/resolve/main/split_files/vae/hunyuanvideo15_vae_fp16.safetensors",
+     "size": 2521292758
+    },
+    "qwen_2.5_vl_7b_fp8_scaled.safetensors": {
+     "name": "qwen_2.5_vl_7b_fp8_scaled.safetensors",
+     "dir": "text_encoders",
+     "url": "https://huggingface.co/Comfy-Org/HunyuanVideo_1.5_repackaged/resolve/main/split_files/text_encoders/qwen_2.5_vl_7b_fp8_scaled.safetensors",
+     "size": 9384670680
+    },
+    "byt5_small_glyphxl_fp16.safetensors": {
+     "name": "byt5_small_glyphxl_fp16.safetensors",
+     "dir": "text_encoders",
+     "url": "https://huggingface.co/Comfy-Org/HunyuanVideo_1.5_repackaged/resolve/main/split_files/text_encoders/byt5_small_glyphxl_fp16.safetensors",
+     "size": 438643184
+    },
+    "hunyuanvideo1.5_720p_t2v_fp16.safetensors": {
+     "name": "hunyuanvideo1.5_720p_t2v_fp16.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/HunyuanVideo_1.5_repackaged/resolve/main/split_files/diffusion_models/hunyuanvideo1.5_720p_t2v_fp16.safetensors",
+     "size": 16653368128
+    },
+    "hunyuanvideo1.5_720p_i2v_fp16.safetensors": {
+     "name": "hunyuanvideo1.5_720p_i2v_fp16.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/HunyuanVideo_1.5_repackaged/resolve/main/split_files/diffusion_models/hunyuanvideo1.5_720p_i2v_fp16.safetensors",
+     "size": 16653368128
+    },
+    "sigclip_vision_patch14_384.safetensors": {
+     "name": "sigclip_vision_patch14_384.safetensors",
+     "dir": "clip_vision",
+     "url": "https://huggingface.co/Comfy-Org/sigclip_vision_384/resolve/main/sigclip_vision_patch14_384.safetensors",
+     "size": 856505640
+    }
+   }
+  },
+  {
+   "id": "ltx-2.5",
+   "name": "LTX-2.5",
+   "about": "22B, text or image to video with sound.",
+   "gated": "https://huggingface.co/Lightricks/LTX-2.5",
+   "note": "Free under the LTX-2.x community license for organisations under $10M yearly revenue.",
+   "tasks": {
+    "t2v": {
+     "workflow": "ltx-2.5-t2v.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "prompt"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "width",
+       "default": 1280,
+       "min": 256,
+       "max": 1920,
+       "step": 32
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "height",
+       "default": 704,
+       "min": 256,
+       "max": 1920,
+       "step": 32
+      },
+      {
+       "name": "duration",
+       "kind": "int",
+       "param": "duration",
+       "min": 1,
+       "max": 20,
+       "default": 5
+      }
+     ]
+    },
+    "i2v": {
+     "workflow": "ltx-2.5-i2v.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "prompt"
+      },
+      {
+       "name": "image",
+       "kind": "image"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "width",
+       "default": 1280,
+       "min": 256,
+       "max": 1920,
+       "step": 32
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "height",
+       "default": 704,
+       "min": 256,
+       "max": 1920,
+       "step": 32
+      },
+      {
+       "name": "duration",
+       "kind": "int",
+       "param": "duration",
+       "min": 1,
+       "max": 20,
+       "default": 5
+      }
+     ]
+    }
+   },
+   "variants": [
+    {
+     "id": "int8",
+     "label": "int8",
+     "min_vram_gb": 31,
+     "files": [
+      "gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
+      "gemma4_e2b_it_int8_convrot.safetensors",
+      "ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors",
+      "ltx-2.5-audio-vae-bf16.safetensors",
+      "ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors",
+      "ltx-2.5-video-vae-bf16.safetensors"
+     ]
+    }
+   ],
+   "files": {
+    "gemma4_e2b_it_int8_convrot.safetensors": {
+     "name": "gemma4_e2b_it_int8_convrot.safetensors",
+     "dir": "text_encoders",
+     "url": "https://huggingface.co/Comfy-Org/gemma-4/resolve/main/text_encoders/gemma4_e2b_it_int8_convrot.safetensors",
+     "size": 5199997904
+    },
+    "ltx-2.5-audio-vae-bf16.safetensors": {
+     "name": "ltx-2.5-audio-vae-bf16.safetensors",
+     "dir": "vae",
+     "url": "https://huggingface.co/Lightricks/LTX-2.5/resolve/main/vae/ltx-2.5-audio-vae-bf16.safetensors",
+     "size": 364866540
+    },
+    "ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors": {
+     "name": "ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors",
+     "dir": "latent_upscale_models",
+     "url": "https://huggingface.co/Lightricks/LTX-2.5/resolve/main/latent_upscale_models/ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors",
+     "size": 995778752
+    },
+    "ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors": {
+     "name": "ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Lightricks/LTX-2.5/resolve/main/diffusion_models/ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors",
+     "size": 21504034224
+    },
+    "gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors": {
+     "name": "gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
+     "dir": "text_encoders",
+     "url": "https://huggingface.co/Lightricks/LTX-2.5/resolve/main/text_encoders/gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
+     "size": 15372969374
+    },
+    "ltx-2.5-video-vae-bf16.safetensors": {
+     "name": "ltx-2.5-video-vae-bf16.safetensors",
+     "dir": "vae",
+     "url": "https://huggingface.co/Lightricks/LTX-2.5/resolve/main/vae/ltx-2.5-video-vae-bf16.safetensors",
+     "size": 1472223346
+    }
+   }
+  },
+  {
+   "id": "minimax-h3",
+   "name": "MiniMax H3",
+   "about": "Text or image to video with sound (about 768p, up to 15 s), and text to image.",
+   "note": "Using what it makes commercially needs a MiniMax license, sold through Comfy.",
+   "tasks": {
+    "t2v": {
+     "workflow": "minimax-h3-t2v.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "prompt"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "width",
+       "default": 832,
+       "min": 256,
+       "max": 1536,
+       "step": 32
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "height",
+       "default": 480,
+       "min": 256,
+       "max": 1536,
+       "step": 32
+      },
+      {
+       "name": "duration",
+       "kind": "float",
+       "param": "duration",
+       "min": 1,
+       "max": 15,
+       "default": 2
+      }
+     ]
+    },
+    "i2v": {
+     "workflow": "minimax-h3-i2v.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "prompt"
+      },
+      {
+       "name": "image",
+       "kind": "image"
+      },
+      {
+       "name": "duration",
+       "kind": "float",
+       "param": "duration",
+       "min": 1,
+       "max": 15,
+       "default": 2
+      }
+     ]
+    },
+    "t2i": {
+     "workflow": "minimax-h3-t2i.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "prompt"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "width",
+       "default": 1280,
+       "min": 256,
+       "max": 2048,
+       "step": 8
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "height",
+       "default": 720,
+       "min": 256,
+       "max": 2048,
+       "step": 8
+      }
+     ]
+    }
+   },
+   "variants": [
+    {
+     "id": "int8",
+     "label": "pruned int8",
+     "min_vram_gb": 31,
+     "files": [
+      "minimax_h3_audio_vae_fp32.safetensors",
+      "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+      "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+      "minimax_h3_video_vae_fp16.safetensors",
+      "minimax_h3_video_vae_int8_convrot.safetensors",
+      "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+     ]
+    },
+    {
+     "id": "w6a8",
+     "label": "pruned w6a8",
+     "min_vram_gb": 23,
+     "min_compute": 8.9,
+     "note": "The smaller 6-bit build, for 24 GB cards.",
+     "replace": {
+      "minimax_h3_fl2va_pruned_int8_convrot.safetensors": "minimax_h3_fl2va_pruned_w6a8.safetensors"
+     },
+     "files": [
+      "minimax_h3_audio_vae_fp32.safetensors",
+      "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+      "minimax_h3_fl2va_pruned_w6a8.safetensors",
+      "minimax_h3_video_vae_fp16.safetensors",
+      "minimax_h3_video_vae_int8_convrot.safetensors",
+      "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors"
+     ]
+    }
+   ],
+   "files": {
+    "minimax_h3_video_vae_int8_convrot.safetensors": {
+     "name": "minimax_h3_video_vae_int8_convrot.safetensors",
+     "dir": "vae",
+     "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_int8_convrot.safetensors",
+     "size": 2811065184
+    },
+    "minimax_h3_audio_vae_fp32.safetensors": {
+     "name": "minimax_h3_audio_vae_fp32.safetensors",
+     "dir": "vae",
+     "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_audio_vae_fp32.safetensors",
+     "size": 605254808
+    },
+    "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors": {
+     "name": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+     "dir": "text_encoders",
+     "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/text_encoders/qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+     "size": 15687142551
+    },
+    "minimax_h3_fl2va_pruned_int8_convrot.safetensors": {
+     "name": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+     "size": 20970379616
+    },
+    "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors": {
+     "name": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+     "dir": "loras",
+     "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/loras/minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+     "size": 1956193000
+    },
+    "minimax_h3_video_vae_fp16.safetensors": {
+     "name": "minimax_h3_video_vae_fp16.safetensors",
+     "dir": "vae",
+     "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/vae/minimax_h3_video_vae_fp16.safetensors",
+     "size": 5207808496
+    },
+    "minimax_h3_fl2va_pruned_w6a8.safetensors": {
+     "name": "minimax_h3_fl2va_pruned_w6a8.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main/diffusion_models/minimax_h3_fl2va_pruned_w6a8.safetensors",
+     "size": 15983746636
+    }
+   }
+  },
+  {
+   "id": "z-image-turbo",
+   "name": "Z-Image Turbo",
+   "about": "Fast text to image, 8 steps.",
+   "tasks": {
+    "t2i": {
+     "workflow": "z-image-turbo-t2i.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "prompt"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "width",
+       "min": 256,
+       "max": 2048,
+       "step": 16,
+       "default": 1024
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "height",
+       "min": 256,
+       "max": 2048,
+       "step": 16,
+       "default": 1024
+      }
+     ]
+    }
+   },
+   "variants": [
+    {
+     "id": "bf16",
+     "label": "bf16",
+     "min_vram_gb": 15,
+     "files": [
+      "ae.safetensors",
+      "qwen_3_4b.safetensors",
+      "z_image_turbo_bf16.safetensors"
+     ]
+    }
+   ],
+   "files": {
+    "z_image_turbo_bf16.safetensors": {
+     "name": "z_image_turbo_bf16.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/diffusion_models/z_image_turbo_bf16.safetensors",
+     "size": 12309866400
+    },
+    "ae.safetensors": {
+     "name": "ae.safetensors",
+     "dir": "vae",
+     "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/vae/ae.safetensors",
+     "size": 335304388
+    },
+    "qwen_3_4b.safetensors": {
+     "name": "qwen_3_4b.safetensors",
+     "dir": "text_encoders",
+     "url": "https://huggingface.co/Comfy-Org/z_image_turbo/resolve/main/split_files/text_encoders/qwen_3_4b.safetensors",
+     "size": 8044982048
+    }
+   }
+  },
+  {
+   "id": "qwen-image-2.1-turbo",
+   "name": "Qwen-Image 2.1 Turbo",
+   "about": "Text to image up to 2K, good at writing text into images.",
+   "tasks": {
+    "t2i": {
+     "workflow": "qwen-image-2.1-turbo-t2i.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "positive_prompt"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "width",
+       "default": 1024,
+       "min": 256,
+       "max": 2048,
+       "step": 32
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "height",
+       "default": 1024,
+       "min": 256,
+       "max": 2048,
+       "step": 32
+      }
+     ]
+    }
+   },
+   "variants": [
+    {
+     "id": "bf16",
+     "label": "bf16",
+     "min_vram_gb": 31,
+     "replace": {
+      "qwen_image_2.1_turbo_int8_convrot.safetensors": "qwen_image_2.1_turbo_bf16.safetensors"
+     },
+     "files": [
+      "qwen3.5_9b_qwen_image_2.1_pe_t2i.int8_convrot.safetensors",
+      "qwen3vl_8b_int8_convrot.safetensors",
+      "qwen_image_2.1_turbo_bf16.safetensors",
+      "qwen_image_2.1_vae_bf16.safetensors"
+     ]
+    },
+    {
+     "id": "int8",
+     "label": "int8",
+     "min_vram_gb": 15,
+     "files": [
+      "qwen3.5_9b_qwen_image_2.1_pe_t2i.int8_convrot.safetensors",
+      "qwen3vl_8b_int8_convrot.safetensors",
+      "qwen_image_2.1_turbo_int8_convrot.safetensors",
+      "qwen_image_2.1_vae_bf16.safetensors"
+     ]
+    }
+   ],
+   "files": {
+    "qwen3.5_9b_qwen_image_2.1_pe_t2i.int8_convrot.safetensors": {
+     "name": "qwen3.5_9b_qwen_image_2.1_pe_t2i.int8_convrot.safetensors",
+     "dir": "text_encoders",
+     "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3.5_9b_qwen_image_2.1_pe_t2i.int8_convrot.safetensors",
+     "size": 9471072252
+    },
+    "qwen_image_2.1_turbo_int8_convrot.safetensors": {
+     "name": "qwen_image_2.1_turbo_int8_convrot.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/diffusion_models/qwen_image_2.1_turbo_int8_convrot.safetensors",
+     "size": 7256787829
+    },
+    "qwen_image_2.1_vae_bf16.safetensors": {
+     "name": "qwen_image_2.1_vae_bf16.safetensors",
+     "dir": "vae",
+     "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/vae/qwen_image_2.1_vae_bf16.safetensors",
+     "size": 675509688
+    },
+    "qwen3vl_8b_int8_convrot.safetensors": {
+     "name": "qwen3vl_8b_int8_convrot.safetensors",
+     "dir": "text_encoders",
+     "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/text_encoders/qwen3vl_8b_int8_convrot.safetensors",
+     "size": 9350798360
+    },
+    "qwen_image_2.1_turbo_bf16.safetensors": {
+     "name": "qwen_image_2.1_turbo_bf16.safetensors",
+     "dir": "diffusion_models",
+     "url": "https://huggingface.co/Comfy-Org/Qwen-Image-2.1/resolve/main/diffusion_models/qwen_image_2.1_turbo_bf16.safetensors",
+     "size": 14230280616
+    }
+   }
+  }
+ ]
+}
