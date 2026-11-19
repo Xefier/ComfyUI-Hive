@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.7.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.8.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -30,6 +30,7 @@ download it (a GitHub release), then make a flight sheet with miner **Custom**:
 | `comfyui_version` | `v0.45.0` | The ComfyUI release. The workflows were made and checked for this one: change it only with a new version of this miner |
 | `reset_oc` | `0` | `1` resets clock locks and power limits to default at start |
 | `allow_docker` | `0` | `1` starts even with Docker containers running |
+| `peers` | none | Other rigs of this miner that aren't found by themselves (another subnet): comma-separated addresses, e.g. `10.0.2.15,10.0.2.16` |
 
 **Everything goes on the DOCKER drive**, `/var/lib/docker/comfyui-hive`: ComfyUI and its Python (about 8 GB), the
 models (17 to 64 GB each), your own LoRAs (in `models/loras`, beside the ones the models bring) and what is made. If no drive is mounted at `/var/lib/docker` the miner waits and says so,
@@ -70,6 +71,16 @@ versions of this miner.
   the buttons going through the chat's other results, and Esc to close. The same in the Outputs view.
 - **The prompt being written** is kept with the chat like its other settings.
 - **Models to download** are folded under the ones on the rig ("7 more to download").
+- **Every rig on one page:** the rigs running this miner find each other on the LAN (each announces itself by a
+  broadcast on the page's port, UDP; `peers=` names the ones on another subnet). When a rig has found others, **Other
+  rigs** appears at the top of its page. Turned on (the browser remembers it), the list shows every rig's chats with
+  the rig's name beside each, and opening one turns the whole page to that rig: its models, LoRAs, queue, progress,
+  outputs and rental warning. **New chat** gets a choice of the rig to start it on. A chat stays on the rig it was
+  started on, and a request sent this way says on its own rig's page whose page it came from. The browser only talks
+  to the rig whose page is open, which passes everything on, so it works from anywhere that rig's page does. Every rig
+  needs this version, and with `allow=` set, the rigs' own addresses must be in it for them to reach each other.
+- **One scroll bar:** on a desktop screen the page itself doesn't scroll, only the chat's messages do (and the side
+  panel when its lists are longer than the window). A phone scrolls as one page.
 - **A rental is never interrupted by a request:** before a request is taken, and again before one that waited in the
   queue starts, the rig checks what it checks before starting ComfyUI: a GPU process that isn't ComfyUI, or a running
   Docker container (unless `allow_docker=1`). If there is one, the request is refused with what was found and nothing
@@ -321,6 +332,15 @@ For the page's polish (use again, use as input, the queue's wait, the title, the
 the folded models, the new look), the page run on a PC against the same stand-in for ComfyUI, in a browser, dark and
 light and at a phone's width: each tried once and working, with no errors in the console. The rental warning was
 shown by setting it by hand, and the sound was turned on but not listened to. Not run: any of it on a rig.
+
+For every rig on one page (v0.8), two copies of `page.py` on one PC, each told of the other with `peers=`, without
+ComfyUI: each lists the other by name; a chat started and renamed on the second through the first, and opened from the first one's page;
+the page turning to the second rig's models and back; a request sent to the second through the first, recorded there
+with the first's name (it then fails for want of a ComfyUI); a 1 MB range of a file and a 3 MB LoRA upload passed on
+unchanged; an address that isn't a known rig refused; **Other rigs** turned off and on; and the second rig stopped
+while its chat was open, which says it doesn't answer and lets another chat be opened. Not run: any of it on a rig,
+the broadcast by which rigs find each other (two copies on one PC can't share the port), the worker's name read from
+Hive, and a video played through another rig.
 
 For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
 with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like

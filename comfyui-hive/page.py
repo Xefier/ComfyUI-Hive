@@ -26,6 +26,8 @@ h-run.sh runs it beside ComfyUI, on the rig's LAN address at ComfyUI's port + 1.
   /api/lora-delete  POST {name}: deletes one
   /files/<path>   an output, ?download=1 to save it
   /log            the end of the miner log
+  /api/hello      who this rig is, for the other rigs; /api/rigs: the other rigs it found; /api/chats: its chats
+  /rig/<address:port>/<any of the above>  the same on another rig, passed on to it: one page for every rig's chats
 
 Anything that can reach the port can use it: like ComfyUI itself, it listens only on the private LAN address, and the
 firewall rules of h-run.sh limit it to allow=. Standard library only, so it runs before ComfyUI's packages are installed.
@@ -35,7 +37,9 @@ import argparse
 import base64
 import copy
 import hashlib
+import http.client
 import http.server
+import ipaddress
 import json
 import os
 import random
@@ -67,6 +71,10 @@ OUTPUT_PREFIX = "comfyui-hive"
 # stages): each is a pass of the request, and counts its own steps.
 SAMPLERS = ("KSampler", "KSamplerAdvanced", "SamplerCustom", "SamplerCustomAdvanced")
 # What is worked out while a request runs, and not kept with it afterwards
+APP = "comfyui-hive"
+ANNOUNCE = b"comfyui-hive "  # then the page's port: what a rig tells the LAN every few seconds
+PEER_HEARD = 60  # seconds a rig is asked who it is after it last announced itself
+PEER_KEPT = 20  # seconds a rig stays listed after it last answered
 RUN_FIELDS = ("est", "shown", "begun", "first", "last", "rate", "all_step", "all_steps", "pass", "passes")
 
 args = None
@@ -305,6 +313,10 @@ class Rig:
         self.token = read_line(os.path.join(args.data, "hf_token")) or os.environ.get("HF_TOKEN", "")
         self.last_model = None
         self.rental = ""  # what says a rental may be active, looked at every few seconds for the page
+        self.id = f"{random.randrange(16 ** 12):012x}"  # of this run: how a rig knows its own announcement
+        self.name = args.name or socket.gethostname()
+        self.heard = {}  # "address:port" -> when a rig announced itself from there
+        self.peers = {}  # "address:port" -> {id, name, version, seen}: the other rigs that answered
         try:
             # An upload the miner stopped in the middle of
             for name in os.listdir(lora_root()):
@@ -752,6 +764,80 @@ class Rig:
                                 last=max([chat["created"]] + [j["created"] for j in mine])))
         return sorted(out, key=lambda chat: -chat["last"])
 
+    # other rigs ---
+
+    def hello(self):
+        return {"app": APP, "id": self.id, "name": self.name, "version": args.version}
+
+    def rigs(self):
+        with lock:
+            found = [{"id": peer, "name": info["name"], "version": info["version"]} for peer, info in self.peers.items()]
+        return sorted(found, key=lambda peer: (peer["name"], peer["id"]))
+
+    def listen_loop(self):
+        """Hears the other rigs of the LAN announce themselves. Only an address comes of it: peers_loop asks who it is."""
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # Not the LAN address: Linux gives a broadcast only to a socket bound to every address
+            sock.bind(("", args.port))
+        except OSError as error:
+            log(f"Other rigs are not heard: UDP port {args.port} can't be listened on ({error})")
+            return
+        while True:
+            try:
+                data, sender = sock.recvfrom(256)
+            except OSError:
+                time.sleep(1)
+                continue
+            port = data[len(ANNOUNCE):]
+            if not data.startswith(ANNOUNCE) or not port.isdigit() or not 0 < int(port) < 65536:
+                continue
+            try:
+                private = ipaddress.ip_address(sender[0]).is_private
+            except ValueError:
+                continue
+            peer = f"{sender[0]}:{int(port)}"
+            with lock:
+                if private and (len(self.heard) < 200 or peer in self.heard):
+                    self.heard[peer] = time.time()
+
+    def peers_loop(self):
+        """Announces this rig to the LAN, and asks each rig heard there or named in peers= who it is."""
+        named = [peer if ":" in peer else f"{peer}:{args.port}" for peer in args.peers.split(",") if peer]
+        sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sender.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+        try:
+            sender.bind((args.bind, 0))
+        except OSError:
+            pass
+        while True:
+            try:
+                sender.sendto(ANNOUNCE + str(args.port).encode(), ("255.255.255.255", args.port))
+            except OSError:
+                pass
+            now = time.time()
+            with lock:
+                self.heard = {peer: at for peer, at in self.heard.items() if now - at < PEER_HEARD}
+                asked = sorted(set(named) | set(self.heard))
+                found = {peer: info for peer, info in self.peers.items() if now - info["seen"] < PEER_KEPT}
+            for peer in asked:
+                try:
+                    with urllib.request.urlopen(f"http://{peer}/api/hello", timeout=3) as response:
+                        answer = json.loads(response.read(4096))
+                except (OSError, ValueError):
+                    continue
+                if not isinstance(answer, dict) or answer.get("app") != APP or answer.get("id") == self.id:
+                    continue
+                # One rig reached at two addresses is listed once
+                if any(info["id"] == answer.get("id") for other, info in found.items() if other != peer):
+                    continue
+                found[peer] = {"id": answer.get("id"), "name": str(answer.get("name") or peer)[:60],
+                               "version": str(answer.get("version") or "")[:20], "seen": time.time()}
+            with lock:
+                self.peers = found
+            time.sleep(5)
+
     # outputs ---
 
     def outputs(self):
@@ -829,7 +915,7 @@ class Rig:
                 handle.write(json.dumps(job) + "\n")
         os.replace(path + ".tmp", path)
 
-    def add_job(self, request):
+    def add_job(self, request, via=""):
         model, variant = self.find_model(request.get("model"))
         if model is None:
             return None, "That model doesn't fit this rig's GPU"
@@ -852,6 +938,8 @@ class Rig:
                "chat": chat["id"],
                "model_name": model["name"], "variant": variant["label"], "task": task, "prompt": prompt,
                "state": "queued", "created": time.time(), "outputs": [], "error": "", "values": {}}
+        if via:
+            job["via"] = via  # the rig whose page it was sent from
         for item in spec["inputs"]:
             name = item["name"]
             if name in ("prompt", "image") or name not in request or request[name] in ("", None):
@@ -1110,7 +1198,7 @@ class Rig:
                 wait = None if wait is None or took is None else wait + took
                 ahead, before = ahead + 1, job["model"]
         return {
-            "rental": self.rental,
+            "rental": self.rental, "name": self.name,
             "chat": chat_id, "chats": self.chat_list(),
             "version": args.version, "state": read_line(args.state_file) or "stopped",
             "comfy_url": args.comfy, "gpu": self.gpu, "ram_gb": self.ram,
@@ -1352,6 +1440,19 @@ class ProgressWatcher:
 
 # --- the web side -------------------------------------------------------------------------------------------------
 
+class Limited:
+    """A request's body as a file that ends where the body does."""
+
+    def __init__(self, stream, length):
+        self.stream, self.left = stream, length
+
+    def read(self, size=-1):
+        size = self.left if size is None or size < 0 else min(size, self.left)
+        data = self.stream.read(size) if size else b""
+        self.left -= len(data)
+        return data
+
+
 class Handler(http.server.BaseHTTPRequestHandler):
     server_version = "comfyui-hive"
 
@@ -1370,13 +1471,67 @@ class Handler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
         self.wfile.write(body)
 
+    def forward(self):
+        """A request for /rig/<address:port>/<path>: passed on to that rig, and its answer back, both as they come.
+
+        Only to a rig that answered /api/hello as one, so this is no way to reach anything else on the LAN."""
+        parts = self.path.split("/", 3)
+        peer = urllib.parse.unquote(parts[2]) if len(parts) == 4 else ""
+        with lock:
+            known = rig.peers.get(peer)
+        if not known or parts[3].startswith("rig/"):
+            self.close_connection = True
+            self.send(404, {"error": "That rig isn't reachable from this one any more"})
+            return
+        length = int(self.headers.get("Content-Length") or 0)
+        headers = {name: self.headers[name] for name in ("Content-Type", "Range") if self.headers.get(name)}
+        headers["X-Hive-From"] = urllib.parse.quote(rig.name)
+        if self.command == "POST":
+            headers["Content-Length"] = str(length)
+        host, port = peer.rsplit(":", 1)
+        link = http.client.HTTPConnection(host, int(port), timeout=120)
+        try:
+            link.request(self.command, "/" + parts[3], body=Limited(self.rfile, length) if length else None,
+                         headers=headers)
+            answer = link.getresponse()
+        except (OSError, http.client.HTTPException):
+            link.close()
+            self.close_connection = True
+            self.send(502, {"error": f"{known['name']} doesn't answer"})
+            return
+        self.send_response(answer.status)
+        for name in ("Content-Type", "Content-Length", "Content-Range", "Accept-Ranges", "Content-Disposition",
+                     "Cache-Control"):
+            if answer.getheader(name):
+                self.send_header(name, answer.getheader(name))
+        self.end_headers()
+        try:
+            while True:
+                block = answer.read(256 * 1024)
+                if not block:
+                    break
+                self.wfile.write(block)
+        except (OSError, http.client.HTTPException):
+            pass
+        link.close()
+
     def do_GET(self):
         url = urllib.parse.urlparse(self.path)
-        if url.path in ("/", "/index.html"):
+        if url.path.startswith("/rig/"):
+            self.forward()
+        elif url.path in ("/", "/index.html"):
             with open(os.path.join(HERE, "page.html"), "rb") as handle:
                 self.send(200, handle.read(), "text/html; charset=utf-8")
         elif url.path == "/api/state":
             self.send(200, rig.state(urllib.parse.parse_qs(url.query).get("chat", [None])[0]))
+        elif url.path == "/api/hello":
+            self.send(200, rig.hello())
+        elif url.path == "/api/rigs":
+            self.send(200, {"name": rig.name, "rigs": rig.rigs()})
+        elif url.path == "/api/chats":
+            # Without what each chat's composer is set to: this is asked often, for the list of every rig's chats
+            self.send(200, {"name": rig.name,
+                            "chats": [{k: v for k, v in chat.items() if k != "settings"} for chat in rig.chat_list()]})
         elif url.path == "/api/outputs":
             self.send(200, {"outputs": rig.outputs()})
         elif url.path == "/api/chat-image":
@@ -1398,6 +1553,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
     def do_POST(self):
         length = int(self.headers.get("Content-Length") or 0)
         url = urllib.parse.urlparse(self.path)
+        if url.path.startswith("/rig/"):
+            self.forward()
+            return
         if url.path == "/api/lora-upload":
             # The file itself is the body, written to the drive as it comes: a LoRA is far too big to hold as JSON
             name, error = rig.save_lora(urllib.parse.parse_qs(url.query).get("name", [""])[0], self.rfile, length)
@@ -1414,7 +1572,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         path = url.path
         if path == "/api/generate":
-            job, error = rig.add_job(body)
+            job, error = rig.add_job(body, urllib.parse.unquote(self.headers.get("X-Hive-From") or "")[:60])
             self.send(400 if error else 200, {"error": error} if error else {"job": job["id"]})
         elif path == "/api/chat-new":
             self.send(200, {"chat": rig.new_chat(body.get("title"))["id"]})
@@ -1523,6 +1681,8 @@ def main():
     parser.add_argument("--gpu", type=int, default=0)
     parser.add_argument("--allow-docker", type=int, default=0)
     parser.add_argument("--version", default="")
+    parser.add_argument("--name", default="")
+    parser.add_argument("--peers", default="")
     args = parser.parse_args()
     for folder in (args.models, args.outputs, args.inputs, args.data):
         os.makedirs(folder, exist_ok=True)
@@ -1532,7 +1692,7 @@ def main():
         log(f"GPU {rig.gpu['name']}, {rig.gpu['vram_gb']} GB: {len(offered)} models fit: {', '.join(offered)}")
     else:
         log("No GPU found: no models are offered")
-    for loop in (rig.download_loop, rig.job_loop, rig.stats_loop):
+    for loop in (rig.download_loop, rig.job_loop, rig.stats_loop, rig.listen_loop, rig.peers_loop):
         threading.Thread(target=loop, daemon=True).start()
     server = http.server.ThreadingHTTPServer((args.bind, args.port), Handler)
     server.daemon_threads = True

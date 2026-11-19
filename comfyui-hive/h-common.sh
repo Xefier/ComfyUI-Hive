@@ -27,6 +27,8 @@ CH_COMFYUI_VERSION=v0.45.0
 CH_HF_TOKEN=""
 CH_RESET_OC=0
 CH_ALLOW_DOCKER=0
+# Other rigs of this miner the page can't hear announce themselves (another subnet): addresses, with :port if not ours
+CH_PEERS=""
 
 [[ -f $CUSTOM_CONFIG_FILENAME ]] && . "$CUSTOM_CONFIG_FILENAME"
 

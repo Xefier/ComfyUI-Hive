@@ -29,7 +29,7 @@ a:hover { text-decoration: underline; }
 ::selection { background: var(--accent); color: var(--accent-text); }
 * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 
-header { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 18px;
+header { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 18px;
   border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(10px); }
 header h1 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 9px; letter-spacing: -.01em; }
 header h1::before { content: ""; width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(135deg, var(--accent), var(--accent2));
@@ -46,13 +46,9 @@ header nav a:hover { background: var(--soft); text-decoration: none; }
 .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
 .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
 
-main { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; max-width: 1440px; margin: 0 auto; align-items: start; }
+main { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; max-width: 1440px; margin: 0 auto; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
-.side { position: sticky; top: 66px; max-height: calc(100vh - 82px); overflow-y: auto; }
-@media (max-width: 860px) {
-  main { grid-template-columns: 1fr; }
-  .side { position: static; max-height: none; }
-  header { position: static; }
+@media (max-width: 860px) { main { grid-template-columns: 1fr; } }
 }
 h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
 h2.row { justify-content: space-between; }
@@ -75,7 +71,11 @@ button.small { padding: 3px 9px; font-size: 13px; border-radius: 7px; }
 .model:hover, .chatitem:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
 .model.picked, .chatitem.picked { border-color: var(--accent); background: var(--soft); }
 .model .name, .chatitem .name { font-weight: 600; }
-.chatitem .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chatitem .name { display: flex; gap: 7px; align-items: center; }
+.chatitem .name > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.chatitem .name .tag { flex: none; font-weight: 500; }
+.chip.name { color: var(--text); font-weight: 600; }
+#newrig { font-size: 13px; text-transform: none; letter-spacing: 0; max-width: 130px; padding: 2px 4px; }
 .model .meta, .chatitem .meta { color: var(--muted); font-size: 12.5px; }
 .model .note { color: var(--warn); font-size: 12.5px; margin-top: 4px; }
 .model .actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
@@ -100,12 +100,11 @@ details.more[open] > summary { margin-bottom: 4px; }
 .run .pct { min-width: 38px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
 .run .times { font-variant-numeric: tabular-nums; }
 
-.chat { display: flex; flex-direction: column; min-height: 70vh; position: relative; }
+.chat { display: flex; flex-direction: column; min-height: 70vh; min-width: 0; position: relative; }
 .banner { border: 1px solid var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--text);
   border-radius: 10px; padding: 8px 12px; font-size: 14px; margin-bottom: 8px; }
 .banner b { color: var(--warn); }
-.messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 4px 12px; max-height: calc(100vh - 360px); min-height: 180px; }
-@media (max-width: 860px) { .messages { max-height: none; } }
+.messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 4px 12px; min-height: 180px; }
 .empty { margin: auto; text-align: center; color: var(--muted); padding: 30px 10px; }
 .empty b { display: block; color: var(--text); font-size: 16px; margin-bottom: 4px; }
 .msg { max-width: 92%; border-radius: 14px; padding: 10px 13px; overflow-wrap: anywhere; }
@@ -178,6 +177,19 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
 .viewer button:hover:not(:disabled) { background: rgba(255, 255, 255, .22); border-color: transparent; }
 .viewer .close { position: absolute; top: 12px; right: 12px; }
 .viewer #viewmedia { display: contents; }
+/* On a screen with the room for it the page itself never scrolls: the chat's messages do, and the side panel when its
+   lists are long. A phone or a low window scrolls as one page instead. */
+@media (min-width: 861px) and (min-height: 600px) {
+  body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
+  header { flex: none; }
+  main, .outputs { flex: 1; min-height: 0; width: 100%; }
+  .outputs { width: calc(100% - 32px); }
+  .side, .outputs { overflow-y: auto; }
+  .chat { min-height: 0; }
+  .messages { min-height: 120px; }
+  .composer { flex: none; max-height: 60vh; overflow-y: auto; }
+  .composer > * { flex: none; }
+}
 </style>
 </head>
 <body>
@@ -185,6 +197,7 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
   <h1>ComfyUI-Hive</h1>
   <span class="rig" id="rig"><span class="chip">…</span></span>
   <nav>
+    <label class="toggle" id="rigsbox" hidden title="The chats of the other ComfyUI-Hive rigs on the network in this page's list too, to work in them from here"><input type="checkbox" id="rigson"> Other rigs<span id="rigscount"></span></label>
     <label class="toggle" title="A short sound when a request of the open chat ends"><input type="checkbox" id="sound"> Sound when done</label>
     <a id="comfy" href="#" target="_blank" rel="noopener">ComfyUI editor</a>
     <a href="#" id="showlog">Miner log</a>
@@ -204,7 +217,7 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
 </section>
 <main id="chatview">
   <section class="panel side">
-    <h2 class="row">Chats <button class="small" id="newchat">New chat</button></h2>
+    <h2 class="row">Chats <span class="row"><select id="newrig" hidden title="The rig the new chat is on"></select><button class="small" id="newchat">New chat</button></span></h2>
     <div id="chats"></div>
     <div class="hint"><a href="#" id="showarchived"></a></div>
     <h2 class="next">Models for this GPU</h2>
@@ -272,13 +285,18 @@ const TASKS = { t2i: "Text to image", edit: "Edit image", t2v: "Text to video", 
 const LABELS = { width: "Width", height: "Height", length: "Frames", duration: "Seconds", steps: "Steps", seed: "Seed" };
 // image: the attached one as a data URL, or true for the one the rig kept for this chat
 let state = null, picked = null, task = null, image = null, shown = new Map();
+// The rig of the open chat: "" for the one this page comes from, or another one as this rig reaches it (address:port).
+// Everything the page asks goes to that rig: its own asks it directly, another's are passed on by this page's rig.
+let rigOf = "", rigsOn = false;
+try { rigsOn = localStorage.getItem("rigs") === "1"; rigOf = rigsOn && localStorage.getItem("rig") || ""; } catch { /* no storage: this rig only */ }
+const at = (path, where = rigOf) => (where ? "/rig/" + where : "") + path;
 
 const $ = id => document.getElementById(id);
 const gb = bytes => (bytes / 1024 ** 3).toFixed(1) + " GB";
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 
-async function post(path, body) {
-  const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+async function post(path, body, where = rigOf) {
+  const response = await fetch(at(path, where), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || response.statusText);
   return data;
@@ -298,19 +316,29 @@ function toast(text) {
 function say(text, bad) { $("status").textContent = text || ""; $("status").className = "status" + (bad ? " bad" : ""); }
 
 async function refresh() {
-  const asked = chat, epoch = imageEpoch;
+  const asked = chat, where = rigOf, epoch = imageEpoch;
   let got;
-  try { got = await (await fetch("/api/state" + (asked ? "?chat=" + encodeURIComponent(asked) : ""))).json(); }
-  catch { $("rig").innerHTML = chip("The rig doesn't answer", "bad"); return; }
+  try {
+    const response = await fetch(at("/api/state" + (asked ? "?chat=" + encodeURIComponent(asked) : "")));
+    got = await response.json();
+    if (!response.ok) throw new Error(got.error);
+  } catch {
+    if (asked !== chat || where !== rigOf) return;
+    $("rig").innerHTML = chip(where ? `${rigName(where)} doesn't answer` : "The rig doesn't answer", "bad");
+    // Another rig that is gone when the page opens: this page's own instead
+    if (where && !state) { openChat(null, ""); refresh(); }
+    return;
+  }
   // Another chat was picked while this was on its way
-  if (asked !== chat) return;
+  if (asked !== chat || where !== rigOf) return;
   state = got;
+  rigChats.set(rigOf, { name: state.name, chats: state.chats });
   if (!pickChat()) { refresh(); return; }
   const g = state.gpu;
-  $("rig").innerHTML = `<span class="chip"><i class="dot ${state.state === "ready" ? "ok" : ""}"></i>ComfyUI ${esc(state.state)}</span>`
+  $("rig").innerHTML = (state.name ? chip(state.name, "name") : "") + `<span class="chip"><i class="dot ${state.state === "ready" ? "ok" : ""}"></i>ComfyUI ${esc(state.state)}</span>`
     + (g ? chip(g.name) + chip(`${g.used_gb} / ${g.vram_gb} GB VRAM`) + chip(`${g.load}% load`) : chip("no GPU found", "bad"))
     + chip(`RAM ${state.ram_gb ?? "?"} GB`) + chip(`${gb(state.disk_free)} free`) + chip(state.version);
-  $("comfy").href = state.comfy_url.replace(/^http:\/\/[^/:]+/, location.protocol + "//" + location.hostname);
+  $("comfy").href = state.comfy_url.replace(/^http:\/\/[^/:]+/, location.protocol + "//" + (rigOf ? rigOf.split(":")[0] : location.hostname));
   const adopt = openSettings();
   if (!picked || !state.models.some(m => m.id === picked)) {
     const remembered = state.settings.model;
@@ -333,11 +361,21 @@ async function refresh() {
 let chat = null, showArchived = false;
 try { chat = localStorage.getItem("chat"); } catch { /* no storage: the last used chat opens */ }
 
-function openChat(id) {
-  if (id === chat) return;
+const chatKey = () => rigOf + "|" + chat;
+const mine = c => c.id === chat && c.rig === rigOf;
+
+function openChat(id, where = rigOf) {
+  if (id === chat && where === rigOf) return;
   flushSettings();
+  // Another rig has its own models: the one its chat or the rig remembers is picked when it answers
+  if (where !== rigOf) picked = task = null;
   chat = id;
-  try { id ? localStorage.setItem("chat", id) : localStorage.removeItem("chat"); } catch { /* as above */ }
+  rigOf = where;
+  try {
+    id ? localStorage.setItem("chat", id) : localStorage.removeItem("chat");
+    localStorage.setItem("rig", where);
+  } catch { /* as above */ }
+  $("newrig").value = where;
   $("messages").innerHTML = "";
   shown.clear();
   // The image is the chat's: the one of the chat opened now is shown when the rig answers
@@ -361,23 +399,24 @@ function pickChat() {
 
 function drawChats() {
   const box = $("chats");
-  const archived = state.chats.filter(c => c.archived).length;
-  const list = state.chats.filter(c => showArchived || !c.archived || c.id === chat);
-  const key = JSON.stringify([list, chat]);
+  const all = chatList();
+  const archived = all.filter(c => c.archived).length;
+  const list = all.filter(c => showArchived || !c.archived || mine(c));
+  const key = JSON.stringify([list, chat, rigOf, rigChats.size]);
   if (box.dataset.key !== key) {
     box.dataset.key = key;
     box.innerHTML = "";
     if (!list.length) box.innerHTML = `<div class="hint">No chat yet: the first request starts one.</div>`;
     for (const c of list) {
       const div = document.createElement("div");
-      div.className = "chatitem" + (c.id === chat ? " picked" : "");
-      div.innerHTML = `<div class="name">${esc(c.title || "New chat")}</div>
+      div.className = "chatitem" + (mine(c) ? " picked" : "");
+      div.innerHTML = `<div class="name"><span>${esc(c.title || "New chat")}</span>${rigChats.size > 1 ? `<span class="tag">${esc(c.rigName)}</span>` : ""}</div>
         <div class="meta">${c.jobs} ${c.jobs === 1 ? "request" : "requests"}${c.busy ? " · working" : ""}${c.archived ? " · archived" : ""}</div>
         <div class="actions"><button class="small" data-act="rename">Rename</button><button class="small" data-act="archive">${c.archived ? "Unarchive" : "Archive"}</button><button class="small" data-act="delete">Delete</button></div>`;
       div.onclick = e => {
         const act = e.target.dataset && e.target.dataset.act;
         if (act) { e.stopPropagation(); chatAction(act, c); return; }
-        openChat(c.id);
+        openChat(c.id, c.rig);
         refresh();
       };
       box.appendChild(div);
@@ -391,29 +430,91 @@ async function chatAction(act, c) {
     if (act === "rename") {
       const title = prompt("Name of the chat", c.title);
       if (title === null) return;
-      await post("/api/chat-update", { chat: c.id, title });
+      await post("/api/chat-update", { chat: c.id, title }, c.rig);
     } else if (act === "archive") {
-      await post("/api/chat-update", { chat: c.id, archived: !c.archived });
-      // An archived chat leaves the list: the one last used opens
-      if (!c.archived && c.id === chat) openChat((state.chats.find(o => !o.archived && o.id !== c.id) || {}).id || null);
+      await post("/api/chat-update", { chat: c.id, archived: !c.archived }, c.rig);
+      // An archived chat leaves the list: the one last used on its rig opens
+      if (!c.archived && mine(c)) openChat((chatList().find(o => !o.archived && o.rig === c.rig && o.id !== c.id) || {}).id || null);
     } else if (act === "delete") {
       if (!confirm(`Delete the chat "${c.title || "New chat"}" with its ${c.jobs} ${c.jobs === 1 ? "request" : "requests"}? The images and videos they made are deleted from the rig too. Archive it instead to keep them.`)) return;
-      await post("/api/chat-delete", { chat: c.id });
-      if (c.id === chat) openChat(null);
+      await post("/api/chat-delete", { chat: c.id }, c.rig);
+      if (mine(c)) openChat(null);
     }
     say("");
   } catch (e) { say(e.message, true); }
   refresh();
+  refreshRigs();
 }
 
 $("newchat").onclick = async () => {
+  const where = $("newrig").hidden ? rigOf : $("newrig").value;
   // An empty chat that is already there is opened again rather than adding another
-  const empty = state && state.chats.find(c => !c.jobs && !c.archived && !c.title);
-  try { openChat(empty ? empty.id : (await post("/api/chat-new", {})).chat); } catch (e) { say(e.message, true); }
+  const empty = chatList().find(c => c.rig === where && !c.jobs && !c.archived && !c.title);
+  try { openChat(empty ? empty.id : (await post("/api/chat-new", {}, where)).chat, where); } catch (e) { say(e.message, true); }
   await refresh();
   $("prompt").focus();
 };
 $("showarchived").onclick = e => { e.preventDefault(); showArchived = !showArchived; drawChats(); };
+
+// --- other rigs: their chats in this page's list too --------------------------------------------------------------
+// The rigs find each other on the network; this page's rig says which it found. With "Other rigs" on, each one's
+// chats are listed with the rig's name beside them, and opening one turns the whole page to that rig: its models,
+// LoRAs, queue and outputs. A chat stays on the rig it was started on.
+let rigs = [], homeName = "", rigChats = new Map();  // rigChats: rig -> {name, chats}, this page's own under ""
+const rigName = where => where ? (rigs.find(r => r.id === where) || rigChats.get(where) || {}).name || where : homeName;
+
+// Every chat listed, each with its rig. The one last used first, as each rig's own list is.
+function chatList() {
+  const all = [];
+  for (const [where, r] of rigChats) for (const c of r.chats) all.push({ ...c, rig: where, rigName: r.name });
+  return rigChats.size > 1 ? all.sort((a, b) => b.last - a.last) : all;
+}
+
+function drawRigs() {
+  $("rigsbox").hidden = !rigs.length && !rigsOn;
+  $("rigson").checked = rigsOn;
+  $("rigscount").textContent = rigs.length ? ` (${rigs.length})` : "";
+  const select = $("newrig"), options = [{ id: "", name: homeName }, ...rigs];
+  const key = JSON.stringify(options);
+  if (select.dataset.key !== key) {
+    select.dataset.key = key;
+    select.innerHTML = "";
+    for (const r of options) select.appendChild(new Option(r.name, r.id));
+    select.value = rigOf;
+  }
+  select.hidden = !rigsOn || !rigs.length;
+}
+
+async function refreshRigs() {
+  let got;
+  try { got = await (await fetch("/api/rigs")).json(); } catch { return; }
+  if (!Array.isArray(got.rigs)) return;
+  homeName = got.name;
+  rigs = got.rigs;
+  if (rigsOn) {
+    // The open chat's rig is kept up to date by refresh()
+    await Promise.all(["", ...rigs.map(r => r.id)].filter(where => where !== rigOf).map(async where => {
+      try {
+        const response = await fetch(at("/api/chats", where));
+        const data = await response.json();
+        if (response.ok && Array.isArray(data.chats)) rigChats.set(where, { name: data.name, chats: data.chats });
+      } catch { /* it keeps the chats it had until the rig leaves the list */ }
+    }));
+  }
+  for (const where of [...rigChats.keys()]) {
+    if (where !== rigOf && (!rigsOn || where && !rigs.some(r => r.id === where))) rigChats.delete(where);
+  }
+  drawRigs();
+  if (state) drawChats();
+}
+
+$("rigson").onchange = () => {
+  rigsOn = $("rigson").checked;
+  try { localStorage.setItem("rigs", rigsOn ? "1" : "0"); } catch { /* as above */ }
+  // Off: back to this page's own rig
+  if (!rigsOn && rigOf) { openChat(null, ""); refresh(); }
+  refreshRigs();
+};
 
 // --- each chat's own settings: the model, the task, the numbers (size, frames, steps, seed), the LoRAs and the
 // prompt being written ---------------------------------------------------------------------------------------------
@@ -423,8 +524,8 @@ let settingsOf, kept = {}, unsaved = null, saveTimer = null;
 
 // The settings of the chat just opened, into the composer. True when it has none yet.
 function openSettings() {
-  if (settingsOf === chat) return false;
-  settingsOf = chat;
+  if (settingsOf === chatKey()) return false;
+  settingsOf = chatKey();
   const open = state.chats.find(c => c.id === chat);
   const s = open && open.settings;
   if (!s) return !!open;
@@ -440,12 +541,12 @@ function openSettings() {
 
 // Called after the composer is drawn for the model and task picked now: its number boxes are theirs
 function saveSettings() {
-  if (!chat || settingsOf !== chat || !picked) return;
+  if (!chat || settingsOf !== chatKey() || !picked) return;
   if (task) {
     const values = kept[picked + "/" + task] = {};
     for (const input of $("settings").querySelectorAll("input[type=number]")) values[input.dataset.name] = input.value;
   }
-  unsaved = JSON.parse(JSON.stringify({ chat, settings: { model: picked, task, values: kept, loras: loraSlots, prompt: $("prompt").value } }));
+  unsaved = { where: rigOf, body: JSON.parse(JSON.stringify({ chat, settings: { model: picked, task, values: kept, loras: loraSlots, prompt: $("prompt").value } })) };
   clearTimeout(saveTimer);
   saveTimer = setTimeout(flushSettings, 400);
 }
@@ -453,7 +554,7 @@ function saveSettings() {
 function flushSettings() {
   clearTimeout(saveTimer);
   // Not said when it fails: the next change sends them again
-  if (unsaved) post("/api/chat-settings", unsaved).catch(() => {});
+  if (unsaved) post("/api/chat-settings", unsaved.body, unsaved.where).catch(() => {});
   unsaved = null;
 }
 
@@ -479,7 +580,7 @@ function showView() {
 }
 
 async function loadOutputs() {
-  try { outputs = (await (await fetch("/api/outputs")).json()).outputs; } catch { osay("The rig doesn't answer", true); return; }
+  try { outputs = (await (await fetch(at("/api/outputs"))).json()).outputs; } catch { osay("The rig doesn't answer", true); return; }
   outPicked = new Set(outputs.map(o => o.path).filter(p => outPicked.has(p)));
   const box = $("outs");
   box.innerHTML = outputs.length ? "" : `<div class="hint">Nothing has been made yet.</div>`;
@@ -506,7 +607,7 @@ async function loadOutputs() {
 function drawOutSummary() {
   const size = list => mb(list.reduce((sum, o) => sum + o.size, 0));
   const picked = outputs.filter(o => outPicked.has(o.path));
-  $("outsummary").textContent = `${outputs.length} ${outputs.length === 1 ? "file" : "files"}, ${size(outputs)}`
+  $("outsummary").textContent = (rigChats.size > 1 && state ? state.name + ": " : "") + `${outputs.length} ${outputs.length === 1 ? "file" : "files"}, ${size(outputs)}`
     + (picked.length ? ` · ${picked.length} selected, ${size(picked)}` : "");
   $("outdelete").disabled = !picked.length;
   $("outall").textContent = outputs.length && picked.length === outputs.length ? "Select none" : "Select all";
@@ -830,7 +931,7 @@ function nextLoraUpload() {
   $("loraname").textContent = file.name + (loraQueue.length ? ` (${loraQueue.length} more waiting)` : "");
   $("loraupload").hidden = false;
   progress(0);
-  xhr.open("POST", "/api/lora-upload?name=" + encodeURIComponent(file.name));
+  xhr.open("POST", at("/api/lora-upload?name=" + encodeURIComponent(file.name)));
   xhr.upload.onprogress = e => progress(e.loaded);
   xhr.onload = () => {
     let data = {};
@@ -1080,7 +1181,7 @@ function syncImage() {
   if (stamp === null) return;
   image = true;
   const preview = $("imagepreview");
-  preview.src = `/api/chat-image?chat=${encodeURIComponent(chat)}&v=${stamp}`;
+  preview.src = at(`/api/chat-image?chat=${encodeURIComponent(chat)}&v=${stamp}`);
   preview.hidden = false;
   $("imagetext").textContent = "Kept in this chat. Drop, paste or";
   $("imageremove").hidden = false;
@@ -1132,7 +1233,7 @@ chatBox.addEventListener("drop", e => {
 window.addEventListener("dragover", e => { if (hasFiles(e)) e.preventDefault(); });
 window.addEventListener("drop", e => { if (hasFiles(e)) e.preventDefault(); });
 
-const fileUrl = path => "/files/" + path.split("/").map(encodeURIComponent).join("/");
+const fileUrl = path => at("/files/" + path.split("/").map(encodeURIComponent).join("/"));
 const fileExt = path => path.split(".").pop().toLowerCase();
 const fileKind = path => ["mp4", "webm"].includes(fileExt(path)) ? "video" : ["mp3", "flac", "wav"].includes(fileExt(path)) ? "audio" : "image";
 
@@ -1348,6 +1449,7 @@ function drawMessages() {
       you.innerHTML = `<div class="who">${esc(job.model_name)} · ${esc(TASKS[job.task] || job.task)}</div><div class="text">${esc(job.prompt)}</div>`
         + (set ? `<div class="hint">${esc(set)}</div>` : "")
         + (job.image ? `<div class="hint">from an image</div>` : "")
+        + (job.via ? `<div class="hint">sent from the page of ${esc(job.via)}</div>` : "")
         + (job.loras || []).map(slot => `<div class="hint">LoRA ${esc(loraText(slot))}</div>`).join("")
         + `<div class="links"><a href="#" title="Its prompt, settings, seed, LoRAs and image back in the composer">Use again</a></div>`;
       you.querySelector(".links a").onclick = e => { e.preventDefault(); useAgain(job.id); };
@@ -1381,7 +1483,7 @@ $("showlog").onclick = async e => {
   e.preventDefault();
   const log = $("log");
   log.hidden = !log.hidden;
-  if (!log.hidden) { log.textContent = await (await fetch("/log")).text(); log.scrollTop = log.scrollHeight; }
+  if (!log.hidden) { log.textContent = await (await fetch(at("/log"))).text(); log.scrollTop = log.scrollHeight; }
 };
 $("savetoken").onclick = async () => {
   try { await post("/api/token", { token: $("token").value.trim() }); $("token").value = ""; say("Token saved on the rig"); }
@@ -1392,6 +1494,8 @@ $("savetoken").onclick = async () => {
 showView();
 refresh();
 setInterval(refresh, 1500);
+refreshRigs();
+setInterval(refreshRigs, 4000);
 </script>
 </body>
 </html>

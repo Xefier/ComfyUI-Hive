@@ -230,15 +230,17 @@ page_running() {
 # The chat page. It keeps running while ComfyUI restarts, and is started again if it stops.
 start_page() {
     page_running && return 0
-    local address
+    local address name
     address=$(ch_lan_address)
+    # What the other rigs' pages call this one: the worker's name in Hive
+    name=$(. /hive-config/rig.conf 2>/dev/null; echo "$WORKER_NAME")
     mkdir -p "$CH_PAGE_DATA" "$CH_OUTPUTS" "$CH_INPUTS" "$CH_MODELS"
     HF_TOKEN="$CH_HF_TOKEN" PYTHONUNBUFFERED=1 setsid "$CH_VENV/bin/python" "$CH_DIR/page.py" \
         --bind "$address" --port "$CH_PAGE_PORT" --comfy "http://$address:$CH_PORT" --gpu "$CH_GPUS" --allow-docker "$CH_ALLOW_DOCKER" \
         --catalog "$CH_DIR/catalog.json" --workflows "$CH_DIR/workflows" --models "$CH_MODELS" \
         --outputs "$CH_OUTPUTS" --inputs "$CH_INPUTS" --data "$CH_PAGE_DATA" \
         --state-file "$CH_RUN_DIR/state" --page-file "$CH_RUN_DIR/page.json" --log "$LOG_FILE" \
-        --version "$CUSTOM_VERSION" >> "$LOG_FILE" 2>&1 &
+        --version "$CUSTOM_VERSION" --name "$name" --peers "$CH_PEERS" >> "$LOG_FILE" 2>&1 &
     echo "$!" > "$CH_RUN_DIR/page.pid"
     log "The page is at http://$address:$CH_PAGE_PORT/"
 }
