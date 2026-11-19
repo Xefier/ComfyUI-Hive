@@ -1,7 +1,16 @@
 {
  "comfyui": "v0.45.0",
- "about": "Source of comfyui-hive/catalog.json: tools/build.py. A task's template is a ComfyUI workflow template of that version. An input's param is a setting shown on the template's subgraph (its label) or 'node.input' for a template without one. Variants are best first; the page offers the first that fits the GPU: min_vram_gb (as nvidia-smi reports it, so a 24 GB card is 23.99) and min_compute (CUDA compute capability). replace swaps a file the workflows load for another build in the same folder; set is [node, input, value]. An input of kind loras lets the page add the user's own LoRAs to the task: after lists the model outputs they are chained onto, [node] or [node, \"low\"] for the low-noise model of a pair (which takes a slot's second file); every such input gets the slots and strength limits of loras below.",
+ "about": "Source of comfyui-hive/catalog.json: tools/build.py. A task's template is a ComfyUI workflow template of that version. An input's param is a setting shown on the template's subgraph (its label) or 'node.input' for a template without one. Variants are best first; the page offers the first that fits the GPU: min_vram_gb (as nvidia-smi reports it, so a 24 GB card is 23.99) and min_compute (CUDA compute capability). replace swaps a file the workflows load for another build in the same folder; set is [node, input, value]. An input of kind loras lets the page add the user's own LoRAs to the task: after lists the model outputs they are chained onto, [node] or [node, \"low\"] for the low-noise model of a pair (which takes a slot's second file); every such input gets the slots and strength limits of loras below; its clip ([node, output] of the text encoder, for a single model) applies each LoRA to the text encoder too (LoraLoader), as SD 1.5 and SDXL LoRAs expect. A model's files puts its own file in place of one the template loads ({template file: {name, url}}), for a model run through another's template (a checkpoint). A task's set is [node, input, value] of the template it always changes; its clip_skip adds a CLIPSetLastLayer of that layer after that CLIP output. A task's like names a task of tasks below that several models share; the task's own keys are added to it, and its defaults ({input: value}) replace those inputs' defaults.",
  "loras": {"slots": 3, "strength": {"min": -10, "max": 10, "default": 1}},
+ "tasks": {
+  "checkpoint-t2i": {"template": "image_sdxl_simple", "inputs": [
+   {"name": "prompt", "kind": "text", "param": "10.text"},
+   {"name": "width", "kind": "int", "param": "13.width", "min": 256, "max": 2048, "step": 8},
+   {"name": "height", "kind": "int", "param": "13.height", "min": 256, "max": 2048, "step": 8},
+   {"name": "steps", "kind": "int", "param": "12.steps", "min": 1, "max": 100},
+   {"name": "cfg", "kind": "float", "param": "12.cfg", "min": 1, "max": 20},
+   {"name": "loras", "kind": "loras", "after": [["15"]], "clip": ["15", 1]}]}
+ },
  "models": [
   {
    "id": "wan2.2-14b",
@@ -156,6 +165,45 @@
     {"id": "bf16", "label": "bf16", "min_vram_gb": 31,
      "replace": {"qwen_image_2.1_turbo_int8_convrot.safetensors": "qwen_image_2.1_turbo_bf16.safetensors"}},
     {"id": "int8", "label": "int8", "min_vram_gb": 15}
+   ]
+  },
+  {
+   "id": "sdxl-1.0",
+   "name": "SDXL 1.0",
+   "about": "Stability's SDXL base: text to image at 1024 px. Takes SDXL LoRAs.",
+   "tasks": {
+    "t2i": {"like": "checkpoint-t2i", "set": [["11", "text", "lowres, blurry, out of focus, deformed, bad anatomy, extra limbs, mutated, watermark, text, logo, signature"]]}
+   },
+   "variants": [
+    {"id": "fp16", "label": "fp16", "min_vram_gb": 7}
+   ]
+  },
+  {
+   "id": "pony-v6-xl",
+   "name": "Pony Diffusion V6 XL",
+   "about": "SDXL-based, text to image at 1024 px, trained on tags. Start a prompt with score_9, score_8_up, score_7_up. Takes Pony LoRAs.",
+   "files": {"sd_xl_base_1.0.safetensors": {"name": "ponyDiffusionV6XL.safetensors",
+     "url": "https://huggingface.co/AstraliteHeart/pony-diffusion-v6/resolve/main/v6.safetensors"}},
+   "tasks": {
+    "t2i": {"like": "checkpoint-t2i", "clip_skip": {"after": ["15", 1], "layer": -2},
+     "set": [["11", "text", "score_4, score_5, score_6, lowres, blurry, deformed, bad anatomy, extra limbs, watermark, text, logo, signature"],
+      ["12", "sampler_name", "euler_ancestral"], ["12", "scheduler", "normal"]]}
+   },
+   "variants": [
+    {"id": "fp16", "label": "fp16", "min_vram_gb": 7}
+   ]
+  },
+  {
+   "id": "sd-1.5",
+   "name": "SD 1.5",
+   "about": "Stable Diffusion 1.5: text to image at 512 px, small and quick. Takes SD 1.5 LoRAs.",
+   "files": {"sd_xl_base_1.0.safetensors": {"name": "v1-5-pruned-emaonly-fp16.safetensors",
+     "url": "https://huggingface.co/Comfy-Org/stable-diffusion-1.5/resolve/main/v1-5-pruned-emaonly-fp16.safetensors"}},
+   "tasks": {
+    "t2i": {"like": "checkpoint-t2i", "defaults": {"width": 512, "height": 512}, "set": [["11", "text", "lowres, blurry, out of focus, deformed, bad anatomy, extra limbs, mutated, watermark, text, logo, signature"]]}
+   },
+   "variants": [
+    {"id": "fp16", "label": "fp16", "min_vram_gb": 3}
    ]
   }
  ]

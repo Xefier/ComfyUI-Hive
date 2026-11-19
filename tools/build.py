@@ -98,6 +98,12 @@ def main():
         needed = set()  # names the workflows load, before any variant swaps them
         tasks = {}
         for task, spec in model["tasks"].items():
+            if "like" in spec:
+                # A task several models share, with this model's own keys added
+                spec = dict(source["tasks"][spec["like"]], **{k: v for k, v in spec.items() if k != "like"})
+                defaults = spec.pop("defaults", {})
+                spec["inputs"] = [dict(item, default=defaults[item["name"]]) if item["name"] in defaults else item
+                                  for item in spec["inputs"]]
             with open(os.path.join(options.templates, spec["template"] + ".json"), encoding="utf-8") as handle:
                 template = json.load(handle)
             # Nodes the template has bypassed that this task needs (an image input left off by default)
@@ -106,6 +112,32 @@ def main():
                     node["mode"] = 0
             prompt, params = convert.convert(template, info)
             known = template_files(template)
+            # A model of its own run through another model's template (a checkpoint for CheckpointLoaderSimple):
+            # its file in place of the template's, kept in the same folder
+            for old, own in model.get("files", {}).items():
+                if old not in known:
+                    print(f"  {task}: {old} is not loaded by {spec['template']}", file=sys.stderr)
+                    problems += 1
+                    continue
+                known[own["name"]] = (known[old][0], own["url"])
+                for node in prompt.values():
+                    for name, value in node["inputs"].items():
+                        if value == old:
+                            node["inputs"][name] = own["name"]
+            # Settings of the template this task always changes (a negative prompt, the sampler)
+            for node_id, name, value in spec.get("set", []):
+                prompt[node_id]["inputs"][name] = value
+            # Skips the text encoder's last layers ("clip skip"), as a model like Pony is trained: a CLIPSetLastLayer
+            # after the CLIP output named, which everything that took that output takes instead
+            if "clip_skip" in spec:
+                clip = spec["clip_skip"]["after"]
+                takers = [(node, name) for node in prompt.values() for name, value in node["inputs"].items()
+                          if value == clip]
+                prompt["clip-skip"] = {"class_type": "CLIPSetLastLayer",
+                                       "inputs": {"stop_at_clip_layer": spec["clip_skip"]["layer"], "clip": clip},
+                                       "_meta": {"title": "CLIP skip"}}
+                for node, name in takers:
+                    node["inputs"][name] = ["clip-skip", 0]
             loads = used_names(prompt) & set(known)
             for name in sorted(loads):  # so the catalog comes out the same every time
                 directory, url = known[name]
@@ -117,11 +149,17 @@ def main():
                 if entry["kind"] == "loras":
                     # The slots and strength limits are the same for every model: said once in the source
                     entry = dict(source["loras"], **item)
-                    for node_id, *_ in entry["after"]:
-                        if not any(value == [node_id, 0] for node in prompt.values()
-                                   for value in node["inputs"].values()):
-                            print(f"  {task}: nothing takes the output of node '{node_id}', named for the LoRAs",
+                    outputs = [[node_id, 0] for node_id, *_ in entry["after"]]
+                    if "clip" in entry:
+                        if len(entry["after"]) != 1:
+                            print(f"  {task}: LoRAs on the CLIP too need one model output, not a pair",
                                   file=sys.stderr)
+                            problems += 1
+                        outputs.append(entry["clip"])
+                    for output in outputs:
+                        if not any(value == output for node in prompt.values() for value in node["inputs"].values()):
+                            print(f"  {task}: nothing takes output {output[1]} of node '{output[0]}', named for "
+                                  "the LoRAs", file=sys.stderr)
                             problems += 1
                 param = entry.get("param")
                 if param is not None and param not in params and "." in param:
@@ -169,7 +207,7 @@ def main():
         for variant in variants:
             total = sum(files[n]["size"] or 0 for n in variant["files"])
             print(f"  variant {variant['id']}: {len(variant['files'])} files, {total / 1024 ** 3:.1f} GB")
-        catalog["models"].append(dict({k: v for k, v in model.items() if k not in ("tasks", "variants")},
+        catalog["models"].append(dict({k: v for k, v in model.items() if k not in ("tasks", "variants", "files")},
                                       tasks=tasks, variants=variants, files=files))
 
     with open(os.path.join(MINER, "catalog.json"), "w", encoding="utf-8", newline="\n") as handle:

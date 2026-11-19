@@ -1,0 +1,155 @@
+{
+ "template": "image_sdxl_simple",
+ "prompt": {
+  "7": {
+   "class_type": "SaveImage",
+   "inputs": {
+    "filename_prefix": "sdxl_simple",
+    "images": [
+     "14",
+     0
+    ]
+   },
+   "_meta": {
+    "title": "SaveImage"
+   }
+  },
+  "10": {
+   "class_type": "CLIPTextEncode",
+   "inputs": {
+    "text": "a giant classical marble statue standing alone in a pure white empty void, soft diffused lighting, subtle shadows, surreal, minimalist, fine art photography, quiet atmosphere, sense of scale",
+    "clip": [
+     "clip-skip",
+     0
+    ]
+   },
+   "_meta": {
+    "title": "Positive Prompt"
+   }
+  },
+  "11": {
+   "class_type": "CLIPTextEncode",
+   "inputs": {
+    "text": "score_4, score_5, score_6, lowres, blurry, deformed, bad anatomy, extra limbs, watermark, text, logo, signature",
+    "clip": [
+     "clip-skip",
+     0
+    ]
+   },
+   "_meta": {
+    "title": "Negative Prompt"
+   }
+  },
+  "12": {
+   "class_type": "KSampler",
+   "inputs": {
+    "seed": 812045847300606,
+    "steps": 25,
+    "cfg": 7,
+    "sampler_name": "euler_ancestral",
+    "scheduler": "normal",
+    "denoise": 1,
+    "model": [
+     "15",
+     0
+    ],
+    "positive": [
+     "10",
+     0
+    ],
+    "negative": [
+     "11",
+     0
+    ],
+    "latent_image": [
+     "13",
+     0
+    ]
+   },
+   "_meta": {
+    "title": "KSampler"
+   }
+  },
+  "13": {
+   "class_type": "EmptyLatentImage",
+   "inputs": {
+    "width": 1024,
+    "height": 1024,
+    "batch_size": 1
+   },
+   "_meta": {
+    "title": "Empty Latent"
+   }
+  },
+  "14": {
+   "class_type": "VAEDecode",
+   "inputs": {
+    "samples": [
+     "12",
+     0
+    ],
+    "vae": [
+     "15",
+     2
+    ]
+   },
+   "_meta": {
+    "title": "VAEDecode"
+   }
+  },
+  "15": {
+   "class_type": "CheckpointLoaderSimple",
+   "inputs": {
+    "ckpt_name": "ponyDiffusionV6XL.safetensors"
+   },
+   "_meta": {
+    "title": "CheckpointLoaderSimple"
+   }
+  },
+  "clip-skip": {
+   "class_type": "CLIPSetLastLayer",
+   "inputs": {
+    "stop_at_clip_layer": -2,
+    "clip": [
+     "15",
+     1
+    ]
+   },
+   "_meta": {
+    "title": "CLIP skip"
+   }
+  }
+ },
+ "params": {
+  "10.text": [
+   [
+    "10",
+    "text"
+   ]
+  ],
+  "13.width": [
+   [
+    "13",
+    "width"
+   ]
+  ],
+  "13.height": [
+   [
+    "13",
+    "height"
+   ]
+  ],
+  "12.steps": [
+   [
+    "12",
+    "steps"
+   ]
+  ],
+  "12.cfg": [
+   [
+    "12",
+    "cfg"
+   ]
+  ]
+ }
+}

@@ -79,14 +79,24 @@ versions of this miner.
 - **Edit image** (Qwen-Image 2.1 Turbo): attach the image and say in the prompt what to change ("make it night",
   "replace the car with a bicycle", "remove the text"); the result keeps the image's size. A prompt-refining model
   first turns the instruction into a fuller one, as in ComfyUI's own template.
-- **LoRAs:** Wan 2.2 (14B and 5B) and HunyuanVideo 1.5 take up to 3 of your own LoRAs per request, in **LoRAs**
+- **LoRAs:** Wan 2.2 (14B and 5B), HunyuanVideo 1.5, SDXL 1.0, Pony Diffusion V6 XL and SD 1.5 take up to 3 of your own LoRAs per request, in **LoRAs**
   under the task buttons: each slot is a file and a strength (1 by default, negative allowed), set with the slider (-5 to 5, for slider LoRAs
   that are used at either side of 0; double-click it to go back to 1) or typed (-10 to 10); a slot left on "none"
   isn't used. They are added on top of what the model's workflow already applies, the Wan 2.2 14B speed-up LoRAs
   included. Wan 2.2 14B is two models, a high-noise and a low-noise one, and every LoRA goes to both: a LoRA that comes
   as one file (a Wan 2.1 LoRA, say) is used for both, and for one that comes as a high and a low file, pick the high
-  file in the slot and the low file under **low noise**. Only the video model is changed, not the text encoder
-  (ComfyUI's `LoraLoaderModelOnly`). A request in the history says which LoRAs it used.
+  file in the slot and the low file under **low noise**. The page goes by the file names (`high`/`low` as a word in the
+  name, as in `..._high_noise.safetensors`): picking either half of a pair whose other half is on the rig puts the high
+  one in the slot and the low one under **low noise**, and a half used alone, a pair the wrong way round, or a pair's
+  file on a model other than Wan 2.2 14B gets a warning under its slot. A half alone does little: the high-noise model
+  makes the shapes and the motion, and gets the low-noise file too. On the video models only the video model is changed, not the
+  text encoder (ComfyUI's `LoraLoaderModelOnly`); on SDXL, Pony and SD 1.5 a LoRA changes the text encoder too, at
+  the same strength (`LoraLoader`), as LoRAs for those expect. A request in the history says which LoRAs it used.
+  - **Which model a LoRA is for:** a LoRA works only on the family it was trained for, which its Civitai page gives
+    as the base model: "SD 1.5" for SD 1.5, "SDXL 1.0" for SDXL, "Pony" for Pony Diffusion V6 XL, "Wan Video" for Wan
+    (a Wan 2.1 14B LoRA works on Wan 2.2 14B too), "HunyuanVideo" for HunyuanVideo. One for another family
+    fails no request: ComfyUI finds nothing it fits and it simply changes nothing. Pony and SDXL LoRAs load on each
+    other's model but work poorly there.
   - **Adding one:** drop a `.safetensors` file on the chat or choose it in the LoRAs box; it uploads into the rig's
     `models/loras` folder with a progress bar and can be cancelled. 8 GB at most each, `.safetensors` only, and
     the name keeps only letters, digits, spaces and `. _ - + ( )`. A file copied into that folder by hand (in a
@@ -153,8 +163,12 @@ pulling a client change, new sessions pick it up; after moving the clone, run `a
 | MiniMax H3 | text/image to video with sound, text to image | pruned w6a8 | pruned int8 | 39 / 44 GB | Commercial use of what it makes needs a MiniMax license (sold through Comfy) |
 | Z-Image Turbo | text to image | bf16 | bf16 | 19 GB | |
 | Qwen-Image 2.1 Turbo | text to image, up to 2K; edit image | int8 | bf16 | 34 / 40 GB | Editing has its own prompt-refining text encoder, included in the download |
+| SDXL 1.0 | text to image, 1024 px | fp16 | fp16 | 6.5 GB | Stability's base model. Takes your LoRAs (SDXL) |
+| Pony Diffusion V6 XL | text to image, 1024 px | fp16 | fp16 | 6.5 GB | SDXL-based, prompted with tags: start with `score_9, score_8_up, score_7_up`. Clip skip 2 and Euler a, as its author advises. Takes your LoRAs (Pony) |
+| SD 1.5 | text to image, 512 px | fp16 | fp16 | 2 GB | Takes your LoRAs (SD 1.5) |
 
-The workflows are ComfyUI's own templates for each model, as its editor offers them (with their defaults: speed-up LoRAs
+SDXL, Pony and SD 1.5 share ComfyUI's SDXL template (one checkpoint, prompt, sampler, decode), with the page also
+setting the steps and CFG and a fixed negative prompt per model. The workflows are ComfyUI's own templates for each model, as its editor offers them (with their defaults: speed-up LoRAs
 on, sizes, lengths); only the prompt, image, size, length and seed are set by the page, and your LoRAs added. **Which build fits which card is
 an estimate** from the files' sizes and the templates' own notes (the Wan 2.2 template measured its fp8 build at 84% of
 a 24 GB card), not yet measured on these rigs. If a model runs out of memory on a card, raise its `min_vram_gb` in
@@ -192,7 +206,11 @@ The miner ships ready-made API workflows (`comfyui-hive/workflows/`) and `comfyu
    GPU memory each needs and the files they swap. For a task to take the user's LoRAs, give it an input of kind
    `loras` whose `after` names the node whose model output they are chained onto (two nodes, the second marked
    `"low"`, for a high-noise and low-noise pair); `page.py` adds the loader nodes when a request is sent, so there
-   is one workflow per task whatever the number of LoRAs.
+   is one workflow per task whatever the number of LoRAs. Give it `clip` (the text encoder's output) for LoRAs that
+   change the text encoder too. A model with no template of its own can use another's: `files` puts its file in
+   place of the template's (a checkpoint for the SDXL template), a task's `set` changes the template's settings
+   (the negative prompt, the sampler) and `clip_skip` skips the text encoder's last layers. Models sharing a task
+   name it once in `tasks` and refer to it with `like`.
 3. `python tools/build.py --templates <templates folder> --object-info <object_info.json>` converts the templates
    (`tools/convert.py` expands their subgraphs into the API format), works out which files each workflow loads and their
    sizes on Hugging Face.
@@ -258,6 +276,17 @@ reaches ComfyUI and fails only at loading the empty stand-in model files; the pa
 is pasted on Qwen-Image. `comfy_download` against the page, with a small real file from Hugging Face: a yes and a no in
 the dialog, a dialog the client cancels by itself (then the session's yes in the conversation), and a refusal without
 any yes. Not run: a real edit, and the dialog in a real Claude Code session.
+
+For SDXL 1.0, Pony Diffusion V6 XL and SD 1.5 (v0.6), with a CPU-only ComfyUI v0.45.0 on Windows: every workflow of the
+catalog is taken by ComfyUI (`tools/check.py`), the three new ones also with all 3 LoRA slots filled; the workflow
+`page.py` builds for Pony with two LoRAs chains checkpoint, `LoraLoader`s (model and text encoder, a negative strength
+passed through), clip skip, prompts and sampler as meant; the other models' workflows come out of `tools/build.py`
+unchanged. Not run: a download of the three on a rig, a real image from any of them, and a real LoRA on them.
+
+For the high and low pairing (v0.6), the page run on Windows with stand-in LoRA files, in a browser: picking a low-noise file
+whose high-noise file is on the rig fills the slot with the high one and **low noise** with the low one; a low-noise file
+alone is warned about on Wan 2.2 14B, and both halves on Wan 2.2 5B; a file that isn't a half gets no warning; no
+errors in the browser's console.
 
 For the chats and the Outputs view (v0.5), the page run on a PC without ComfyUI, on a made-up history and image files:
 the history from before chats opens as General; a new chat, its name from the first prompt, rename, archive and

@@ -1030,6 +1030,270 @@
      "size": 14230280616
     }
    }
+  },
+  {
+   "id": "sdxl-1.0",
+   "name": "SDXL 1.0",
+   "about": "Stability's SDXL base: text to image at 1024 px. Takes SDXL LoRAs.",
+   "tasks": {
+    "t2i": {
+     "workflow": "sdxl-1.0-t2i.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "10.text"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "13.width",
+       "min": 256,
+       "max": 2048,
+       "step": 8,
+       "default": 1024
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "13.height",
+       "min": 256,
+       "max": 2048,
+       "step": 8,
+       "default": 1024
+      },
+      {
+       "name": "steps",
+       "kind": "int",
+       "param": "12.steps",
+       "min": 1,
+       "max": 100,
+       "default": 25
+      },
+      {
+       "name": "cfg",
+       "kind": "float",
+       "param": "12.cfg",
+       "min": 1,
+       "max": 20,
+       "default": 7
+      },
+      {
+       "slots": 3,
+       "strength": {
+        "min": -10,
+        "max": 10,
+        "default": 1
+       },
+       "name": "loras",
+       "kind": "loras",
+       "after": [
+        [
+         "15"
+        ]
+       ],
+       "clip": [
+        "15",
+        1
+       ]
+      }
+     ]
+    }
+   },
+   "variants": [
+    {
+     "id": "fp16",
+     "label": "fp16",
+     "min_vram_gb": 7,
+     "files": [
+      "sd_xl_base_1.0.safetensors"
+     ]
+    }
+   ],
+   "files": {
+    "sd_xl_base_1.0.safetensors": {
+     "name": "sd_xl_base_1.0.safetensors",
+     "dir": "checkpoints",
+     "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/main/sd_xl_base_1.0.safetensors?download=true",
+     "size": 6938078334
+    }
+   }
+  },
+  {
+   "id": "pony-v6-xl",
+   "name": "Pony Diffusion V6 XL",
+   "about": "SDXL-based, text to image at 1024 px, trained on tags. Start a prompt with score_9, score_8_up, score_7_up. Takes Pony LoRAs.",
+   "tasks": {
+    "t2i": {
+     "workflow": "pony-v6-xl-t2i.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "10.text"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "13.width",
+       "min": 256,
+       "max": 2048,
+       "step": 8,
+       "default": 1024
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "13.height",
+       "min": 256,
+       "max": 2048,
+       "step": 8,
+       "default": 1024
+      },
+      {
+       "name": "steps",
+       "kind": "int",
+       "param": "12.steps",
+       "min": 1,
+       "max": 100,
+       "default": 25
+      },
+      {
+       "name": "cfg",
+       "kind": "float",
+       "param": "12.cfg",
+       "min": 1,
+       "max": 20,
+       "default": 7
+      },
+      {
+       "slots": 3,
+       "strength": {
+        "min": -10,
+        "max": 10,
+        "default": 1
+       },
+       "name": "loras",
+       "kind": "loras",
+       "after": [
+        [
+         "15"
+        ]
+       ],
+       "clip": [
+        "15",
+        1
+       ]
+      }
+     ]
+    }
+   },
+   "variants": [
+    {
+     "id": "fp16",
+     "label": "fp16",
+     "min_vram_gb": 7,
+     "files": [
+      "ponyDiffusionV6XL.safetensors"
+     ]
+    }
+   ],
+   "files": {
+    "ponyDiffusionV6XL.safetensors": {
+     "name": "ponyDiffusionV6XL.safetensors",
+     "dir": "checkpoints",
+     "url": "https://huggingface.co/AstraliteHeart/pony-diffusion-v6/resolve/main/v6.safetensors",
+     "size": 6938041050
+    }
+   }
+  },
+  {
+   "id": "sd-1.5",
+   "name": "SD 1.5",
+   "about": "Stable Diffusion 1.5: text to image at 512 px, small and quick. Takes SD 1.5 LoRAs.",
+   "tasks": {
+    "t2i": {
+     "workflow": "sd-1.5-t2i.json",
+     "inputs": [
+      {
+       "name": "prompt",
+       "kind": "text",
+       "param": "10.text"
+      },
+      {
+       "name": "width",
+       "kind": "int",
+       "param": "13.width",
+       "min": 256,
+       "max": 2048,
+       "step": 8,
+       "default": 512
+      },
+      {
+       "name": "height",
+       "kind": "int",
+       "param": "13.height",
+       "min": 256,
+       "max": 2048,
+       "step": 8,
+       "default": 512
+      },
+      {
+       "name": "steps",
+       "kind": "int",
+       "param": "12.steps",
+       "min": 1,
+       "max": 100,
+       "default": 25
+      },
+      {
+       "name": "cfg",
+       "kind": "float",
+       "param": "12.cfg",
+       "min": 1,
+       "max": 20,
+       "default": 7
+      },
+      {
+       "slots": 3,
+       "strength": {
+        "min": -10,
+        "max": 10,
+        "default": 1
+       },
+       "name": "loras",
+       "kind": "loras",
+       "after": [
+        [
+         "15"
+        ]
+       ],
+       "clip": [
+        "15",
+        1
+       ]
+      }
+     ]
+    }
+   },
+   "variants": [
+    {
+     "id": "fp16",
+     "label": "fp16",
+     "min_vram_gb": 3,
+     "files": [
+      "v1-5-pruned-emaonly-fp16.safetensors"
+     ]
+    }
+   ],
+   "files": {
+    "v1-5-pruned-emaonly-fp16.safetensors": {
+     "name": "v1-5-pruned-emaonly-fp16.safetensors",
+     "dir": "checkpoints",
+     "url": "https://huggingface.co/Comfy-Org/stable-diffusion-1.5/resolve/main/v1-5-pruned-emaonly-fp16.safetensors",
+     "size": 2132696762
+    }
+   }
   }
  ]
 }

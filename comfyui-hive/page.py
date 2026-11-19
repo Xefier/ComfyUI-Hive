@@ -187,23 +187,38 @@ def looks_like_safetensors(start, length):
     return 2 <= header <= min(length - 8, 100 * 1024 ** 2) and start[8:9] == b"{"
 
 
-def add_loras(prompt, after, slots):
+def add_loras(prompt, after, slots, clip=None):
     """Puts the job's LoRAs into a workflow: a chain of LoraLoaderModelOnly, one per slot, after each model output
     named in `after` ([node] or [node, "low"]), and everything that took that output takes the end of the chain
     instead. So they add to whatever the workflow already applies (the speed-up LoRAs). A model marked "low" is the
-    low-noise one of a pair: it gets the slot's low file when the slot has one, else the same file as the others."""
+    low-noise one of a pair: it gets the slot's low file when the slot has one, else the same file as the others.
+    With `clip` ([node, output] of the text encoder, for a single model), each slot is a LoraLoader that applies the
+    LoRA to that text encoder too, at the same strength, as SD 1.5 and SDXL LoRAs expect."""
     for index, (node_id, *low) in enumerate(after):
         source = [node_id, 0]
+        clip_source = list(clip) if clip and index == 0 else None
         takers = [(node, name) for node in prompt.values() for name, value in node["inputs"].items() if value == source]
+        clip_takers = [(node, name) for node in prompt.values() for name, value in node["inputs"].items()
+                       if clip_source and value == clip_source]
         for number, slot in enumerate(slots, 1):
             new_id = f"lora-{number}-{index}"
-            prompt[new_id] = {"class_type": "LoraLoaderModelOnly",
-                              "inputs": {"lora_name": (low and slot.get("low")) or slot["name"],
-                                         "strength_model": slot["strength"], "model": source},
-                              "_meta": {"title": f"LoRA {number}"}}
+            lora_name = (low and slot.get("low")) or slot["name"]
+            if clip_source:
+                prompt[new_id] = {"class_type": "LoraLoader",
+                                  "inputs": {"lora_name": lora_name, "strength_model": slot["strength"],
+                                             "strength_clip": slot["strength"], "model": source, "clip": clip_source},
+                                  "_meta": {"title": f"LoRA {number}"}}
+                clip_source = [new_id, 1]
+            else:
+                prompt[new_id] = {"class_type": "LoraLoaderModelOnly",
+                                  "inputs": {"lora_name": lora_name, "strength_model": slot["strength"],
+                                             "model": source},
+                                  "_meta": {"title": f"LoRA {number}"}}
             source = [new_id, 0]
         for node, name in takers:
             node["inputs"][name] = source
+        for node, name in clip_takers:
+            node["inputs"][name] = clip_source
 
 
 class Rig:
@@ -930,7 +945,7 @@ def build_prompt(model, variant, job):
                 if node["class_type"] == "LoadImage":
                     node["inputs"]["image"] = job["image"]
         elif item["kind"] == "loras":
-            add_loras(prompt, item["after"], job.get("loras") or [])
+            add_loras(prompt, item["after"], job.get("loras") or [], item.get("clip"))
         elif name in job["values"]:
             put(item["param"], job["values"][name])
     seed = job.get("seed")

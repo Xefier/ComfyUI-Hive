@@ -494,6 +494,55 @@ function loraPaired(item) { return item.after.some(target => target.length > 1);
 function usedLoras() { return loraSlots.filter(slot => slot.name); }
 function lsay(text, bad) { $("lorastatus").textContent = text || ""; $("lorastatus").className = "status" + (bad ? " bad" : ""); }
 
+// Which half of a high-noise and low-noise pair a file is, by its name ("..._high_noise", "...-low.safetensors"), and
+// the other half's file among those on the rig: the same name with high and low swapped.
+const HALF = /(^|[^a-z])(high|low)(?=[^a-z]|$)/i;
+function loraHalf(name) { const m = HALF.exec((name || "").replace(/\.safetensors$/i, "")); return m ? m[2].toLowerCase() : null; }
+function loraPartner(name, names) {
+  const half = loraHalf(name);
+  if (!half) return "";
+  const other = name.replace(new RegExp(HALF.source, "gi"), (all, before, word) =>
+    before + (word === word.toUpperCase() ? (half === "high" ? "LOW" : "HIGH")
+      : word[0] === word[0].toUpperCase() ? (half === "high" ? "Low" : "High") : (half === "high" ? "low" : "high")));
+  return names.find(n => n.toLowerCase() === other.toLowerCase()) || "";
+}
+
+// Picking one half of a pair fills in the other: the high file in the slot, the low one under low noise
+function pairSlot(slot, names) {
+  const partner = loraPartner(slot.name, names);
+  if (!partner) return;
+  if (loraHalf(slot.name) === "low") [slot.name, slot.low] = [partner, slot.name];
+  else if (!slot.low) slot.low = partner;
+}
+
+// What is wrong with a slot's files for this model, or ""
+function loraWarning(slot, item, names) {
+  if (!slot.name) return "";
+  const half = loraHalf(slot.name), partner = loraPartner(slot.name, names);
+  if (!loraPaired(item)) {
+    return half ? `${slot.name} looks like one half of a high-noise and low-noise pair, made for Wan 2.2 14B, not this model.` : "";
+  }
+  if (half === "low" && !slot.low) {
+    return `${slot.name} is the low-noise half of a pair, so the high-noise model gets it too, and the high-noise model `
+      + "is the one that makes the shapes and the motion: it will do little. "
+      + (partner ? `Pick ${partner} here and this one under low noise.` : "Upload its high-noise file too and pick it here, with this one under low noise.");
+  }
+  if (half === "high" && !slot.low) {
+    return `${slot.name} is the high-noise half of a pair, so the low-noise model gets it too. `
+      + (partner ? `Pick ${partner} under low noise.` : "Upload its low-noise file too and pick it under low noise.");
+  }
+  if (slot.low && loraHalf(slot.low) === "high") return `${slot.low} is a high-noise file, under low noise: swap the two.`;
+  return "";
+}
+
+function drawLoraWarnings(item) {
+  const names = state.loras.map(f => f.name);
+  $("loraslots").querySelectorAll("[data-warn]").forEach((div, i) => {
+    div.textContent = loraWarning(loraSlots[i], item, names);
+    div.hidden = !div.textContent;
+  });
+}
+
 function loraText(slot) {
   return `${slot.name}${slot.low ? ` (low noise: ${slot.low})` : ""} × ${slot.strength}`;
 }
@@ -513,7 +562,7 @@ function drawLoras() {
   $("lorasummary").textContent = `LoRAs · ${used ? used + " used" : "none used"} · ${names.length} on this rig`;
   const key = JSON.stringify([item, state.loras]);
   const box = $("loraslots");
-  if (box.dataset.key === key) return;
+  if (box.dataset.key === key) { drawLoraWarnings(item); return; }
   box.dataset.key = key;
   box.innerHTML = "";
   const paired = loraPaired(item);
@@ -527,7 +576,8 @@ function drawLoras() {
       // The slider is for slider LoRAs, used anywhere from negative to positive: it covers the range they are made
       // for, and the number beside it takes anything the model does
       + `<label title="Drag for a slider LoRA; double-click to go back to ${item.strength.default}">Strength <input type="range" data-field="strength" list="lorazero" min="${Math.max(item.strength.min, -SLIDER)}" max="${Math.min(item.strength.max, SLIDER)}" step="0.05">`
-      + `<input type="number" data-field="strength" min="${item.strength.min}" max="${item.strength.max}" step="0.05"></label>`;
+      + `<input type="number" data-field="strength" min="${item.strength.min}" max="${item.strength.max}" step="0.05"></label>`
+      + `<div class="status bad" data-warn hidden></div>`;
     for (const input of row.querySelectorAll("[data-field]")) {
       const field = input.dataset.field;
       const set = value => {
@@ -537,11 +587,19 @@ function drawLoras() {
       };
       input.value = slot[field];
       input.oninput = () => set(input.value);
-      input.onchange = () => { set(input.value); drawLoras(); };
+      input.onchange = () => {
+        set(input.value);
+        if (field === "name" && paired) {
+          pairSlot(slot, names);
+          for (const select of row.querySelectorAll("select")) select.value = slot[select.dataset.field];
+        }
+        drawLoras();
+      };
       if (input.type === "range") input.ondblclick = () => set(item.strength.default);
     }
     box.appendChild(row);
   }
+  drawLoraWarnings(item);
   const files = $("lorafiles");
   files.innerHTML = "";
   for (const file of state.loras) {
