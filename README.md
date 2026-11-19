@@ -73,6 +73,41 @@ The page and ComfyUI have no login: like Ollama-Hive's API, anything on the LAN 
 including starting a download or deleting a model. They listen only on the private LAN address, and `allow=` limits
 which addresses can connect.
 
+## Claude sessions
+
+Claude Code sessions on your PCs can make images and videos on the rigs too. On each PC, clone or pull this repo (needs
+Claude Code and Python 3.8 or newer; nothing to install), then either ask Claude in this repo's folder ("add the rig at
+192.168.1.189", or `/comfyui-hive add 192.168.1.189`) or run it yourself from the repo's folder:
+
+```powershell
+.\client\comfyui-hive.cmd add 192.168.1.189 192.168.1.232
+```
+
+| Command | Does |
+|---|---|
+| `comfyui-hive add <address>[:port] ...` | Adds rigs; the page's port 8189 unless given. Registers the MCP server on first use |
+| `comfyui-hive remove <address>[:port] ...` | Removes rigs; removing the last one unregisters the server |
+| `comfyui-hive list` | Lists the rigs, whether each answers, and its downloaded models (also what a double-click does) |
+| `comfyui-hive unregister` | Removes every rig and the server |
+
+It registers for the current Windows user, in every project. New sessions then get four tools:
+
+- `comfy_status`: each rig, its GPU, the models downloaded on it with what they can make and their settings' limits,
+  the models that could be downloaded, and the requests running or waiting.
+- `comfy_generate`: makes an image or a video and saves it on this PC, returning the file's path. The session gives
+  the prompt, the model (it can be left out when only one downloaded model can do the task), the task (`t2i`, `t2v`,
+  `i2v`), an image path for image to video, and optionally size, length or duration, and seed. It goes to the least
+  busy rig that has the model. It waits with progress (step and speed) for up to 30 minutes; with `wait: false` it
+  returns at once with a job id.
+- `comfy_result`: waits for such a job and saves its result.
+- `comfy_cancel`: stops a job.
+
+**It never downloads a model.** Only models already downloaded on a rig can be used; if none has the one asked for,
+the tool says which rig's page to press Download on. Results go to `Videos\ComfyUI-Hive` (set `COMFYUI_HIVE_OUT` in your
+environment before `add` for another folder). An image to animate is read only from the session's folder, the results
+folder (so an image it made can be animated next), Pictures, Downloads, Desktop and Claude's scratch folders. After
+pulling a client change, new sessions pick it up; after moving the clone, run `add` again.
+
 ## Models
 
 | Model | Makes | 4090 (24 GB) | 5090 (32 GB) | Download | Notes |
@@ -148,6 +183,7 @@ curl -s http://$(cat /run/comfyui-hive/address):8188/system_stats | jq
 - `h-stats.sh`: dashboard stats
 - `h-config.sh`: checks the flight sheet settings and writes `comfyui-hive.conf`
 - `h-common.sh`, `h-log.sh`: settings, paths and helpers they share
+- `client/comfyui_hive_mcp.py`: the Claude Code tools (MCP server, runs on the PC); `client/comfyui-hive.cmd` / `.ps1` register it
 
 Build the archive with `Archive.bat`, then rename it to `comfyui-hive-v<version>.tar.gz`: Hive reads the miner's name
 and version from the file name.
