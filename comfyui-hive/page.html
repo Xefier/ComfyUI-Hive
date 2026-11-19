@@ -1370,7 +1370,7 @@ document.addEventListener("click", e => {
   const view = e.target.closest("[data-view]"), input = e.target.closest("[data-input]"), gone = e.target.closest("[data-delete]");
   if (view) {
     e.preventDefault();
-    const paths = view.closest("#outs") ? outputs.map(o => o.path) : state.jobs.flatMap(j => j.outputs);
+    const paths = view.closest("#outs") ? outputs.map(o => o.path) : state.jobs.flatMap(shownOutputs);
     const list = paths.filter(path => fileKind(path) !== "audio");
     openViewer(list, list.indexOf(view.dataset.view));
   } else if (input) {
@@ -1452,6 +1452,9 @@ try { $("stitch").checked = localStorage.getItem("stitch") === "1"; } catch { /*
 $("stitch").onchange = e => { try { localStorage.setItem("stitch", e.target.checked ? "1" : "0"); } catch { /* as above */ } };
 
 // The video a request made: not the stitched one made of it and those before it
+// What the chat shows of a request's files: of a stitched one, the stitched video without the part made for it,
+// which is all in it (the part stays on the rig, for the next stitching, and is in Outputs)
+const shownOutputs = job => job.outputs.includes(job.stitched) ? job.outputs.filter(path => path === job.stitched || fileKind(path) !== "video") : job.outputs;
 const ownVideo = job => job.outputs.find(path => fileKind(path) === "video" && path !== job.stitched);
 
 // The picture a video ends on, as the browser plays it
@@ -1675,7 +1678,7 @@ function drawMessages() {
     else if (job.state === "done") {
       const took = job.finished && job.started ? ` in ${clock(job.finished - job.started)}` : "";
       html += `<div class="hint">Done${took}</div>`
-        + job.outputs.map(path => (path === job.stitched ? `<div class="hint">All ${job.parts} in a row, stitched:</div>` : "") + media(path, true)).join("")
+        + shownOutputs(job).map(path => (path === job.stitched ? `<div class="hint" title="The part this request added is in it, and on its own in Outputs">All ${job.parts} in a row, stitched:</div>` : "") + media(path, true)).join("")
         + (job.stitch_error ? `<div class="hint">${esc(job.stitch_error)}</div>` : "")
         + (job.removed ? `<div class="hint">${job.removed === 1 ? "A file it made was" : job.removed + " files it made were"} deleted</div>` : "");
     } else if (job.state === "cancelled") html += `<div class="hint">Cancelled</div>`;

@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.12.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.13.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -66,7 +66,8 @@ versions of this miner.
   its own; with **Also make one stitched video of them in a row** ticked, the rig also makes one video of the whole
   row when it is done: every video continued up to this one, one after another, the frame they share left out once,
   with their sound. It is made from the videos themselves each time, never from an earlier stitched one, with PyAV,
-  which ComfyUI has installed. The last frame is taken as the browser plays the video, so a little softer than the
+  which ComfyUI has installed. The chat shows only the stitched video under such a request: the part it added is in
+  it, stays on the rig for the next stitching, and is listed in Outputs. The last frame is taken as the browser plays the video, so a little softer than the
   model made it.
 - **A request taken to another rig:** with **Other rigs** on, a list of the rigs stands beside Use again and Continue,
   set to the open chat's own. With another rig chosen, they start a new chat on that rig, named after this one, with
@@ -384,6 +385,9 @@ chat, a model the other rig doesn't offer, and any of it on a rig.
 For the mark of a finished chat (v0.12), on a PC with made-up requests: none on the first visit, **finished** and
 **failed** on chats whose last request ended after they were looked at, none for a cancelled one or the open chat, and
 the mark gone after opening the chat. Not run: a request that ends while the page is open, and any of it on a rig.
+
+For a stitched request showing only its stitched video (v0.13), on a PC with a made-up one: the stitched video alone
+under it, Continue still offered, and its own part shown again once the stitched video is deleted.
 
 For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
 with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like
