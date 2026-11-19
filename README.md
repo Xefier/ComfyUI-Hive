@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.8.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.9.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -79,6 +79,8 @@ versions of this miner.
   started on, and a request sent this way says on its own rig's page whose page it came from. The browser only talks
   to the rig whose page is open, which passes everything on, so it works from anywhere that rig's page does. Every rig
   needs this version, and with `allow=` set, the rigs' own addresses must be in it for them to reach each other.
+- **Progress in the list of chats:** a chat with a request under way has a bar on its card in the list, with how far
+  it is and the time left, or "waiting its turn" behind another request: every rig's work at a glance.
 - **One scroll bar:** on a desktop screen the page itself doesn't scroll, only the chat's messages do (and the side
   panel when its lists are longer than the window). A phone scrolls as one page.
 - **A rental is never interrupted by a request:** before a request is taken, and again before one that waited in the
@@ -341,6 +343,10 @@ unchanged; an address that isn't a known rig refused; **Other rigs** turned off 
 while its chat was open, which says it doesn't answer and lets another chat be opened. Not run: any of it on a rig,
 the broadcast by which rigs find each other (two copies on one PC can't share the port), the worker's name read from
 Hive, and a video played through another rig.
+
+For the bars in the list of chats (v0.9), with made-up requests: the rig's numbers for a chat with a running, a
+waiting and a finished request, and the cards drawn for each, one of another rig among them, filling without the list
+being built again. Not run: a real request, and any of it on a rig.
 
 For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
 with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like

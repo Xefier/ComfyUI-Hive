@@ -79,6 +79,8 @@ button.small { padding: 3px 9px; font-size: 13px; border-radius: 7px; }
 .model .meta, .chatitem .meta { color: var(--muted); font-size: 12.5px; }
 .model .note { color: var(--warn); font-size: 12.5px; margin-top: 4px; }
 .model .actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+.chatitem .bar { margin-top: 6px; }
+.chatitem .bar > div { transition: width 1.5s linear; }
 .chatitem .actions { display: none; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
 .chatitem.picked .actions, .chatitem:hover .actions { display: flex; }
 details.more > summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 6px 2px; }
@@ -402,7 +404,8 @@ function drawChats() {
   const all = chatList();
   const archived = all.filter(c => c.archived).length;
   const list = all.filter(c => showArchived || !c.archived || mine(c));
-  const key = JSON.stringify([list, chat, rigOf, rigChats.size]);
+  // How far each is changes all the time: it is filled in below, so the list isn't built again for it
+  const key = JSON.stringify([list.map(c => ({ ...c, progress: 0, eta: 0 })), chat, rigOf, rigChats.size]);
   if (box.dataset.key !== key) {
     box.dataset.key = key;
     box.innerHTML = "";
@@ -411,7 +414,8 @@ function drawChats() {
       const div = document.createElement("div");
       div.className = "chatitem" + (mine(c) ? " picked" : "");
       div.innerHTML = `<div class="name"><span>${esc(c.title || "New chat")}</span>${rigChats.size > 1 ? `<span class="tag">${esc(c.rigName)}</span>` : ""}</div>
-        <div class="meta">${c.jobs} ${c.jobs === 1 ? "request" : "requests"}${c.busy ? " · working" : ""}${c.archived ? " · archived" : ""}</div>
+        <div class="meta">${c.jobs} ${c.jobs === 1 ? "request" : "requests"}<span class="doing"></span>${c.archived ? " · archived" : ""}</div>
+        ${c.busy ? `<div class="bar"><div></div></div>` : ""}
         <div class="actions"><button class="small" data-act="rename">Rename</button><button class="small" data-act="archive">${c.archived ? "Unarchive" : "Archive"}</button><button class="small" data-act="delete">Delete</button></div>`;
       div.onclick = e => {
         const act = e.target.dataset && e.target.dataset.act;
@@ -422,6 +426,14 @@ function drawChats() {
       box.appendChild(div);
     }
   }
+  list.forEach((c, i) => {
+    if (!c.busy) return;
+    const div = box.children[i], known = c.running && c.progress != null;
+    div.querySelector(".bar").classList.toggle("wait", c.running && !known);
+    div.querySelector(".bar > div").style.width = known ? (100 * c.progress).toFixed(1) + "%" : "";
+    div.querySelector(".doing").textContent = !c.running ? " · waiting its turn" : !known ? " · working"
+      : ` · ${Math.floor(100 * c.progress)}%` + (c.eta == null ? "" : c.eta < 1 ? " · almost done" : ` · about ${clock(c.eta)} left`);
+  });
   $("showarchived").textContent = archived ? (showArchived ? "Hide archived" : `Show archived (${archived})`) : "";
 }
 

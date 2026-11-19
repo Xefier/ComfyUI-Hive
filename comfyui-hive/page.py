@@ -755,12 +755,17 @@ class Rig:
             return self.keep_image(chat, kind, data), None
 
     def chat_list(self):
-        """The chats, the one last used first, each with how many requests it has and whether one is under way."""
+        """The chats, the one last used first, each with how many requests it has and whether one is under way:
+        how far the running one is and how long it has left, for the bar in the list of chats."""
         with lock:
-            out = []
+            out, now = [], time.time()
             for chat in self.chats:
                 mine = [job for job in self.jobs if job["chat"] == chat["id"]]
+                running = next((j for j in mine if j["state"] == "running"), None)
+                fraction, left, rough = job_progress(running, now) if running and running.get("begun") else (None, None, True)
                 out.append(dict(chat, jobs=len(mine), busy=any(j["state"] in ("queued", "running") for j in mine),
+                                running=bool(running), progress=fraction,
+                                eta=None if left is None or rough else round(left),
                                 last=max([chat["created"]] + [j["created"] for j in mine])))
         return sorted(out, key=lambda chat: -chat["last"])
 
