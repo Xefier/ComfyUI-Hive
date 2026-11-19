@@ -40,6 +40,10 @@ header nav a { font-size: 13.5px; padding: 5px 10px; border-radius: 8px; color: 
 header nav a:hover { background: var(--soft); text-decoration: none; }
 .toggle { display: flex; gap: 5px; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; padding: 5px 8px; }
 .toggle input { accent-color: var(--accent); }
+.veil { display: flex; align-items: center; padding: 4px 8px; }
+.veil[aria-pressed=true] { color: var(--bad); border-color: var(--bad); }
+/* Hidden, not removed: everything keeps its place, and comes back as it was */
+body.veiled :is(img, video) { visibility: hidden; }
 .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); background: var(--inset);
   border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px; white-space: nowrap; }
 .chip.bad { color: var(--bad); border-color: var(--bad); }
@@ -117,6 +121,7 @@ details.more[open] > summary { margin-bottom: 4px; }
 .msg img, .msg video { max-width: 100%; max-height: 60vh; border-radius: 8px; display: block; margin-top: 6px; }
 .msg img, .out img { cursor: zoom-in; }
 .msg .error { color: var(--bad); }
+.msg .links a.danger { color: var(--bad); margin-left: auto; }
 .msg .links, .out .links { display: flex; gap: 14px; font-size: 13px; margin-top: 6px; flex-wrap: wrap; }
 .toast { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: var(--text); color: var(--panel); border-radius: 10px;
   padding: 8px 14px; font-size: 13.5px; box-shadow: var(--shadow); max-width: 90%; z-index: 3; }
@@ -131,6 +136,9 @@ details.more[open] > summary { margin-bottom: 4px; }
 .imagehint .imagesize { color: var(--text); }
 .imagehint .choose { color: var(--accent); cursor: pointer; text-decoration: underline; }
 .chat.dropping { outline: 2px dashed var(--accent); outline-offset: -6px; }
+.continuing { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.continuing label { display: flex; gap: 5px; align-items: center; cursor: pointer; color: var(--text); }
+.continuing input { accent-color: var(--accent); }
 .chat.dropping .imagebox { border-color: var(--accent); }
 textarea, .row input[type=number], .row select, .token input { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--inset);
   color: var(--text); transition: border-color .12s, box-shadow .12s; }
@@ -200,6 +208,11 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
   <span class="rig" id="rig"><span class="chip">…</span></span>
   <nav>
     <label class="toggle" id="rigsbox" hidden title="The chats of the other ComfyUI-Hive rigs on the network in this page's list too, to work in them from here"><input type="checkbox" id="rigson"> Other rigs<span id="rigscount"></span></label>
+    <button class="small veil" id="veil" title="Hide every image and video on the page until this is pressed again (Alt+X)" aria-pressed="false">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 19 2 12z"/><circle cx="12" cy="12" r="3"/><path class="cross" d="M4 3l16 18"/>
+      </svg>
+    </button>
     <label class="toggle" title="A short sound when a request of the open chat ends"><input type="checkbox" id="sound"> Sound when done</label>
     <a id="comfy" href="#" target="_blank" rel="noopener">ComfyUI editor</a>
     <a href="#" id="showlog">Miner log</a>
@@ -255,6 +268,11 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
         <div class="status" id="lorastatus"></div>
         <div id="lorafiles"></div>
       </details>
+      <div class="continuing" id="continuing" hidden>
+        <span>Continues that video from its last frame.</span>
+        <label title="When this one is done, the rig also makes one video of the whole row: every video continued up to this one, one after another"><input type="checkbox" id="stitch"> Also make one stitched video of them in a row</label>
+        <button class="small" id="continuestop" title="Keep the image, as a request of its own">Not a continuation</button>
+      </div>
       <div class="imagebox" id="imagebox" hidden>
         <img id="imagepreview" alt="" hidden>
         <div class="imagehint">
@@ -625,11 +643,14 @@ function drawOutSummary() {
   $("outall").textContent = outputs.length && picked.length === outputs.length ? "Select none" : "Select all";
 }
 
-async function deleteOutputs(paths) {
+// From the Outputs view, or one file from its request in the chat (which tells and draws again its own way)
+async function deleteOutputs(paths, tell = osay, redraw = loadOutputs) {
   if (!confirm(paths.length === 1 ? `Delete ${paths[0]} from the rig?` : `Delete these ${paths.length} files from the rig?`)) return;
-  try { const done = await post("/api/outputs-delete", { paths }); osay(`${done.deleted} deleted`); }
-  catch (e) { osay(e.message, true); }
-  loadOutputs();
+  try {
+    const done = await post("/api/outputs-delete", { paths });
+    tell(done.deleted ? `${done.deleted} deleted` : "Not deleted: the request that makes it is still running", !done.deleted);
+  } catch (e) { tell(e.message, true); }
+  redraw();
 }
 
 $("outall").onclick = () => {
@@ -757,6 +778,7 @@ $("go").onclick = async () => {
     if (!image) { say("Attach an image: drop it, paste it or choose a file", true); return; }
     // One kept on the rig from before isn't sent again: the rig uses its own
     if (image !== true) body.image = image;
+    if (continuing) { body.continues = continuing; body.stitch = $("stitch").checked; }
   }
   if (loraInput(m, task)) body.loras = usedLoras();
   $("go").disabled = true;
@@ -765,6 +787,7 @@ $("go").onclick = async () => {
     if (!chat) openChat((await post("/api/chat-new", {})).chat);
     body.chat = chat;
     await post("/api/generate", body); say(""); $("prompt").value = "";
+    setContinuing(null);
     saveSettings();
   }
   catch (e) { say(e.message, true); }
@@ -1002,6 +1025,7 @@ function imageTask() {
 async function attach(blob, how) {
   if (!blob || !blob.type.startsWith("image/")) { say("That isn't an image", true); return; }
   if (!imageTask()) return;
+  setContinuing(null);
   try {
     const data = TAKEN.includes(blob.type) ? await readAsDataURL(blob) : await toPng(blob);
     if (data.length * 0.75 > MAX_IMAGE) { say("The image is too big (40 MB at most)", true); return; }
@@ -1018,6 +1042,7 @@ async function attach(blob, how) {
     showImageSize();
     say("");
     keepImage({ image: data });
+    return true;
   } catch {
     say("This browser can't read that image", true);
   }
@@ -1153,6 +1178,7 @@ function syncPreset() {
 }
 
 function clearImage() {
+  setContinuing(null);
   image = null;
   imageSize = null;
   showImageSize();
@@ -1249,14 +1275,16 @@ const fileUrl = path => at("/files/" + path.split("/").map(encodeURIComponent).j
 const fileExt = path => path.split(".").pop().toLowerCase();
 const fileKind = path => ["mp4", "webm"].includes(fileExt(path)) ? "video" : ["mp3", "flac", "wav"].includes(fileExt(path)) ? "audio" : "image";
 
-// input: with the link that attaches an image to start the next request from
-function media(path, input) {
+// inChat: with the link that attaches an image to start the next request from, and the one that deletes the file
+// (the Outputs view has its own button for that)
+function media(path, inChat) {
   const url = fileUrl(path), kind = fileKind(path), at = esc(path);
   const view = kind === "video" ? `<video src="${url}" controls loop playsinline preload="metadata"></video>`
     : kind === "audio" ? `<audio src="${url}" controls></audio>` : `<img src="${url}" alt="" data-view="${at}" title="Click to see it large">`;
   return `${view}<div class="links"><a href="${url}?download=1">Download</a><a href="${url}" target="_blank" rel="noopener">Open</a>`
     + (kind === "video" ? `<a href="#" data-view="${at}">View large</a>` : "")
-    + (input && ["png", "jpg", "jpeg", "webp"].includes(fileExt(path)) ? `<a href="#" data-input="${at}" title="Attach it: to make a video from it, or to edit it">Use as input</a>` : "")
+    + (inChat && ["png", "jpg", "jpeg", "webp"].includes(fileExt(path)) ? `<a href="#" data-input="${at}" title="Attach it: to make a video from it, or to edit it">Use as input</a>` : "")
+    + (inChat ? `<a href="#" class="danger" data-delete="${at}" title="Delete this file from the rig">Delete</a>` : "")
     + `</div>`;
 }
 
@@ -1304,7 +1332,7 @@ document.addEventListener("keydown", e => {
 });
 
 document.addEventListener("click", e => {
-  const view = e.target.closest("[data-view]"), input = e.target.closest("[data-input]");
+  const view = e.target.closest("[data-view]"), input = e.target.closest("[data-input]"), gone = e.target.closest("[data-delete]");
   if (view) {
     e.preventDefault();
     const paths = view.closest("#outs") ? outputs.map(o => o.path) : state.jobs.flatMap(j => j.outputs);
@@ -1314,11 +1342,28 @@ document.addEventListener("click", e => {
     e.preventDefault();
     if (!imageTask()) return;
     say("");
+    setContinuing(null);
     keepImage({ output: input.dataset.input });
     toast("That image is attached: write what to do with it.");
     $("prompt").focus();
+  } else if (gone) {
+    e.preventDefault();
+    deleteOutputs([gone.dataset.delete], text => toast(text), refresh);
   }
 });
+
+// --- every image and video hidden, until asked for again: for when someone else can see the screen ---------------
+function setVeil(on) {
+  document.body.classList.toggle("veiled", on);
+  $("veil").setAttribute("aria-pressed", on);
+  if (on) for (const video of document.querySelectorAll("video")) video.pause();
+  try { localStorage.setItem("veil", on ? "1" : "0"); } catch { /* as above */ }
+}
+$("veil").onclick = () => setVeil(!document.body.classList.contains("veiled"));
+document.addEventListener("keydown", e => {
+  if (e.altKey && !e.ctrlKey && !e.metaKey && e.code === "KeyX") { e.preventDefault(); $("veil").click(); }
+});
+try { if (localStorage.getItem("veil") === "1") setVeil(true); } catch { /* as above */ }
 
 // --- a request again: its prompt, model, task, numbers, seed, LoRAs and image back in the composer ---------------
 function settingsText(job) {
@@ -1330,25 +1375,85 @@ function settingsText(job) {
   return parts.join(" · ");
 }
 
-function useAgain(id) {
-  // As it is now: its seed is only known once it has started
-  const job = state.jobs.find(j => j.id === id);
-  if (!job) return;
-  if (!state.models.some(m => m.id === job.model)) { say(`${job.model_name} isn't offered on this rig any more`, true); return; }
+// A request's model, numbers, LoRAs and prompt back in the composer, for the task given, with the seed given
+function restore(job, forTask, seed) {
   picked = job.model;
-  task = job.task;
+  task = forTask;
   const values = kept[picked + "/" + task] = {};
   for (const [name, value] of Object.entries(job.values || {})) values[name] = String(value);
-  values.seed = job.seed == null ? "" : String(job.seed);
+  values.seed = seed == null ? "" : String(seed);
   loraSlots = (job.loras || []).map(slot => ({ name: slot.name, low: slot.low || "", strength: slot.strength }));
   $("prompt").value = job.prompt;
   $("tasks").dataset.key = $("loraslots").dataset.key = "";
   drawModels();
   drawComposer();
   saveSettings();
+}
+
+function useAgain(id) {
+  // As it is now: its seed is only known once it has started
+  const job = state.jobs.find(j => j.id === id);
+  if (!job) return;
+  if (!state.models.some(m => m.id === job.model)) { say(`${job.model_name} isn't offered on this rig any more`, true); return; }
+  setContinuing(null);
+  restore(job, job.task, job.seed);
   if (job.image) keepImage({ job: job.id });
   toast(job.seed == null ? "That request's prompt and settings are back."
     : "That request's prompt and settings are back, with its seed: clear Seed for a different result.");
+  $("prompt").focus();
+}
+
+// --- a request continued: the same again, starting from the last frame of the video it made -----------------------
+// The request sent while this is set says which one it continues, so the rig can stitch the row into one video
+let continuing = null;
+
+function setContinuing(id) {
+  continuing = id;
+  $("continuing").hidden = !id;
+}
+$("continuestop").onclick = () => setContinuing(null);
+try { $("stitch").checked = localStorage.getItem("stitch") === "1"; } catch { /* as above */ }
+$("stitch").onchange = e => { try { localStorage.setItem("stitch", e.target.checked ? "1" : "0"); } catch { /* as above */ } };
+
+// The video a request made: not the stitched one made of it and those before it
+const ownVideo = job => job.outputs.find(path => fileKind(path) === "video" && path !== job.stitched);
+
+// The picture a video ends on, as the browser plays it
+function lastFrame(url) {
+  return new Promise((resolve, reject) => {
+    const video = document.createElement("video");
+    video.muted = true;
+    video.preload = "auto";
+    video.onerror = () => reject(new Error("no video"));
+    video.onloadedmetadata = () => { video.currentTime = Math.max(0, video.duration - 0.01); };
+    video.onseeked = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext("2d").drawImage(video, 0, 0);
+      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("no picture")), "image/png");
+    };
+    video.src = url;
+  });
+}
+
+async function continueFrom(id) {
+  const job = state.jobs.find(j => j.id === id), video = job && ownVideo(job);
+  if (!video) return;
+  const m = state.models.find(m => m.id === job.model);
+  if (!m) { say(`${job.model_name} isn't offered on this rig any more`, true); return; }
+  const from = needsImage(m, job.task) ? job.task : Object.keys(m.tasks).find(t => needsImage(m, t) && t.endsWith("2v"));
+  if (!from) { say(`${m.name} can't start a video from an image: pick a model that can, and use the video's last frame`, true); return; }
+  const asked = chatKey();
+  let frame;
+  try { frame = await lastFrame(fileUrl(video)); }
+  catch { say("This browser couldn't read the video's last frame", true); return; }
+  if (asked !== chatKey()) return;
+  // A new seed: the same one on another start repeats the same movement
+  restore(job, from, null);
+  if (!await attach(frame, "The last frame of that video")) return;
+  setContinuing(id);
+  toast("Its prompt and settings are back, starting from the video's last frame: change the prompt to say what happens next.");
   $("prompt").focus();
 }
 
@@ -1451,7 +1556,7 @@ function drawMessages() {
   if (state.jobs.length) { if (empty) empty.remove(); }
   else if (!empty) box.innerHTML = `<div class="empty"><b>Nothing made in this chat yet</b>Pick a model, write a prompt and press Generate.</div>`;
   for (const job of state.jobs) {
-    const key = JSON.stringify([job.state, job.outputs.length, job.error, job.note, job.ahead, job.wait == null ? null : Math.round(job.wait / 10)]);
+    const key = JSON.stringify([job.state, job.outputs, job.error, job.note, job.ahead, job.wait == null ? null : Math.round(job.wait / 10)]);
     let pair = shown.get(job.id);
     if (pair && pair.key === key) continue;
     if (!pair) {
@@ -1460,18 +1565,22 @@ function drawMessages() {
       const set = settingsText(job);
       you.innerHTML = `<div class="who">${esc(job.model_name)} · ${esc(TASKS[job.task] || job.task)}</div><div class="text">${esc(job.prompt)}</div>`
         + (set ? `<div class="hint">${esc(set)}</div>` : "")
-        + (job.image ? `<div class="hint">from an image</div>` : "")
+        + (job.continues ? `<div class="hint">continues a video from its last frame${job.stitch ? ", stitched with it when done" : ""}</div>`
+          : job.image ? `<div class="hint">from an image</div>` : "")
         + (job.via ? `<div class="hint">sent from the page of ${esc(job.via)}</div>` : "")
         + (job.loras || []).map(slot => `<div class="hint">LoRA ${esc(loraText(slot))}</div>`).join("")
-        + `<div class="links"><a href="#" title="Its prompt, settings, seed, LoRAs and image back in the composer">Use again</a></div>`;
-      you.querySelector(".links a").onclick = e => { e.preventDefault(); useAgain(job.id); };
+        + `<div class="links"><a href="#" data-act="again" title="Its prompt, settings, seed, LoRAs and image back in the composer">Use again</a>`
+        + `<a href="#" data-act="continue" hidden title="Its prompt, settings and LoRAs back in the composer, starting from the last frame of the video it made: to go on where it ended">Continue</a></div>`;
+      you.querySelector("[data-act=again]").onclick = e => { e.preventDefault(); useAgain(job.id); };
+      you.querySelector("[data-act=continue]").onclick = e => { e.preventDefault(); continueFrom(job.id); };
       const rig = document.createElement("div");
       rig.className = "msg rig";
       box.appendChild(you); box.appendChild(rig);
-      pair = { rig };
+      pair = { rig, you };
       shown.set(job.id, pair);
     }
     pair.key = key;
+    pair.you.querySelector("[data-act=continue]").hidden = !(job.state === "done" && ownVideo(job));
     // Updated in place, so the bar moves on rather than starting over and Stop stays under the pointer
     if (job.state === "running") { pair.key = ""; drawRunning(pair.rig, job); continue; }
     let html = `<div class="who">${esc(job.variant)} · seed ${esc(job.seed ?? "random")}</div>`;
@@ -1480,7 +1589,9 @@ function drawMessages() {
     }
     else if (job.state === "done") {
       const took = job.finished && job.started ? ` in ${clock(job.finished - job.started)}` : "";
-      html += `<div class="hint">Done${took}</div>` + job.outputs.map(path => media(path, true)).join("")
+      html += `<div class="hint">Done${took}</div>`
+        + job.outputs.map(path => (path === job.stitched ? `<div class="hint">All ${job.parts} in a row, stitched:</div>` : "") + media(path, true)).join("")
+        + (job.stitch_error ? `<div class="hint">${esc(job.stitch_error)}</div>` : "")
         + (job.removed ? `<div class="hint">${job.removed === 1 ? "A file it made was" : job.removed + " files it made were"} deleted</div>` : "");
     } else if (job.state === "cancelled") html += `<div class="hint">Cancelled</div>`;
     else html += `<div class="error">${esc(job.error || "Failed")}</div>`;

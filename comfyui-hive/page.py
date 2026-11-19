@@ -36,6 +36,7 @@ firewall rules of h-run.sh limit it to allow=. Standard library only, so it runs
 import argparse
 import base64
 import copy
+import fractions
 import hashlib
 import http.client
 import http.server
@@ -75,6 +76,7 @@ APP = "comfyui-hive"
 ANNOUNCE = b"comfyui-hive "  # then the page's port: what a rig tells the LAN every few seconds
 PEER_HEARD = 60  # seconds a rig is asked who it is after it last announced itself
 PEER_KEPT = 20  # seconds a rig stays listed after it last answered
+MAX_STITCH = 40  # videos in one row
 RUN_FIELDS = ("est", "shown", "begun", "first", "last", "rate", "all_step", "all_steps", "pass", "passes")
 
 args = None
@@ -982,6 +984,13 @@ class Rig:
                         return None, "This needs an image: attach one"
                     job["image"] = job["id"] + os.path.splitext(kept)[1]
                     shutil.copyfile(kept, os.path.join(args.inputs, job["image"]))
+            if request.get("continues"):
+                # It starts from the last frame of that request's video: the two belong in a row
+                with lock:
+                    before = next((j for j in self.jobs if j["id"] == str(request["continues"])), None)
+                if before and before["chat"] == chat["id"]:
+                    job["continues"] = before["id"]
+                    job["stitch"] = bool(request.get("stitch"))
         if request.get("seed") not in (None, ""):
             try:
                 job["seed"] = int(request["seed"])
@@ -1002,6 +1011,31 @@ class Rig:
             wake_jobs.notify_all()
         log(f"Job {job['id']}: {model['name']} {task}: {prompt[:120]}")
         return job, None
+
+    def stitch(self, job):
+        """Makes one video of a request's and those it continues, in a row, beside the request's own. Each part is
+        taken from the request that made it, never from an earlier stitched one, so nothing is encoded twice over."""
+        with lock:
+            parts, link = [], job
+            while link and len(parts) < MAX_STITCH:
+                video = next((path for path in link["outputs"] if is_video(path) and path != link.get("stitched")), None)
+                if video is None:
+                    break  # deleted since: the row starts after it
+                parts.insert(0, video)
+                link = next((j for j in self.jobs if j["id"] == link.get("continues")), None)
+        if len(parts) < 2:
+            job["stitch_error"] = "Not stitched: the video this continues is no longer on the rig"
+            return
+        name = os.path.splitext(parts[-1])[0] + "-stitched.mp4"
+        try:
+            stitch_videos([os.path.join(args.outputs, path) for path in parts], os.path.join(args.outputs, name))
+        except Exception as error:  # noqa: BLE001 - the request's own video is there all the same
+            job["stitch_error"] = f"Not stitched: {error}"
+            log(f"Job {job['id']}: not stitched: {error}")
+            return
+        job["stitched"], job["parts"] = name, len(parts)
+        job["outputs"].append(name)
+        log(f"Job {job['id']}: {len(parts)} videos stitched into {name}")
 
     def cancel_job(self, job_id):
         with lock:
@@ -1108,6 +1142,8 @@ class Rig:
                         job["outputs"].append(relative)
         if not job["outputs"]:
             raise RuntimeError("ComfyUI finished without saving anything")
+        if job.get("stitch"):
+            self.stitch(job)
         if job.get("first"):
             # How long each part took, for the estimate of the next request like this one. The time per step is over
             # all passes, so what goes on between them (the other half's model loading) is in it.
@@ -1291,6 +1327,90 @@ def build_prompt(model, variant, job):
         if node["class_type"].startswith("Save") and "filename_prefix" in node["inputs"]:
             node["inputs"]["filename_prefix"] = f"{OUTPUT_PREFIX}/{job['id']}"
     return copy.deepcopy(prompt)
+
+
+def is_video(path):
+    return path.lower().endswith((".mp4", ".webm"))
+
+
+def stitch_videos(sources, target):
+    """Writes the videos one after another into one mp4. Each but the first starts from the frame the one before it
+    ended on, so that frame is left out once, with the sound of its moment. They are decoded and encoded again
+    (H.264, close to lossless): joining them as they are can't leave a frame out.
+
+    With PyAV, which ComfyUI needs and has installed for its own saving of videos; this page runs in the same Python."""
+    try:
+        import av
+        import numpy
+    except ImportError as error:
+        raise RuntimeError("ComfyUI's packages aren't installed yet") from error
+    clips = [av.open(source) for source in sources]
+    partial = target + ".part"
+    try:
+        first = clips[0].streams.video[0]
+        rate = first.average_rate
+        width, height = first.codec_context.width, first.codec_context.height
+        for clip in clips[1:]:
+            context = clip.streams.video[0].codec_context
+            if (context.width, context.height) != (width, height):
+                raise RuntimeError(f"the videos differ in size ({width} x {height} and {context.width} x {context.height})")
+        sound = next((clip.streams.audio[0] for clip in clips if clip.streams.audio), None)
+        with av.open(partial, "w", format="mp4") as out:
+            video = out.add_stream("libx264", rate=rate, options={"crf": "14", "preset": "medium"})
+            video.width, video.height, video.pix_fmt = width, height, "yuv420p"
+            audio, channels, layout, hertz = None, 0, "", 0
+            if sound is not None:
+                channels = 1 if sound.codec_context.layout.name == "mono" else 2
+                layout, hertz = "stereo" if channels == 2 else "mono", sound.codec_context.sample_rate
+                audio = out.add_stream("aac", rate=hertz, layout=layout)
+            frames, samples = 0, []
+            for index, clip in enumerate(clips):
+                began = frames
+                for count, frame in enumerate(clip.decode(clip.streams.video[0])):
+                    if index and count == 0:
+                        continue
+                    frame = frame.reformat(width, height, "yuv420p")
+                    frame.pts, frame.time_base = frames, 1 / rate
+                    frames += 1
+                    for packet in video.encode(frame):
+                        out.mux(packet)
+                if audio is None:
+                    continue
+                # The clip's sound, cut or filled with silence to the length of its frames, so the next one starts
+                # with its picture
+                heard = numpy.zeros((channels, 0), dtype="float32")
+                if clip.streams.audio:
+                    clip.seek(0)
+                    resampler = av.AudioResampler(format="fltp", layout=layout, rate=hertz)
+                    pieces = [piece.to_ndarray() for frame in clip.decode(clip.streams.audio[0])
+                              for piece in resampler.resample(frame)]
+                    pieces += [piece.to_ndarray() for piece in resampler.resample(None)]
+                    if pieces:
+                        heard = numpy.concatenate(pieces, axis=1)
+                    if index:
+                        heard = heard[:, round(hertz / rate):]
+                wanted = round((frames - began) * hertz / rate)
+                heard = heard[:, :wanted]
+                samples.append(numpy.pad(heard, ((0, 0), (0, wanted - heard.shape[1]))))
+            for packet in video.encode():
+                out.mux(packet)
+            if audio is not None:
+                heard = numpy.ascontiguousarray(numpy.concatenate(samples, axis=1), dtype="float32")
+                size = audio.codec_context.frame_size or 1024
+                for start in range(0, heard.shape[1], size):
+                    frame = av.AudioFrame.from_ndarray(numpy.ascontiguousarray(heard[:, start:start + size]),
+                                                       format="fltp", layout=layout)
+                    frame.sample_rate, frame.pts, frame.time_base = hertz, start, fractions.Fraction(1, hertz)
+                    for packet in audio.encode(frame):
+                        out.mux(packet)
+                for packet in audio.encode():
+                    out.mux(packet)
+        os.replace(partial, target)
+    finally:
+        for clip in clips:
+            clip.close()
+        if os.path.exists(partial):
+            os.remove(partial)
 
 
 def job_progress(job, now):

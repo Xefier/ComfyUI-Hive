@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.9.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.10.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -61,6 +61,17 @@ versions of this miner.
 - **A request again:** **Use again** under a request puts its prompt, model, task, numbers, seed, LoRAs and image
   back in the composer (clear Seed for a different result). **Use as input** under an image the rig made attaches it,
   switching to the model's task that starts from an image. Each request shows the size and numbers it was made with.
+- **A video continued:** **Continue**, beside Use again once a request has made a video, does the same but starts
+  from the last frame of that video, with a new seed: to go on where it ended. The request made this way is a video of
+  its own; with **Also make one stitched video of them in a row** ticked, the rig also makes one video of the whole
+  row when it is done: every video continued up to this one, one after another, the frame they share left out once,
+  with their sound. It is made from the videos themselves each time, never from an earlier stitched one, with PyAV,
+  which ComfyUI has installed. The last frame is taken as the browser plays the video, so a little softer than the
+  model made it.
+- **A file deleted from the chat:** **Delete** at the right of a file's links under a request deletes it from the
+  rig, after asking.
+- **Every image hidden:** the eye with a line through it at the top (or Alt+X) hides every image and video on the
+  page and pauses the videos, until it is pressed again. The browser remembers it.
 - **The queue:** a waiting request says how many are before it and, once requests like them have been timed, about
   when it starts.
 - **Without looking:** the tab's title shows how far the open chat's request is ("46% · ComfyUI-Hive"), "Working"
@@ -347,6 +358,14 @@ Hive, and a video played through another rig.
 For the bars in the list of chats (v0.9), with made-up requests: the rig's numbers for a chat with a running, a
 waiting and a finished request, and the cards drawn for each, one of another rig among them, filling without the list
 being built again. Not run: a real request, and any of it on a rig.
+
+For Continue and stitching (v0.10), on a PC with videos made for the test, with and without sound, and PyAV 12 (a rig
+has 14 or newer): two and three stitched with the right number of frames and length of sound, videos of different
+sizes refused, a row of requests stitched from their own videos, and one whose earlier video is gone saying so. On
+the page: Continue attaching the right last frame, the request carrying which one it continues and the choice to
+stitch, and a stitched request continued from its own video. Delete in the chat and the eye (with Alt+X) were tried
+on the same page. Not run: a continued request taken and made by a rig, stitching on a rig, and any of it through
+another rig.
 
 For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
 with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like
