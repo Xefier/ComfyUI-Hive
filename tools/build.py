@@ -107,13 +107,22 @@ def main():
             prompt, params = convert.convert(template, info)
             known = template_files(template)
             loads = used_names(prompt) & set(known)
-            for name in loads:
+            for name in sorted(loads):  # so the catalog comes out the same every time
                 directory, url = known[name]
                 files[name] = {"name": name, "dir": directory, "url": url}
             needed |= loads
             inputs = []
             for item in spec["inputs"]:
                 entry = dict(item)
+                if entry["kind"] == "loras":
+                    # The slots and strength limits are the same for every model: said once in the source
+                    entry = dict(source["loras"], **item)
+                    for node_id, *_ in entry["after"]:
+                        if not any(value == [node_id, 0] for node in prompt.values()
+                                   for value in node["inputs"].values()):
+                            print(f"  {task}: nothing takes the output of node '{node_id}', named for the LoRAs",
+                                  file=sys.stderr)
+                            problems += 1
                 param = entry.get("param")
                 if param is not None and param not in params and "." in param:
                     # "node.input" of a template without a subgraph

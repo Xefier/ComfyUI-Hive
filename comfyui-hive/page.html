@@ -66,6 +66,13 @@ textarea { font: inherit; width: 100%; min-height: 76px; resize: vertical; borde
 .row label { font-size: 13px; color: var(--muted); display: flex; gap: 4px; align-items: center; }
 .row input[type=number] { width: 84px; font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
 .row select { font: inherit; font-size: 14px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+details.loras { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+details.loras summary { cursor: pointer; font-size: 13px; color: var(--muted); }
+details.loras[open] summary { margin-bottom: 8px; }
+details.loras .row { margin-bottom: 6px; }
+details.loras select { max-width: 280px; }
+.lorafile { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 4px; }
+.lorafile .name { overflow-wrap: anywhere; }
 .hint { color: var(--muted); font-size: 13px; }
 .status { font-size: 13px; color: var(--muted); }
 .status.bad { color: var(--bad); }
@@ -97,6 +104,22 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
     <div class="messages" id="messages"></div>
     <div class="composer">
       <div class="tasks" id="tasks"></div>
+      <details class="loras" id="lorabox" hidden>
+        <summary id="lorasummary">LoRAs</summary>
+        <div id="loraslots"></div>
+        <div class="imagehint">
+          <span>Your LoRAs on this rig. Add one: drop a .safetensors file on the chat, or</span>
+          <label class="choose">choose a file<input type="file" id="lorafile" accept=".safetensors" multiple hidden></label>
+        </div>
+        <div class="row" id="loraupload" hidden>
+          <span class="hint" id="loraname"></span>
+          <div class="bar"><div id="lorabar"></div></div>
+          <span class="hint" id="lorapct"></span>
+          <button class="small" id="loracancel">Cancel</button>
+        </div>
+        <div class="status" id="lorastatus"></div>
+        <div id="lorafiles"></div>
+      </details>
       <div class="imagebox" id="imagebox" hidden>
         <img id="imagepreview" alt="" hidden>
         <div class="imagehint">
@@ -216,7 +239,7 @@ function drawComposer() {
     // The attached image stays when switching task or model, so it can be tried with another one
     $("imagebox").hidden = !needsImage(m, task);
     for (const item of (m && task ? m.tasks[task] : [])) {
-      if (item.name === "prompt" || item.name === "image") continue;
+      if (item.name === "prompt" || item.name === "image" || item.kind === "loras") continue;
       const label = document.createElement("label");
       label.innerHTML = `${LABELS[item.name] || item.name} <input type="number" data-name="${item.name}" value="${item.default ?? ""}"
         ${item.min != null ? `min="${item.min}"` : ""} ${item.max != null ? `max="${item.max}"` : ""} step="${item.step || (item.kind === "float" ? 0.5 : 1)}">`;
@@ -228,6 +251,7 @@ function drawComposer() {
     addPresets(sbox);
     showImageSize();
   }
+  drawLoras();
   const ready = m && m.installed && state.state === "ready";
   $("go").disabled = !m || !m.installed;
   if (m && !m.installed) say(`${m.name} isn't on this rig: press Download first.`);
@@ -245,6 +269,7 @@ $("go").onclick = async () => {
     if (!image) { say("Attach an image: drop it, paste it or choose a file", true); return; }
     body.image = image;
   }
+  if (loraInput(m, task)) body.loras = usedLoras();
   $("go").disabled = true;
   try { await post("/api/generate", body); say(""); $("prompt").value = ""; }
   catch (e) { say(e.message, true); }
@@ -252,6 +277,118 @@ $("go").onclick = async () => {
   refresh();
 };
 $("prompt").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("go").click(); });
+
+// --- LoRAs: your own files on the rig, and the slots that add them to a request -----------------------------------
+// A task takes them when the catalog gives it an input of kind "loras": so many slots, each a file and a strength.
+// A model made of a high-noise and a low-noise part (Wan 2.2 14B) can take a second file for the low-noise part.
+let loraSlots = [];
+const loraQueue = [];
+let loraXhr = null;
+
+function loraInput(m, t) { return (m && t && m.tasks[t].find(i => i.kind === "loras")) || null; }
+function loraPaired(item) { return item.after.some(target => target.length > 1); }
+function usedLoras() { return loraSlots.filter(slot => slot.name); }
+function lsay(text, bad) { $("lorastatus").textContent = text || ""; $("lorastatus").className = "status" + (bad ? " bad" : ""); }
+
+function loraText(slot) {
+  return `${slot.name}${slot.low ? ` (low noise: ${slot.low})` : ""} × ${slot.strength}`;
+}
+
+function drawLoras() {
+  const item = loraInput(current(), task);
+  $("lorabox").hidden = !item;
+  if (!item) return;
+  const names = state.loras.map(f => f.name);
+  while (loraSlots.length < item.slots) loraSlots.push({ name: "", low: "", strength: item.strength.default });
+  // A file that was deleted leaves its slot
+  for (const slot of loraSlots) {
+    if (!names.includes(slot.name)) slot.name = "";
+    if (!names.includes(slot.low)) slot.low = "";
+  }
+  const used = usedLoras().length;
+  $("lorasummary").textContent = `LoRAs · ${used ? used + " used" : "none used"} · ${names.length} on this rig`;
+  const key = JSON.stringify([item, state.loras]);
+  const box = $("loraslots");
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
+  box.innerHTML = "";
+  const paired = loraPaired(item);
+  const options = first => `<option value="">${first}</option>` + names.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join("");
+  for (let i = 0; i < item.slots; i++) {
+    const slot = loraSlots[i];
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<label>LoRA ${i + 1} <select data-field="name">${options("none")}</select></label>`
+      + (paired ? `<label title="For a LoRA that comes as a high-noise and a low-noise file: the low-noise one. Otherwise the same file goes to both.">low noise <select data-field="low">${options("same file")}</select></label>` : "")
+      + `<label>Strength <input type="number" data-field="strength" min="${item.strength.min}" max="${item.strength.max}" step="0.05"></label>`;
+    for (const input of row.querySelectorAll("[data-field]")) {
+      input.value = slot[input.dataset.field];
+      input.onchange = () => { slot[input.dataset.field] = input.value; drawLoras(); };
+    }
+    box.appendChild(row);
+  }
+  const files = $("lorafiles");
+  files.innerHTML = "";
+  for (const file of state.loras) {
+    const div = document.createElement("div");
+    div.className = "lorafile";
+    div.innerHTML = `<span class="name">${esc(file.name)}</span><span class="hint">${(file.size / 1024 ** 2).toFixed(0)} MB</span><button class="small">Delete</button>`;
+    div.querySelector("button").onclick = async () => {
+      if (!confirm(`Delete the LoRA ${file.name} from this rig?`)) return;
+      try { await post("/api/lora-delete", { name: file.name }); lsay(""); } catch (e) { lsay(e.message, true); }
+      refresh();
+    };
+    files.appendChild(div);
+  }
+}
+
+// One at a time, the file itself as the request's body, so the bar is the real progress to the rig
+function uploadLoras(files) {
+  if (!loraInput(current(), task)) { say("This model doesn't take LoRAs here", true); return; }
+  $("lorabox").open = true;
+  for (const file of files) {
+    if (!/\.safetensors$/i.test(file.name)) lsay(`${file.name}: a LoRA is a .safetensors file`, true);
+    else if (file.size > state.lora_max) lsay(`${file.name}: a LoRA can be ${gb(state.lora_max)} at most`, true);
+    else if (state.loras.some(f => f.name === file.name)) lsay(`${file.name} is already on this rig: delete it first to replace it`, true);
+    else loraQueue.push(file);
+  }
+  nextLoraUpload();
+}
+
+function nextLoraUpload() {
+  if (loraXhr || !loraQueue.length) return;
+  const file = loraQueue.shift();
+  const xhr = loraXhr = new XMLHttpRequest();
+  const progress = sent => {
+    const pct = Math.floor(100 * sent / file.size);
+    $("lorabar").style.width = pct + "%";
+    $("lorapct").textContent = `${pct}% of ${(file.size / 1024 ** 2).toFixed(0)} MB`;
+  };
+  const done = (text, bad) => {
+    loraXhr = null;
+    $("loraupload").hidden = true;
+    lsay(text, bad);
+    refresh();
+    nextLoraUpload();
+  };
+  $("loraname").textContent = file.name + (loraQueue.length ? ` (${loraQueue.length} more waiting)` : "");
+  $("loraupload").hidden = false;
+  progress(0);
+  xhr.open("POST", "/api/lora-upload?name=" + encodeURIComponent(file.name));
+  xhr.upload.onprogress = e => progress(e.loaded);
+  xhr.onload = () => {
+    let data = {};
+    try { data = JSON.parse(xhr.responseText); } catch { /* not JSON: the status says it */ }
+    if (xhr.status === 200) done(`${data.name} is on the rig`);
+    else done(data.error || `The upload of ${file.name} failed (${xhr.status})`, true);
+  };
+  xhr.onerror = () => done(`The upload of ${file.name} failed: the rig refused it or the connection dropped`, true);
+  xhr.onabort = () => done(`The upload of ${file.name} was cancelled`);
+  xhr.send(file);
+}
+
+$("lorafile").onchange = e => { uploadLoras([...e.target.files]); e.target.value = ""; };
+$("loracancel").onclick = () => { loraQueue.length = 0; if (loraXhr) loraXhr.abort(); };
 
 // --- the image of image-to-video: a file, a drop or a paste -------------------------------------------------------
 
@@ -478,6 +615,9 @@ chat.addEventListener("drop", e => {
   e.preventDefault();
   dragDepth = 0;
   chat.classList.remove("dropping");
+  // A .safetensors file is a LoRA for the rig; anything else is the image to animate
+  const loras = [...(e.dataTransfer.files || [])].filter(f => /\.safetensors$/i.test(f.name));
+  if (loras.length) { uploadLoras(loras); return; }
   const file = imageIn(e.dataTransfer.items) || (e.dataTransfer.files || [])[0];
   if (file) attach(file, "Dropped");
 });
@@ -504,7 +644,8 @@ function drawMessages() {
       const you = document.createElement("div");
       you.className = "msg you";
       you.innerHTML = `<div class="who">${esc(job.model_name)} · ${esc(TASKS[job.task] || job.task)}</div>${esc(job.prompt)}`
-        + (job.image ? `<div class="hint">with ${esc(job.image)}</div>` : "");
+        + (job.image ? `<div class="hint">with ${esc(job.image)}</div>` : "")
+        + (job.loras || []).map(slot => `<div class="hint">LoRA ${esc(loraText(slot))}</div>`).join("");
       const rig = document.createElement("div");
       rig.className = "msg rig";
       box.appendChild(you); box.appendChild(rig);

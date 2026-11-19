@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.2.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.3.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -32,7 +32,7 @@ download it (a GitHub release), then make a flight sheet with miner **Custom**:
 | `allow_docker` | `0` | `1` starts even with Docker containers running |
 
 **Everything goes on the DOCKER drive**, `/var/lib/docker/comfyui-hive`: ComfyUI and its Python (about 8 GB), the
-models (17 to 64 GB each) and what is made. If no drive is mounted at `/var/lib/docker` the miner waits and says so,
+models (17 to 64 GB each), your own LoRAs (in `models/loras`, beside the ones the models bring) and what is made. If no drive is mounted at `/var/lib/docker` the miner waits and says so,
 rather than filling the small OS drive; `data_dir=` puts it all somewhere else. It outlives flight sheet switches and new
 versions of this miner.
 
@@ -64,13 +64,26 @@ versions of this miner.
 
   Either way each side is rounded to the model's multiple, and the page says when it scaled or rounded. MiniMax H3's
   image-to-video takes its size from the image by itself, so it has neither button.
+- **LoRAs:** Wan 2.2 (14B and 5B) and HunyuanVideo 1.5 take up to 3 of your own LoRAs per request, in **LoRAs**
+  under the task buttons: each slot is a file and a strength (1 by default, negative allowed); a slot left on "none"
+  isn't used. They are added on top of what the model's workflow already applies, the Wan 2.2 14B speed-up LoRAs
+  included. Wan 2.2 14B is two models, a high-noise and a low-noise one, and every LoRA goes to both: a LoRA that comes
+  as one file (a Wan 2.1 LoRA, say) is used for both, and for one that comes as a high and a low file, pick the high
+  file in the slot and the low file under **low noise**. Only the video model is changed, not the text encoder
+  (ComfyUI's `LoraLoaderModelOnly`). A request in the history says which LoRAs it used.
+  - **Adding one:** drop a `.safetensors` file on the chat or choose it in the LoRAs box; it uploads into the rig's
+    `models/loras` folder with a progress bar and can be cancelled. 8 GB at most each, `.safetensors` only, and
+    the name keeps only letters, digits, spaces and `. _ - + ( )`. A file copied into that folder by hand (in a
+    subfolder too) is listed as well. **Delete** removes one, unless a waiting or running request uses it.
+  - They are apart from the models' Download and Delete: deleting a model never removes one of your LoRAs, and the
+    LoRAs a model brings aren't in this list.
 - **Switching model** is picking another card. The rig lets go of the last model's memory first, so the first request
   on a new model takes longer while it loads.
 - The page also links ComfyUI's own editor (`http://<rig>:8188`), for building or changing workflows by hand, and shows
   the end of the miner log.
 
 The page and ComfyUI have no login: like Ollama-Hive's API, anything on the LAN that can reach them can use them,
-including starting a download or deleting a model. They listen only on the private LAN address, and `allow=` limits
+including starting a download, deleting a model, and uploading or deleting a LoRA. They listen only on the private LAN address, and `allow=` limits
 which addresses can connect.
 
 ## Claude sessions
@@ -112,16 +125,16 @@ pulling a client change, new sessions pick it up; after moving the clone, run `a
 
 | Model | Makes | 4090 (24 GB) | 5090 (32 GB) | Download | Notes |
 |---|---|---|---|---|---|
-| Wan 2.2 14B | text/image to video, 16 fps | fp8 | fp8 | 64 GB | Both experts and the 4-step speed-up LoRAs, for both tasks |
-| Wan 2.2 5B | text/image to video, 720p 24 fps | fp16 | fp16 | 17 GB | |
-| HunyuanVideo 1.5 | text/image to video, 720p 24 fps | fp16 run as fp8 | fp16 | 43 GB | |
+| Wan 2.2 14B | text/image to video, 16 fps | fp8 | fp8 | 64 GB | Both experts and the 4-step speed-up LoRAs, for both tasks. Takes your LoRAs |
+| Wan 2.2 5B | text/image to video, 720p 24 fps | fp16 | fp16 | 17 GB | Takes your LoRAs |
+| HunyuanVideo 1.5 | text/image to video, 720p 24 fps | fp16 run as fp8 | fp16 | 43 GB | Takes your LoRAs |
 | LTX-2.5 | text/image to video with sound | not offered | int8 | 42 GB | Gated: accept the license at [Lightricks/LTX-2.5](https://huggingface.co/Lightricks/LTX-2.5) and give the account's token. Free for organisations under $10M yearly revenue |
 | MiniMax H3 | text/image to video with sound, text to image | pruned w6a8 | pruned int8 | 39 / 44 GB | Commercial use of what it makes needs a MiniMax license (sold through Comfy) |
 | Z-Image Turbo | text to image | bf16 | bf16 | 19 GB | |
 | Qwen-Image 2.1 Turbo | text to image, up to 2K | int8 | bf16 | 25 / 31 GB | |
 
 The workflows are ComfyUI's own templates for each model, as its editor offers them (with their defaults: speed-up LoRAs
-on, sizes, lengths); only the prompt, image, size, length and seed are set by the page. **Which build fits which card is
+on, sizes, lengths); only the prompt, image, size, length and seed are set by the page, and your LoRAs added. **Which build fits which card is
 an estimate** from the files' sizes and the templates' own notes (the Wan 2.2 template measured its fp8 build at 84% of
 a 24 GB card), not yet measured on these rigs. If a model runs out of memory on a card, raise its `min_vram_gb` in
 `tools/catalog-src.json` and build again.
@@ -155,13 +168,17 @@ The miner ships ready-made API workflows (`comfyui-hive/workflows/`) and `comfyu
    ComfyUI is enough).
 2. Add or change the model in `tools/catalog-src.json`: the template of each task, which of the template's settings the
    page sets (`param`: a label shown on the template's subgraph, or `node.input`), and its builds, best first, with the
-   GPU memory each needs and the files they swap.
+   GPU memory each needs and the files they swap. For a task to take the user's LoRAs, give it an input of kind
+   `loras` whose `after` names the node whose model output they are chained onto (two nodes, the second marked
+   `"low"`, for a high-noise and low-noise pair); `page.py` adds the loader nodes when a request is sent, so there
+   is one workflow per task whatever the number of LoRAs.
 3. `python tools/build.py --templates <templates folder> --object-info <object_info.json>` converts the templates
    (`tools/convert.py` expands their subgraphs into the API format), works out which files each workflow loads and their
    sizes on Hugging Face.
 4. `python tools/check.py --comfy http://<that ComfyUI> --models <its models folder> --inputs <its input folder>` sends
    every model, task and build to that ComfyUI, which checks each node, input and file name, and says what it refuses.
-   It uses empty stand-ins for the model files, so nothing is downloaded.
+   It uses empty stand-ins for the model files, so nothing is downloaded. A task that takes LoRAs is sent twice,
+   without any and with every slot filled.
 
 ## Checks on a rig
 
@@ -176,7 +193,7 @@ curl -s http://$(cat /run/comfyui-hive/address):8188/system_stats | jq
 ## Files
 
 - `h-run.sh`: start-up checks, the install, then runs ComfyUI and the page
-- `page.py`, `page.html`: the chat page, the downloads, and the requests to ComfyUI
+- `page.py`, `page.html`: the chat page, the downloads, your LoRAs, and the requests to ComfyUI
 - `catalog.json`, `workflows/`: the models and their workflows, made by `tools/build.py`
 - `h-stop.sh`: puts the rig back; safe to run repeatedly
 - `h-guard.sh`: runs `h-stop.sh` if `h-run.sh` is killed, and keeps the watchdog off meanwhile
@@ -200,6 +217,19 @@ On a PC with an RTX 5090, in WSL (Ubuntu 20.04), with ComfyUI v0.45.0:
 - the page: lists the models that fit (and the builds a 24 GB card would get), downloads a file from Hugging Face, runs
   a request through ComfyUI and serves the result, follows ComfyUI's progress messages, shows ComfyUI's reason when a
   request fails, and refuses requests for models that aren't downloaded or don't fit.
+
+For the LoRAs (v0.3), with a CPU-only ComfyUI v0.45.0 and an RTX 4090 rig running v0.1 of this miner:
+
+- every task that takes LoRAs is taken by ComfyUI with every slot filled, the first with a high and low pair
+  (`tools/check.py`);
+- the page: upload (progress, the name cleaned, refusals for a wrong type, a duplicate and a file that isn't
+  safetensors inside), the list, Delete, and the slots surviving the page's refresh;
+- on the rig's ComfyUI, a Wan 2.2 14B text-to-video workflow built by `page.py`, without a LoRA and with a high and low
+  pair in a slot (the speed-up LoRAs' own files, for want of another): ComfyUI reported 0 and 400 patches on each of
+  the two models, and both videos were made.
+
+Not run for the LoRAs: v0.3 itself on a rig (the upload of a real, large file to it, a request through its page), a
+LoRA of your own, and Wan 2.2 5B or HunyuanVideo 1.5 generating with one.
 
 Not yet run: a real model generating (no model has been downloaded and run), the memory each build really needs, the
 dashboard stats (no `jq` where it was tested), and anything on a real Hive rig (firewall rules, watchdog).

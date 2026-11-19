@@ -7,6 +7,8 @@ ComfyUI checks a workflow when it is sent (every node exists, every input is the
 name is one it has), so this catches a converter mistake, a renamed node or input, and a file the catalog doesn't
 download. It makes an empty stand-in for each model file that is missing, so no model has to be downloaded; a workflow
 that passes is then stopped at once, since its empty files can't load. It builds the workflows with page.py's own code.
+A task that takes the user's LoRAs is sent twice: without any, and with every slot filled (the first with a high and
+low pair), using empty stand-ins for those too.
 """
 
 import argparse
@@ -19,6 +21,9 @@ import urllib.error
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, os.path.join(ROOT, "comfyui-hive"))
 import page  # noqa: E402
+
+# Stand-ins for a user's LoRAs, for the tasks that take them
+LORAS = ["check-lora-high.safetensors", "check-lora-low.safetensors"]
 
 
 def main():
@@ -33,13 +38,14 @@ def main():
         catalog = json.load(handle)
 
     made = []
-    for model in catalog["models"]:
-        for entry in model["files"].values():
-            path = page.file_path(entry)
-            if not os.path.exists(path):
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                open(path, "wb").close()
-                made.append(path)
+    stand_ins = [entry for model in catalog["models"] for entry in model["files"].values()]
+    stand_ins += [{"dir": page.LORA_DIR, "name": name} for name in LORAS]
+    for entry in stand_ins:
+        path = page.file_path(entry)
+        if not os.path.exists(path):
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            open(path, "wb").close()
+            made.append(path)
     if options.inputs:
         # A 1x1 PNG
         with open(os.path.join(options.inputs, "check.png"), "wb") as handle:
@@ -56,18 +62,26 @@ def main():
                     for item in spec["inputs"]:
                         if item.get("default") is not None and item["name"] not in ("prompt", "image"):
                             job["values"][item["name"]] = item["default"]
-                    prompt = page.build_prompt(model, variant, job)
-                    label = f"{model['id']} {variant['id']} {task}"
-                    try:
-                        answer = page.comfy_post("/prompt", {"prompt": prompt, "client_id": "check"})
-                    except urllib.error.HTTPError as error:
-                        failures += 1
-                        print(f"FAIL {label}: {page.describe_rejection(error)}")
-                        continue
-                    print(f"ok   {label}")
-                    page.comfy_post("/queue", {"delete": [answer["prompt_id"]]})
-                    page.comfy_post("/interrupt", {})
-                    time.sleep(0.5)
+                    jobs = {"": job}
+                    loras = next((item for item in spec["inputs"] if item["kind"] == "loras"), None)
+                    if loras:
+                        # Every slot filled, the first with a high and low pair
+                        slots = [{"name": LORAS[0], "strength": 0.8} for _ in range(loras["slots"])]
+                        slots[0]["low"] = LORAS[1]
+                        jobs[" with LoRAs"] = dict(job, loras=slots)
+                    for suffix, job in jobs.items():
+                        prompt = page.build_prompt(model, variant, job)
+                        label = f"{model['id']} {variant['id']} {task}{suffix}"
+                        try:
+                            answer = page.comfy_post("/prompt", {"prompt": prompt, "client_id": "check"})
+                        except urllib.error.HTTPError as error:
+                            failures += 1
+                            print(f"FAIL {label}: {page.describe_rejection(error)}")
+                            continue
+                        print(f"ok   {label}")
+                        page.comfy_post("/queue", {"delete": [answer["prompt_id"]]})
+                        page.comfy_post("/interrupt", {})
+                        time.sleep(0.5)
     finally:
         for path in made:
             os.remove(path)

@@ -1,6 +1,7 @@
 {
  "comfyui": "v0.45.0",
- "about": "Source of comfyui-hive/catalog.json: tools/build.py. A task's template is a ComfyUI workflow template of that version. An input's param is a setting shown on the template's subgraph (its label) or 'node.input' for a template without one. Variants are best first; the page offers the first that fits the GPU: min_vram_gb (as nvidia-smi reports it, so a 24 GB card is 23.99) and min_compute (CUDA compute capability). replace swaps a file the workflows load for another build in the same folder; set is [node, input, value].",
+ "about": "Source of comfyui-hive/catalog.json: tools/build.py. A task's template is a ComfyUI workflow template of that version. An input's param is a setting shown on the template's subgraph (its label) or 'node.input' for a template without one. Variants are best first; the page offers the first that fits the GPU: min_vram_gb (as nvidia-smi reports it, so a 24 GB card is 23.99) and min_compute (CUDA compute capability). replace swaps a file the workflows load for another build in the same folder; set is [node, input, value]. An input of kind loras lets the page add the user's own LoRAs to the task: after lists the model outputs they are chained onto, [node] or [node, \"low\"] for the low-noise model of a pair (which takes a slot's second file); every such input gets the slots and strength limits of loras below.",
+ "loras": {"slots": 3, "strength": {"min": -10, "max": 10, "default": 1}},
  "models": [
   {
    "id": "wan2.2-14b",
@@ -11,13 +12,15 @@
      {"name": "prompt", "kind": "text", "param": "text"},
      {"name": "width", "kind": "int", "param": "width", "min": 256, "max": 1280, "step": 16},
      {"name": "height", "kind": "int", "param": "height", "min": 256, "max": 1280, "step": 16},
-     {"name": "duration", "kind": "float", "param": "duration", "min": 1, "max": 10}]},
+     {"name": "duration", "kind": "float", "param": "duration", "min": 1, "max": 10},
+     {"name": "loras", "kind": "loras", "after": [["128:120"], ["128:121", "low"]]}]},
     "i2v": {"template": "video_wan2_2_14B_i2v", "inputs": [
      {"name": "prompt", "kind": "text", "param": "prompt"},
      {"name": "image", "kind": "image"},
      {"name": "width", "kind": "int", "param": "width", "min": 256, "max": 1280, "step": 16},
      {"name": "height", "kind": "int", "param": "height", "min": 256, "max": 1280, "step": 16},
-     {"name": "duration", "kind": "float", "param": "duration", "min": 1, "max": 10}]}
+     {"name": "duration", "kind": "float", "param": "duration", "min": 1, "max": 10},
+     {"name": "loras", "kind": "loras", "after": [["129:116"], ["129:117", "low"]]}]}
    },
    "variants": [
     {"id": "fp8", "label": "fp8", "min_vram_gb": 15}
@@ -32,13 +35,15 @@
      {"name": "prompt", "kind": "text", "param": "6.text"},
      {"name": "width", "kind": "int", "param": "55.width", "min": 256, "max": 1280, "step": 32},
      {"name": "height", "kind": "int", "param": "55.height", "min": 256, "max": 1280, "step": 32},
-     {"name": "length", "kind": "int", "param": "55.length", "min": 1, "max": 241, "step": 4}]},
+     {"name": "length", "kind": "int", "param": "55.length", "min": 1, "max": 241, "step": 4},
+     {"name": "loras", "kind": "loras", "after": [["37"]]}]},
     "i2v": {"template": "video_wan2_2_5B_ti2v", "enable": [56], "inputs": [
      {"name": "prompt", "kind": "text", "param": "6.text"},
      {"name": "image", "kind": "image"},
      {"name": "width", "kind": "int", "param": "55.width", "min": 256, "max": 1280, "step": 32},
      {"name": "height", "kind": "int", "param": "55.height", "min": 256, "max": 1280, "step": 32},
-     {"name": "length", "kind": "int", "param": "55.length", "min": 1, "max": 241, "step": 4}]}
+     {"name": "length", "kind": "int", "param": "55.length", "min": 1, "max": 241, "step": 4},
+     {"name": "loras", "kind": "loras", "after": [["37"]]}]}
    },
    "variants": [
     {"id": "fp16", "label": "fp16", "min_vram_gb": 11}
@@ -53,13 +58,15 @@
      {"name": "prompt", "kind": "text", "param": "44.text"},
      {"name": "width", "kind": "int", "param": "124.width", "min": 256, "max": 1280, "step": 16},
      {"name": "height", "kind": "int", "param": "124.height", "min": 256, "max": 1280, "step": 16},
-     {"name": "length", "kind": "int", "param": "124.length", "min": 1, "max": 241, "step": 4}]},
+     {"name": "length", "kind": "int", "param": "124.length", "min": 1, "max": 241, "step": 4},
+     {"name": "loras", "kind": "loras", "after": [["12"]]}]},
     "i2v": {"template": "video_hunyuan_video_1.5_720p_i2v", "inputs": [
      {"name": "prompt", "kind": "text", "param": "44.text"},
      {"name": "image", "kind": "image"},
      {"name": "width", "kind": "int", "param": "78.width", "min": 256, "max": 1280, "step": 16},
      {"name": "height", "kind": "int", "param": "78.height", "min": 256, "max": 1280, "step": 16},
-     {"name": "length", "kind": "int", "param": "78.length", "min": 1, "max": 241, "step": 4}]}
+     {"name": "length", "kind": "int", "param": "78.length", "min": 1, "max": 241, "step": 4},
+     {"name": "loras", "kind": "loras", "after": [["12"]]}]}
    },
    "variants": [
     {"id": "fp16", "label": "fp16", "min_vram_gb": 31},

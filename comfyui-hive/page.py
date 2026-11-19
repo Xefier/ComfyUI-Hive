@@ -13,10 +13,12 @@ h-run.sh runs it beside ComfyUI, on the rig's LAN address at ComfyUI's port + 1.
 
   /               the page (page.html)
   /api/state      the rig, its models, the jobs, what is happening now
-  /api/generate   POST {model, task, prompt, image?, width?, height?, length?, seed?}: queues a job
+  /api/generate   POST {model, task, prompt, image?, width?, height?, length?, seed?, loras?}: queues a job
   /api/cancel     POST {job}: drops a queued job or stops the running one
   /api/download   POST {model}: downloads the model's files; /api/cancel-download and /api/delete likewise
   /api/token      POST {token}: the Hugging Face token for gated models, kept on the rig
+  /api/lora-upload  POST ?name=<file>.safetensors with the file as the body: adds one of your own LoRAs
+  /api/lora-delete  POST {name}: deletes one
   /files/<path>   an output, ?download=1 to save it
   /log            the end of the miner log
 
@@ -47,6 +49,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 CHUNK = 4 * 1024 * 1024
 KEEP_JOBS = 500
 MAX_UPLOAD = 40 * 1024 * 1024
+MAX_LORA = 8 * 1024 ** 3
+LORA_DIR = "loras"  # in the models folder, where ComfyUI looks for them
+LORA_EXT = ".safetensors"
 SPARE_DISK = 2 * 1024 ** 3  # left free on the data drive after a download
 OUTPUT_PREFIX = "comfyui-hive"
 
@@ -152,6 +157,51 @@ def model_files(model, variant):
     return [model["files"][name] for name in variant["files"]]
 
 
+# --- LoRAs --------------------------------------------------------------------------------------------------------
+# Your own LoRA files, uploaded on the page. They share the loras folder with the ones catalog models bring (the
+# speed-up LoRAs) but are apart from the catalog's downloads: a model's Download and Delete never touch them, and
+# these never list or delete a catalog file.
+
+def lora_root():
+    return os.path.join(args.models, LORA_DIR)
+
+
+def lora_file_name(name):
+    """A safe file name for an uploaded LoRA, or None: no folders, .safetensors only."""
+    name = re.split(r"[\\/]", str(name or ""))[-1]
+    name = re.sub(r"[^A-Za-z0-9._ ()+-]", "_", name).strip(" .")
+    if not name.lower().endswith(LORA_EXT) or not len(LORA_EXT) < len(name) <= 200:
+        return None
+    return name
+
+
+def looks_like_safetensors(start, length):
+    """A safetensors file starts with the length of its JSON header, then the header."""
+    if len(start) < 9:
+        return False
+    header = struct.unpack("<Q", start[:8])[0]
+    return 2 <= header <= min(length - 8, 100 * 1024 ** 2) and start[8:9] == b"{"
+
+
+def add_loras(prompt, after, slots):
+    """Puts the job's LoRAs into a workflow: a chain of LoraLoaderModelOnly, one per slot, after each model output
+    named in `after` ([node] or [node, "low"]), and everything that took that output takes the end of the chain
+    instead. So they add to whatever the workflow already applies (the speed-up LoRAs). A model marked "low" is the
+    low-noise one of a pair: it gets the slot's low file when the slot has one, else the same file as the others."""
+    for index, (node_id, *low) in enumerate(after):
+        source = [node_id, 0]
+        takers = [(node, name) for node in prompt.values() for name, value in node["inputs"].items() if value == source]
+        for number, slot in enumerate(slots, 1):
+            new_id = f"lora-{number}-{index}"
+            prompt[new_id] = {"class_type": "LoraLoaderModelOnly",
+                              "inputs": {"lora_name": (low and slot.get("low")) or slot["name"],
+                                         "strength_model": slot["strength"], "model": source},
+                              "_meta": {"title": f"LoRA {number}"}}
+            source = [new_id, 0]
+        for node, name in takers:
+            node["inputs"][name] = source
+
+
 class Rig:
     """What changes: the downloads, the jobs, and the numbers for the dashboard."""
 
@@ -168,6 +218,13 @@ class Rig:
         self.settings = read_json(os.path.join(args.data, "settings.json"), {})
         self.token = read_line(os.path.join(args.data, "hf_token")) or os.environ.get("HF_TOKEN", "")
         self.last_model = None
+        try:
+            # An upload the miner stopped in the middle of
+            for name in os.listdir(lora_root()):
+                if name.endswith(".upload"):
+                    os.remove(os.path.join(lora_root(), name))
+        except OSError:
+            pass
         for line in self.read_jobs():
             if line.get("state") in ("queued", "running"):
                 line["state"] = "failed"
@@ -340,6 +397,113 @@ class Rig:
             raise RuntimeError(f"{entry['name']}: got {size} bytes of {entry['size']}, will resume on the next try")
         os.replace(part, path)
 
+    # LoRAs ---
+
+    def catalog_loras(self):
+        return {entry["name"] for model in self.catalog["models"] for entry in model["files"].values()
+                if entry["dir"] == LORA_DIR}
+
+    def loras(self):
+        """Your LoRAs: every .safetensors under the loras folder that no catalog model brought, by the name ComfyUI
+        gives it (with its folder, for one copied into a subfolder by hand)."""
+        root, skip, found = lora_root(), self.catalog_loras(), []
+        for folder, _, names in os.walk(root, followlinks=True):
+            for name in names:
+                relative = os.path.relpath(os.path.join(folder, name), root)
+                if not name.lower().endswith(LORA_EXT) or relative in skip:
+                    continue
+                try:
+                    found.append({"name": relative, "size": os.path.getsize(os.path.join(folder, name))})
+                except OSError:
+                    pass
+        return sorted(found, key=lambda entry: entry["name"].lower())
+
+    def save_lora(self, asked_name, stream, length):
+        """Writes an uploaded LoRA into the loras folder. Returns its name there, or None and why not."""
+        name = lora_file_name(asked_name)
+        if name is None:
+            return None, f"A LoRA is a {LORA_EXT} file"
+        if length <= 0:
+            return None, "The file is empty"
+        if length > MAX_LORA:
+            return None, f"A LoRA can be {MAX_LORA / 1024 ** 3:.0f} GB at most"
+        if length + SPARE_DISK > disk_free():
+            return None, f"Not enough free space: {disk_free() / 1024 ** 3:.1f} GB is free"
+        path = os.path.join(lora_root(), name)
+        if name in self.catalog_loras() or os.path.exists(path):
+            return None, f"{name} is already on this rig: delete it first to replace it"
+        os.makedirs(lora_root(), exist_ok=True)
+        temp = path + ".upload"
+        try:
+            handle = open(temp, "xb")
+        except FileExistsError:
+            return None, f"{name} is being uploaded already"
+        try:
+            with handle:
+                left = length
+                while left:
+                    block = stream.read(min(CHUNK, left))
+                    if not block:
+                        raise OSError("the upload stopped before the end")
+                    if left == length and not looks_like_safetensors(block, length):
+                        raise OSError(f"it isn't a {LORA_EXT} file inside")
+                    handle.write(block)
+                    left -= len(block)
+            os.replace(temp, path)
+        except OSError as error:
+            try:
+                os.remove(temp)
+            except OSError:
+                pass
+            return None, f"{name}: {error}"
+        log(f"LoRA {name} uploaded: {length / 1024 ** 2:.0f} MB")
+        return name, None
+
+    def delete_lora(self, name):
+        if name not in {entry["name"] for entry in self.loras()}:
+            return "No such LoRA on this rig"
+        with lock:
+            used = {slot.get(key) for job in self.jobs if job["state"] in ("queued", "running")
+                    for slot in job.get("loras", []) for key in ("name", "low")}
+        if name in used:
+            return "A request is using it"
+        try:
+            os.remove(os.path.join(lora_root(), name))
+        except OSError as error:
+            return f"{name}: {error}"
+        log(f"LoRA {name} deleted")
+        return None
+
+    def read_loras(self, item, asked):
+        """The LoRA slots of a request, checked against the task's "loras" input: [{name, low?, strength}]. A slot
+        without a file isn't used."""
+        if not isinstance(asked, list):
+            return None, "loras must be a list"
+        have = {entry["name"] for entry in self.loras()}
+        limits = item["strength"]
+        paired = any(len(target) > 1 for target in item["after"])
+        slots = []
+        for slot in asked:
+            if not isinstance(slot, dict) or not slot.get("name"):
+                continue
+            entry = {"name": str(slot["name"])}
+            if paired and slot.get("low"):
+                entry["low"] = str(slot["low"])
+            for name in (entry["name"], entry.get("low")):
+                if name is not None and name not in have:
+                    return None, f"There is no LoRA {name} on this rig"
+            try:
+                strength = slot.get("strength")
+                entry["strength"] = limits["default"] if strength in ("", None) else float(strength)
+            except (TypeError, ValueError):
+                return None, "A LoRA's strength must be a number"
+            if not limits["min"] <= entry["strength"] <= limits["max"]:
+                return None, f"A LoRA's strength must be between {limits['min']} and {limits['max']}"
+            slots.append(entry)
+        if len(slots) > item["slots"]:
+            return None, f"{item['slots']} LoRAs at most"
+        return slots, None
+
     # jobs ---
 
     def read_jobs(self):
@@ -381,6 +545,13 @@ class Rig:
         for item in spec["inputs"]:
             name = item["name"]
             if name in ("prompt", "image") or name not in request or request[name] in ("", None):
+                continue
+            if item["kind"] == "loras":
+                slots, error = self.read_loras(item, request[name])
+                if error:
+                    return None, error
+                if slots:
+                    job["loras"] = slots
                 continue
             try:
                 value = float(request[name]) if item["kind"] == "float" else int(request[name])
@@ -548,6 +719,7 @@ class Rig:
             "comfy_url": args.comfy, "gpu": self.gpu, "ram_gb": self.ram,
             "disk_free": disk_free(), "models": self.models(), "jobs": jobs,
             "settings": self.settings, "has_token": bool(self.token),
+            "loras": self.loras(), "lora_max": MAX_LORA,
             "hidden": len(self.catalog["models"]) - len(self.models()),
         }
 
@@ -614,6 +786,8 @@ def build_prompt(model, variant, job):
             for node in prompt.values():
                 if node["class_type"] == "LoadImage":
                     node["inputs"]["image"] = job["image"]
+        elif item["kind"] == "loras":
+            add_loras(prompt, item["after"], job.get("loras") or [])
         elif name in job["values"]:
             put(item["param"], job["values"][name])
     seed = job.get("seed")
@@ -761,6 +935,13 @@ class Handler(http.server.BaseHTTPRequestHandler):
 
     def do_POST(self):
         length = int(self.headers.get("Content-Length") or 0)
+        url = urllib.parse.urlparse(self.path)
+        if url.path == "/api/lora-upload":
+            # The file itself is the body, written to the drive as it comes: a LoRA is far too big to hold as JSON
+            name, error = rig.save_lora(urllib.parse.parse_qs(url.query).get("name", [""])[0], self.rfile, length)
+            self.close_connection = True
+            self.send(400 if error else 200, {"error": error} if error else {"name": name})
+            return
         if length > MAX_UPLOAD * 1.5:
             self.send(413, {"error": "too big"})
             return
@@ -769,7 +950,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
         except ValueError:
             self.send(400, {"error": "not JSON"})
             return
-        path = urllib.parse.urlparse(self.path).path
+        path = url.path
         if path == "/api/generate":
             job, error = rig.add_job(body)
             self.send(400 if error else 200, {"error": error} if error else {"job": job["id"]})
@@ -784,6 +965,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send(200, {})
         elif path == "/api/delete":
             error = rig.delete_model(str(body.get("model")))
+            self.send(400 if error else 200, {"error": error})
+        elif path == "/api/lora-delete":
+            error = rig.delete_lora(str(body.get("name")))
             self.send(400 if error else 200, {"error": error})
         elif path == "/api/token":
             token = str(body.get("token") or "").strip()
