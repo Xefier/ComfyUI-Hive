@@ -6,90 +6,154 @@
 <title>ComfyUI-Hive</title>
 <style>
 :root {
-  --bg: #f6f7f9; --panel: #ffffff; --text: #1d2330; --muted: #677087; --line: #e1e4ea;
-  --accent: #3b6cf6; --accent-text: #ffffff; --ok: #1f9d55; --warn: #c27c0e; --bad: #d64545; --bubble: #eef2fe;
+  color-scheme: light dark;
+  --bg: #f2f4f9; --panel: #ffffff; --inset: #f5f6fb; --text: #1a2030; --muted: #667089; --line: #e1e5ee;
+  --accent: #4b6bfb; --accent2: #7c5cf5; --accent-text: #ffffff; --soft: #edf0ff;
+  --ok: #1a9a55; --warn: #b3740a; --bad: #d43f3f; --bubble: #e8ecff;
+  --shadow: 0 1px 2px rgba(20, 28, 50, .05), 0 8px 24px rgba(20, 28, 50, .06);
 }
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #12151b; --panel: #1b2029; --text: #e6e9ef; --muted: #98a1b3; --line: #2b3240;
-    --accent: #6d93ff; --accent-text: #0d1220; --ok: #45c07a; --warn: #e3a73f; --bad: #ef6b6b; --bubble: #212a3d;
+    --bg: #0d1016; --panel: #161b24; --inset: #0f131a; --text: #e7eaf1; --muted: #939db2; --line: #262d3a;
+    --accent: #7b97ff; --accent2: #a78bff; --accent-text: #0b1020; --soft: #1b2340;
+    --ok: #46c480; --warn: #e5ac45; --bad: #f07171; --bubble: #1f2942;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 28px rgba(0, 0, 0, .28);
   }
 }
 * { box-sizing: border-box; }
 /* A display set below would otherwise show an element that is hidden */
 [hidden] { display: none !important; }
-body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
-header { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
-header h1 { font-size: 17px; margin: 0; }
-header .rig { color: var(--muted); font-size: 13px; }
-header a { color: var(--accent); font-size: 13px; }
-main { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; max-width: 1400px; margin: 0 auto; }
-@media (max-width: 860px) { main { grid-template-columns: 1fr; } }
-.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin: 0 0 8px; }
-.model { border: 1px solid var(--line); border-radius: 8px; padding: 10px; margin-bottom: 8px; cursor: pointer; }
-.model.picked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
-.model .name { font-weight: 600; }
-.model .meta { color: var(--muted); font-size: 12.5px; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+a { color: var(--accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+::selection { background: var(--accent); color: var(--accent-text); }
+* { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+
+header { position: sticky; top: 0; z-index: 5; display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 18px;
+  border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(10px); }
+header h1 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 9px; letter-spacing: -.01em; }
+header h1::before { content: ""; width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(135deg, var(--accent), var(--accent2));
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 45%, transparent); }
+header .rig { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 200px; }
+header nav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
+header nav a { font-size: 13.5px; padding: 5px 10px; border-radius: 8px; color: var(--text); }
+header nav a:hover { background: var(--soft); text-decoration: none; }
+.toggle { display: flex; gap: 5px; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; padding: 5px 8px; }
+.toggle input { accent-color: var(--accent); }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); background: var(--inset);
+  border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px; white-space: nowrap; }
+.chip.bad { color: var(--bad); border-color: var(--bad); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+.dot.ok { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
+
+main { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; max-width: 1440px; margin: 0 auto; align-items: start; }
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
+.side { position: sticky; top: 66px; max-height: calc(100vh - 82px); overflow-y: auto; }
+@media (max-width: 860px) {
+  main { grid-template-columns: 1fr; }
+  .side { position: static; max-height: none; }
+  header { position: static; }
+}
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
+h2.row { justify-content: space-between; }
+h2.next { margin-top: 18px; }
+
+button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 6px 12px;
+  cursor: pointer; transition: background .12s, border-color .12s, transform .05s; }
+button:hover:not(:disabled) { border-color: var(--accent); background: var(--soft); }
+button:active:not(:disabled) { transform: translateY(1px); }
+button:disabled { opacity: .5; cursor: default; }
+button.primary { background: linear-gradient(135deg, var(--accent), var(--accent2)); color: var(--accent-text); border-color: transparent; font-weight: 600;
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 35%, transparent); }
+button.primary:hover:not(:disabled) { background: linear-gradient(135deg, var(--accent), var(--accent2)); filter: brightness(1.07); border-color: transparent; }
+button.small { padding: 3px 9px; font-size: 13px; border-radius: 7px; }
+#go { padding: 8px 22px; }
+:is(button, a, input, select, textarea, summary):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.model, .chatitem { border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; margin-bottom: 7px; cursor: pointer;
+  transition: border-color .12s, background .12s; }
+.model:hover, .chatitem:hover { border-color: color-mix(in srgb, var(--accent) 55%, var(--line)); }
+.model.picked, .chatitem.picked { border-color: var(--accent); background: var(--soft); }
+.model .name, .chatitem .name { font-weight: 600; }
+.chatitem .name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.model .meta, .chatitem .meta { color: var(--muted); font-size: 12.5px; }
 .model .note { color: var(--warn); font-size: 12.5px; margin-top: 4px; }
 .model .actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
-.tag { display: inline-block; font-size: 11.5px; padding: 1px 7px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
-.tag.ok { color: var(--ok); border-color: var(--ok); }
-button { font: inherit; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 6px 12px; cursor: pointer; }
-button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
-button:disabled { opacity: .5; cursor: default; }
-button.small { padding: 3px 9px; font-size: 13px; }
+.chatitem .actions { display: none; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.chatitem.picked .actions, .chatitem:hover .actions { display: flex; }
+details.more > summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 6px 2px; }
+details.more[open] > summary { margin-bottom: 4px; }
+.tag { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.tag.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent); background: color-mix(in srgb, var(--ok) 10%, transparent); }
+#showarchived { font-size: 13px; }
+
 .bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; flex: 1; min-width: 80px; }
-.bar > div { height: 100%; background: var(--accent); width: 0; transition: width .4s; }
-.chat { display: flex; flex-direction: column; min-height: 70vh; }
-.messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 2px 12px; max-height: calc(100vh - 330px); }
+.bar > div { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); width: 0; transition: width .4s; border-radius: inherit; }
+/* While it can't be told how far a request is: a piece going back and forth */
+.bar.wait > div { width: 30% !important; transition: none; animation: wait 1.3s ease-in-out infinite alternate; }
+@keyframes wait { from { margin-left: 0; } to { margin-left: 70%; } }
+.run { min-width: min(420px, 70vw); }
+.run .stage { font-weight: 500; }
+.run .bar { height: 10px; border-radius: 5px; }
+.run .bar > div { transition: width 1.5s linear; }
+.run .row { margin: 7px 0 4px; }
+.run .pct { min-width: 38px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.run .times { font-variant-numeric: tabular-nums; }
+
+.chat { display: flex; flex-direction: column; min-height: 70vh; position: relative; }
+.banner { border: 1px solid var(--warn); background: color-mix(in srgb, var(--warn) 12%, transparent); color: var(--text);
+  border-radius: 10px; padding: 8px 12px; font-size: 14px; margin-bottom: 8px; }
+.banner b { color: var(--warn); }
+.messages { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 4px 4px 12px; max-height: calc(100vh - 360px); min-height: 180px; }
 @media (max-width: 860px) { .messages { max-height: none; } }
-.msg { max-width: 92%; border-radius: 10px; padding: 9px 12px; }
-.msg.you { align-self: flex-end; background: var(--bubble); }
-.msg.rig { align-self: flex-start; border: 1px solid var(--line); }
+.empty { margin: auto; text-align: center; color: var(--muted); padding: 30px 10px; }
+.empty b { display: block; color: var(--text); font-size: 16px; margin-bottom: 4px; }
+.msg { max-width: 92%; border-radius: 14px; padding: 10px 13px; overflow-wrap: anywhere; }
+.msg.you { align-self: flex-end; background: var(--bubble); border-bottom-right-radius: 4px; }
+.msg.rig { align-self: flex-start; border: 1px solid var(--line); background: var(--inset); border-bottom-left-radius: 4px; }
 .msg .who { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
-.msg img, .msg video { max-width: 100%; max-height: 60vh; border-radius: 6px; display: block; margin-top: 6px; }
-.msg img.thumb { max-height: 120px; }
+.msg .text { white-space: pre-wrap; }
+.msg img, .msg video { max-width: 100%; max-height: 60vh; border-radius: 8px; display: block; margin-top: 6px; }
+.msg img, .out img { cursor: zoom-in; }
 .msg .error { color: var(--bad); }
-.msg .links { display: flex; gap: 12px; font-size: 13px; margin-top: 6px; }
-.msg .links a { color: var(--accent); }
-.composer { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
-.imagebox { display: flex; gap: 10px; align-items: center; border: 1.5px dashed var(--line); border-radius: 8px; padding: 8px; }
+.msg .links, .out .links { display: flex; gap: 14px; font-size: 13px; margin-top: 6px; flex-wrap: wrap; }
+.toast { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); background: var(--text); color: var(--panel); border-radius: 10px;
+  padding: 8px 14px; font-size: 13.5px; box-shadow: var(--shadow); max-width: 90%; z-index: 3; }
+
+.composer { border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 9px; }
+.tasks { display: inline-flex; gap: 2px; flex-wrap: wrap; align-self: flex-start; background: var(--inset); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
+.tasks button { border: 0; background: transparent; padding: 5px 12px; border-radius: 7px; color: var(--muted); }
+.tasks button.on, .tasks button.on:hover { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
+.imagebox { display: flex; gap: 10px; align-items: center; border: 1.5px dashed var(--line); border-radius: 10px; padding: 8px; background: var(--inset); }
 .imagebox img { max-height: 96px; max-width: 160px; border-radius: 6px; display: block; }
 .imagehint { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
 .imagehint .imagesize { color: var(--text); }
 .imagehint .choose { color: var(--accent); cursor: pointer; text-decoration: underline; }
 .chat.dropping { outline: 2px dashed var(--accent); outline-offset: -6px; }
 .chat.dropping .imagebox { border-color: var(--accent); }
-.tasks { display: flex; gap: 6px; flex-wrap: wrap; }
-.tasks button.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
-textarea { font: inherit; width: 100%; min-height: 76px; resize: vertical; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); padding: 8px; }
-.row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-.row label { font-size: 13px; color: var(--muted); display: flex; gap: 4px; align-items: center; }
-.row input[type=number] { width: 84px; font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
-.row select { font: inherit; font-size: 14px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
-h2.row { justify-content: space-between; }
-h2.next { margin-top: 16px; }
-.chatitem { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin-bottom: 6px; cursor: pointer; }
-.chatitem.picked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
-.chatitem .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.chatitem .meta { color: var(--muted); font-size: 12.5px; }
-.chatitem .actions { display: none; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-.chatitem.picked .actions, .chatitem:hover .actions { display: flex; }
-#showarchived { color: var(--accent); }
-.outputs { margin: 16px; }
+textarea, .row input[type=number], .row select, .token input { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--inset);
+  color: var(--text); transition: border-color .12s, box-shadow .12s; }
+:is(textarea, .row input[type=number], .row select, .token input):focus { outline: none; border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent); }
+textarea { width: 100%; min-height: 84px; resize: vertical; padding: 10px; border-radius: 10px; }
+.row { display: flex; gap: 8px 10px; flex-wrap: wrap; align-items: center; }
+.row label { font-size: 13px; color: var(--muted); display: flex; gap: 5px; align-items: center; }
+.row input[type=number] { width: 86px; padding: 4px 7px; }
+.row select { font-size: 14px; padding: 4px 6px; }
+kbd { font: inherit; font-size: 12px; color: var(--muted); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 5px; padding: 0 5px; }
+
+.outputs { margin: 16px auto; max-width: 1408px; }
 .outputs h2 { margin: 0; }
 .outs { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-top: 12px; }
-.out { border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.out { border: 1px solid var(--line); border-radius: 10px; padding: 8px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; background: var(--inset); }
 .out.on { border-color: var(--accent); }
 .out img, .out video { max-width: 100%; max-height: 190px; border-radius: 6px; display: block; margin: 0 auto; }
 .out audio { width: 100%; }
-.out .links { display: flex; gap: 12px; }
-.out .links a { color: var(--accent); }
 .out .name { overflow-wrap: anywhere; }
 .out .prompt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .out .row { justify-content: space-between; margin-top: auto; }
-details.loras { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+
+details.loras { border: 1px solid var(--line); border-radius: 10px; padding: 7px 11px; }
 details.loras summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 details.loras[open] summary { margin-bottom: 8px; }
 details.loras .row { margin-bottom: 6px; }
@@ -100,18 +164,32 @@ details.loras input[type=range] { width: 150px; accent-color: var(--accent); }
 .hint { color: var(--muted); font-size: 13px; }
 .status { font-size: 13px; color: var(--muted); }
 .status.bad { color: var(--bad); }
-pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: auto; background: var(--bg); padding: 8px; border-radius: 6px; }
+pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: auto; background: var(--inset); padding: 8px; border-radius: 8px; border: 1px solid var(--line); }
 .token { display: flex; gap: 6px; margin-top: 8px; }
-.token input { flex: 1; font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.token input { flex: 1; padding: 4px 7px; }
+
+/* An image or a video of the chat, large, with the ones before and after it */
+.viewer { position: fixed; inset: 0; z-index: 20; background: rgba(6, 8, 12, .9); display: flex; align-items: center; justify-content: center; gap: 8px; padding: 14px; }
+.viewer .body { flex: 1; min-width: 0; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; }
+.viewer img, .viewer video { max-width: 100%; max-height: calc(100vh - 90px); border-radius: 8px; box-shadow: 0 10px 40px rgba(0, 0, 0, .6); }
+.viewer .cap { color: #dfe3ec; font-size: 13px; display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.viewer .cap a { color: #9db2ff; }
+.viewer button { background: rgba(255, 255, 255, .1); color: #fff; border-color: transparent; font-size: 22px; line-height: 1; width: 44px; height: 44px; border-radius: 50%; flex: none; }
+.viewer button:hover:not(:disabled) { background: rgba(255, 255, 255, .22); border-color: transparent; }
+.viewer .close { position: absolute; top: 12px; right: 12px; }
+.viewer #viewmedia { display: contents; }
 </style>
 </head>
 <body>
 <header>
   <h1>ComfyUI-Hive</h1>
-  <span class="rig" id="rig">…</span>
-  <a id="comfy" href="#" target="_blank" rel="noopener">ComfyUI editor</a>
-  <a href="#" id="showlog">Miner log</a>
-  <a href="#outputs" id="viewlink">Outputs</a>
+  <span class="rig" id="rig"><span class="chip">…</span></span>
+  <nav>
+    <label class="toggle" title="A short sound when a request of the open chat ends"><input type="checkbox" id="sound"> Sound when done</label>
+    <a id="comfy" href="#" target="_blank" rel="noopener">ComfyUI editor</a>
+    <a href="#" id="showlog">Miner log</a>
+    <a href="#outputs" id="viewlink">Outputs</a>
+  </nav>
 </header>
 <section class="panel outputs" id="outputsview" hidden>
   <div class="row">
@@ -125,7 +203,7 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
   <div class="outs" id="outs"></div>
 </section>
 <main id="chatview">
-  <section class="panel">
+  <section class="panel side">
     <h2 class="row">Chats <button class="small" id="newchat">New chat</button></h2>
     <div id="chats"></div>
     <div class="hint"><a href="#" id="showarchived"></a></div>
@@ -140,7 +218,9 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
   </section>
   <section class="panel chat">
     <h2 id="chattitle">Chat</h2>
+    <div class="banner" id="rental" hidden></div>
     <div class="messages" id="messages"></div>
+    <div class="toast" id="toast" hidden></div>
     <div class="composer">
       <div class="tasks" id="tasks"></div>
       <details class="loras" id="lorabox" hidden>
@@ -175,14 +255,22 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
       <div class="row" id="settings"></div>
       <div class="row">
         <button class="primary" id="go">Generate</button>
+        <kbd>Ctrl</kbd><kbd>Enter</kbd>
         <span class="status" id="status"></span>
       </div>
     </div>
   </section>
 </main>
+<div class="viewer" id="viewer" hidden>
+  <button id="viewprev" title="The one before (left arrow)">‹</button>
+  <div class="body"><div id="viewmedia"></div><div class="cap" id="viewcap"></div></div>
+  <button id="viewnext" title="The next one (right arrow)">›</button>
+  <button class="close" id="viewclose" title="Close (Esc)">×</button>
+</div>
 <script>
 const TASKS = { t2i: "Text to image", edit: "Edit image", t2v: "Text to video", i2v: "Image to video" };
 const LABELS = { width: "Width", height: "Height", length: "Frames", duration: "Seconds", steps: "Steps", seed: "Seed" };
+// image: the attached one as a data URL, or true for the one the rig kept for this chat
 let state = null, picked = null, task = null, image = null, shown = new Map();
 
 const $ = id => document.getElementById(id);
@@ -196,21 +284,34 @@ async function post(path, body) {
   return data;
 }
 
+const chip = (text, kind) => `<span class="chip ${kind || ""}">${esc(text)}</span>`;
+
+// Something to know for a moment, over the chat: the status line under the prompt is cleared by the page's refresh
+let toastTimer = null;
+function toast(text) {
+  $("toast").textContent = text;
+  $("toast").hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { $("toast").hidden = true; }, 6000);
+}
+
 function say(text, bad) { $("status").textContent = text || ""; $("status").className = "status" + (bad ? " bad" : ""); }
 
 async function refresh() {
-  const asked = chat;
+  const asked = chat, epoch = imageEpoch;
   let got;
   try { got = await (await fetch("/api/state" + (asked ? "?chat=" + encodeURIComponent(asked) : ""))).json(); }
-  catch { $("rig").textContent = "The rig doesn't answer"; return; }
+  catch { $("rig").innerHTML = chip("The rig doesn't answer", "bad"); return; }
   // Another chat was picked while this was on its way
   if (asked !== chat) return;
   state = got;
   if (!pickChat()) { refresh(); return; }
   const g = state.gpu;
-  $("rig").textContent = (g ? `${g.name}, ${g.vram_gb} GB (${g.used_gb} GB used, ${g.load}% load)` : "no GPU found")
-    + ` · RAM ${state.ram_gb ?? "?"} GB · ${gb(state.disk_free)} free · ComfyUI ${state.state} · ${state.version}`;
+  $("rig").innerHTML = `<span class="chip"><i class="dot ${state.state === "ready" ? "ok" : ""}"></i>ComfyUI ${esc(state.state)}</span>`
+    + (g ? chip(g.name) + chip(`${g.used_gb} / ${g.vram_gb} GB VRAM`) + chip(`${g.load}% load`) : chip("no GPU found", "bad"))
+    + chip(`RAM ${state.ram_gb ?? "?"} GB`) + chip(`${gb(state.disk_free)} free`) + chip(state.version);
   $("comfy").href = state.comfy_url.replace(/^http:\/\/[^/:]+/, location.protocol + "//" + location.hostname);
+  const adopt = openSettings();
   if (!picked || !state.models.some(m => m.id === picked)) {
     const remembered = state.settings.model;
     picked = (state.models.find(m => m.id === remembered) || state.models.find(m => m.installed) || state.models[0] || {}).id || null;
@@ -220,6 +321,11 @@ async function refresh() {
   drawModels();
   drawComposer();
   drawMessages();
+  // A chat opened without settings of its own takes what the composer shows as its own
+  if (adopt) saveSettings();
+  // Not from an answer older than an image this page sent meanwhile
+  if (epoch === imageEpoch) syncImage();
+  watchJobs();
 }
 
 // --- chats: each a name over some of the requests, kept on the rig ------------------------------------------------
@@ -229,10 +335,15 @@ try { chat = localStorage.getItem("chat"); } catch { /* no storage: the last use
 
 function openChat(id) {
   if (id === chat) return;
+  flushSettings();
   chat = id;
   try { id ? localStorage.setItem("chat", id) : localStorage.removeItem("chat"); } catch { /* as above */ }
   $("messages").innerHTML = "";
   shown.clear();
+  // The image is the chat's: the one of the chat opened now is shown when the rig answers
+  clearImage();
+  imageStamp = undefined;
+  watched.clear();
 }
 
 // The open chat, or the one last used when it is gone or none was open. False when it changed: the requests shown
@@ -304,6 +415,52 @@ $("newchat").onclick = async () => {
 };
 $("showarchived").onclick = e => { e.preventDefault(); showArchived = !showArchived; drawChats(); };
 
+// --- each chat's own settings: the model, the task, the numbers (size, frames, steps, seed), the LoRAs and the
+// prompt being written ---------------------------------------------------------------------------------------------
+// Kept on the rig with the chat, so it opens the same on another PC or phone. They are read when a chat is opened and
+// written when something is changed; a chat that has none yet starts from what the composer shows.
+let settingsOf, kept = {}, unsaved = null, saveTimer = null;
+
+// The settings of the chat just opened, into the composer. True when it has none yet.
+function openSettings() {
+  if (settingsOf === chat) return false;
+  settingsOf = chat;
+  const open = state.chats.find(c => c.id === chat);
+  const s = open && open.settings;
+  if (!s) return !!open;
+  if (state.models.some(m => m.id === s.model)) { picked = s.model; task = s.task; }
+  // The numbers by model and task: each keeps its own within the chat
+  kept = s.values && typeof s.values === "object" ? s.values : {};
+  $("prompt").value = s.prompt || "";
+  loraSlots = (Array.isArray(s.loras) ? s.loras : []).map(l => ({ name: String(l.name || ""), low: String(l.low || ""), strength: l.strength ?? 1 }));
+  // Drawn again, with these
+  $("tasks").dataset.key = $("loraslots").dataset.key = "";
+  return false;
+}
+
+// Called after the composer is drawn for the model and task picked now: its number boxes are theirs
+function saveSettings() {
+  if (!chat || settingsOf !== chat || !picked) return;
+  if (task) {
+    const values = kept[picked + "/" + task] = {};
+    for (const input of $("settings").querySelectorAll("input[type=number]")) values[input.dataset.name] = input.value;
+  }
+  unsaved = JSON.parse(JSON.stringify({ chat, settings: { model: picked, task, values: kept, loras: loraSlots, prompt: $("prompt").value } }));
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(flushSettings, 400);
+}
+
+function flushSettings() {
+  clearTimeout(saveTimer);
+  // Not said when it fails: the next change sends them again
+  if (unsaved) post("/api/chat-settings", unsaved).catch(() => {});
+  unsaved = null;
+}
+
+$("settings").addEventListener("input", saveSettings);
+$("prompt").addEventListener("input", saveSettings);
+window.addEventListener("pagehide", flushSettings);
+
 // --- outputs: every file the rig made, to look through and delete -------------------------------------------------
 // The other view of the page, at #outputs. Listed when opened and on Refresh, not on a timer: the videos would
 // start over each time.
@@ -370,10 +527,19 @@ $("outdelete").onclick = () => deleteOutputs([...outPicked]);
 $("outrefresh").onclick = () => { osay(""); loadOutputs(); };
 window.addEventListener("hashchange", showView);
 
+// Those on the rig, downloading or picked are listed; the rest are folded away under them
+let moreOpen = null;
+
 function drawModels() {
   const box = $("models");
+  const key = JSON.stringify([state.models, picked, moreOpen, state.hidden, state.has_token]);
+  if (box.dataset.key === key) return;
+  box.dataset.key = key;
   box.innerHTML = "";
   if (!state.models.length) box.innerHTML = `<div class="hint">No model fits this GPU.</div>`;
+  const more = document.createElement("details");
+  more.className = "more";
+  more.innerHTML = "<summary></summary>";
   for (const m of state.models) {
     const d = m.download, busy = d && (d.state === "queued" || d.state === "downloading");
     const div = document.createElement("div");
@@ -396,9 +562,17 @@ function drawModels() {
     div.onclick = e => {
       const act = e.target.dataset && e.target.dataset.act;
       if (act) { e.stopPropagation(); modelAction(act, m); return; }
-      picked = m.id; drawModels(); drawComposer();
+      picked = m.id; say(""); drawModels(); drawComposer(); saveSettings();
     };
-    box.appendChild(div);
+    (m.installed || busy || (d && d.state === "failed") || m.id === picked ? box : more).appendChild(div);
+  }
+  const folded = more.children.length - 1;
+  if (folded) {
+    // With none on the rig yet, the list is all there is to see: open until it is closed
+    more.open = moreOpen ?? folded === state.models.length;
+    more.firstChild.textContent = `${folded} more to download`;
+    more.ontoggle = () => { moreOpen = more.open; };
+    box.appendChild(more);
   }
   $("hidden").textContent = state.hidden ? `${state.hidden} more ${state.hidden === 1 ? "model needs" : "models need"} a bigger GPU than this one.` : "";
   $("tokenbox").hidden = !state.models.some(m => m.gated && !m.installed);
@@ -428,7 +602,7 @@ function drawComposer() {
       const b = document.createElement("button");
       b.textContent = TASKS[t] || t;
       b.className = t === task ? "on" : "";
-      b.onclick = () => { task = t; drawComposer(); };
+      b.onclick = () => { task = t; drawComposer(); saveSettings(); };
       tbox.appendChild(b);
     }
     const sbox = $("settings");
@@ -436,22 +610,25 @@ function drawComposer() {
     // The attached image stays when switching task or model, so it can be tried with another one
     $("imagebox").hidden = !needsImage(m, task);
     $("prompt").placeholder = task === "edit" ? "Say what to change in the image…" : "Describe what to make…";
+    const saved = kept[picked + "/" + task] || {};
     for (const item of (m && task ? m.tasks[task] : [])) {
       if (item.name === "prompt" || item.name === "image" || item.kind === "loras") continue;
       const label = document.createElement("label");
-      label.innerHTML = `${LABELS[item.name] || item.name} <input type="number" data-name="${item.name}" value="${item.default ?? ""}"
+      label.innerHTML = `${LABELS[item.name] || item.name} <input type="number" data-name="${item.name}" value="${esc(saved[item.name] ?? item.default ?? "")}"
         ${item.min != null ? `min="${item.min}"` : ""} ${item.max != null ? `max="${item.max}"` : ""} step="${item.step || (item.kind === "float" ? 0.5 : 1)}">`;
       sbox.appendChild(label);
     }
     const seed = document.createElement("label");
-    seed.innerHTML = `Seed <input type="number" data-name="seed" placeholder="random">`;
+    seed.innerHTML = `Seed <input type="number" data-name="seed" placeholder="random" value="${esc(saved.seed ?? "")}">`;
     if (m && task) sbox.appendChild(seed);
     addPresets(sbox);
     showImageSize();
   }
   drawLoras();
   const ready = m && m.installed && state.state === "ready";
-  $("go").disabled = !m || !m.installed;
+  $("go").disabled = !m || !m.installed || !!state.rental;
+  $("rental").hidden = !state.rental;
+  $("rental").innerHTML = state.rental ? `<b>A rental may be active on this rig.</b> Requests are refused until it ends: ${esc(state.rental)}` : "";
   if (m && !m.installed) say(`${m.name} isn't on this rig: press Download first.`);
   else if (m && state.state !== "ready") say(`ComfyUI is ${state.state}; requests wait for it.`);
   else if ($("status").className === "status") say("");
@@ -465,7 +642,8 @@ $("go").onclick = async () => {
   for (const input of $("settings").querySelectorAll("input[type=number]")) if (input.value !== "") body[input.dataset.name] = input.value;
   if (needsImage(m, task)) {
     if (!image) { say("Attach an image: drop it, paste it or choose a file", true); return; }
-    body.image = image;
+    // One kept on the rig from before isn't sent again: the rig uses its own
+    if (image !== true) body.image = image;
   }
   if (loraInput(m, task)) body.loras = usedLoras();
   $("go").disabled = true;
@@ -474,10 +652,13 @@ $("go").onclick = async () => {
     if (!chat) openChat((await post("/api/chat-new", {})).chat);
     body.chat = chat;
     await post("/api/generate", body); say(""); $("prompt").value = "";
+    saveSettings();
   }
   catch (e) { say(e.message, true); }
   $("go").disabled = false;
-  refresh();
+  await refresh();
+  // To the request just sent, wherever the chat was scrolled to
+  $("messages").scrollTop = $("messages").scrollHeight;
 };
 $("prompt").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("go").click(); });
 
@@ -584,6 +765,7 @@ function drawLoras() {
         slot[field] = value;
         // The slider and the number are one strength
         for (const same of row.querySelectorAll(`[data-field="${field}"]`)) if (same !== input || same.value !== String(value)) same.value = value;
+        saveSettings();
       };
       input.value = slot[field];
       input.oninput = () => set(input.value);
@@ -592,6 +774,7 @@ function drawLoras() {
         if (field === "name" && paired) {
           pairSlot(slot, names);
           for (const select of row.querySelectorAll("select")) select.value = slot[select.dataset.field];
+          saveSettings();
         }
         drawLoras();
       };
@@ -690,16 +873,22 @@ async function toPng(blob) {
   return canvas.toDataURL("image/png");
 }
 
+// An image means a task that starts from one (image to video, edit image): switches to it. False when the model
+// has none.
+function imageTask() {
+  const m = current();
+  if (needsImage(m, task)) return true;
+  const other = m && Object.keys(m.tasks).find(t => needsImage(m, t));
+  if (!other) { say(`${m ? m.name : "This model"} can't start from an image: pick one that can`, true); return false; }
+  task = other;
+  drawComposer();
+  saveSettings();
+  return true;
+}
+
 async function attach(blob, how) {
   if (!blob || !blob.type.startsWith("image/")) { say("That isn't an image", true); return; }
-  let m = current();
-  if (!needsImage(m, task)) {
-    // Dropping or pasting an image means a task that starts from one (image to video, edit image): switch to it
-    const other = m && Object.keys(m.tasks).find(t => needsImage(m, t));
-    if (!other) { say(`${m ? m.name : "This model"} can't start from an image`, true); return; }
-    task = other;
-    drawComposer();
-  }
+  if (!imageTask()) return;
   try {
     const data = TAKEN.includes(blob.type) ? await readAsDataURL(blob) : await toPng(blob);
     if (data.length * 0.75 > MAX_IMAGE) { say("The image is too big (40 MB at most)", true); return; }
@@ -715,6 +904,7 @@ async function attach(blob, how) {
     $("imageremove").hidden = false;
     showImageSize();
     say("");
+    keepImage({ image: data });
   } catch {
     say("This browser can't read that image", true);
   }
@@ -747,6 +937,7 @@ function setSize(width, height) {
   w.value = width;
   h.value = height;
   syncPreset();
+  saveSettings();
 }
 
 function showImageSize() {
@@ -859,6 +1050,49 @@ function clearImage() {
   $("imagefile").value = "";
 }
 
+// --- the chat's image: the last one attached in it is kept on the rig, and is there when the chat is opened again ---
+// imageStamp says which of the chat's images the box shows (null: none; not set: not looked yet).
+let imageStamp, imageEpoch = 0;
+
+// Makes an image the chat's on the rig: {image} the one attached here (null when it was removed), or one the rig has,
+// {job} the one a request started from, {output} one that was made. Those of the rig are shown from it afterwards.
+// Without a chat yet, the first request brings the attached one.
+async function keepImage(source) {
+  const asked = chat, here = "image" in source;
+  if (!asked) return;
+  imageEpoch++;
+  try {
+    const got = await post("/api/chat-image", { chat: asked, ...source });
+    if (asked === chat && here) imageStamp = got.stamp;
+  } catch (e) { if (!here) say(e.message, true); /* one attached here stays, and is sent with the request */ }
+  imageEpoch++;
+  if (!here) refresh();
+}
+
+// Shows the image the rig has for the open chat, when it isn't the one shown: after opening a chat, and when it was
+// attached from another PC or phone
+function syncImage() {
+  const open = state.chats.find(c => c.id === chat);
+  const stamp = open && open.image ? open.image.stamp : null;
+  if (stamp === imageStamp) return;
+  imageStamp = stamp;
+  clearImage();
+  if (stamp === null) return;
+  image = true;
+  const preview = $("imagepreview");
+  preview.src = `/api/chat-image?chat=${encodeURIComponent(chat)}&v=${stamp}`;
+  preview.hidden = false;
+  $("imagetext").textContent = "Kept in this chat. Drop, paste or";
+  $("imageremove").hidden = false;
+}
+
+// The size of an image shown from the rig; an attached one's is known before its preview loads
+$("imagepreview").onload = e => {
+  if (image !== true) return;
+  imageSize = [e.target.naturalWidth, e.target.naturalHeight];
+  showImageSize();
+};
+
 function imageIn(items) {
   for (const item of items || []) {
     if (item.kind === "file" && item.type.startsWith("image/")) return item.getAsFile();
@@ -867,7 +1101,7 @@ function imageIn(items) {
 }
 
 $("imagefile").onchange = e => { if (e.target.files[0]) attach(e.target.files[0], "Chosen"); };
-$("imageremove").onclick = clearImage;
+$("imageremove").onclick = () => { clearImage(); keepImage({ image: null }); };
 
 // Paste anywhere on the page, except text into the prompt or a number box (an image pasted there still counts)
 document.addEventListener("paste", e => {
@@ -898,27 +1132,225 @@ chatBox.addEventListener("drop", e => {
 window.addEventListener("dragover", e => { if (hasFiles(e)) e.preventDefault(); });
 window.addEventListener("drop", e => { if (hasFiles(e)) e.preventDefault(); });
 
-function media(path) {
-  const url = "/files/" + path.split("/").map(encodeURIComponent).join("/");
-  const ext = path.split(".").pop().toLowerCase();
-  const view = ["mp4", "webm"].includes(ext) ? `<video src="${url}" controls loop playsinline preload="metadata"></video>`
-    : ["mp3", "flac", "wav"].includes(ext) ? `<audio src="${url}" controls></audio>` : `<img src="${url}" alt="">`;
-  return `${view}<div class="links"><a href="${url}?download=1">Download</a><a href="${url}" target="_blank" rel="noopener">Open</a></div>`;
+const fileUrl = path => "/files/" + path.split("/").map(encodeURIComponent).join("/");
+const fileExt = path => path.split(".").pop().toLowerCase();
+const fileKind = path => ["mp4", "webm"].includes(fileExt(path)) ? "video" : ["mp3", "flac", "wav"].includes(fileExt(path)) ? "audio" : "image";
+
+// input: with the link that attaches an image to start the next request from
+function media(path, input) {
+  const url = fileUrl(path), kind = fileKind(path), at = esc(path);
+  const view = kind === "video" ? `<video src="${url}" controls loop playsinline preload="metadata"></video>`
+    : kind === "audio" ? `<audio src="${url}" controls></audio>` : `<img src="${url}" alt="" data-view="${at}" title="Click to see it large">`;
+  return `${view}<div class="links"><a href="${url}?download=1">Download</a><a href="${url}" target="_blank" rel="noopener">Open</a>`
+    + (kind === "video" ? `<a href="#" data-view="${at}">View large</a>` : "")
+    + (input && ["png", "jpg", "jpeg", "webp"].includes(fileExt(path)) ? `<a href="#" data-input="${at}" title="Attach it: to make a video from it, or to edit it">Use as input</a>` : "")
+    + `</div>`;
 }
+
+// --- the viewer: an image or a video large, with the others of the chat (or of the Outputs view) before and after --
+let viewList = [], viewAt = 0;
+
+function drawViewer() {
+  const path = viewList[viewAt], url = fileUrl(path);
+  const job = state.jobs.find(j => j.outputs.includes(path)) || outputs.find(o => o.path === path);
+  $("viewmedia").innerHTML = fileKind(path) === "video" ? `<video src="${url}" controls loop autoplay playsinline></video>` : `<img src="${url}" alt="">`;
+  $("viewcap").innerHTML = (viewList.length > 1 ? `<span>${viewAt + 1} of ${viewList.length}</span>` : "")
+    + (job && job.prompt ? `<span>${esc(job.prompt.length > 140 ? job.prompt.slice(0, 140) + "…" : job.prompt)}</span>` : "")
+    + `<a href="${url}?download=1">Download</a>`;
+  $("viewprev").hidden = $("viewnext").hidden = viewList.length < 2;
+}
+
+function openViewer(list, at) {
+  viewList = list;
+  viewAt = Math.max(0, at);
+  if (!list.length) return;
+  drawViewer();
+  $("viewer").hidden = false;
+}
+
+function closeViewer() {
+  $("viewer").hidden = true;
+  // And a video stops
+  $("viewmedia").innerHTML = "";
+}
+
+function stepViewer(by) {
+  viewAt = (viewAt + by + viewList.length) % viewList.length;
+  drawViewer();
+}
+
+$("viewprev").onclick = () => stepViewer(-1);
+$("viewnext").onclick = () => stepViewer(1);
+$("viewclose").onclick = closeViewer;
+$("viewer").onclick = e => { if (e.target === $("viewer") || e.target.classList.contains("body")) closeViewer(); };
+document.addEventListener("keydown", e => {
+  if ($("viewer").hidden) return;
+  if (e.key === "Escape") closeViewer();
+  else if (e.key === "ArrowLeft" && viewList.length > 1) stepViewer(-1);
+  else if (e.key === "ArrowRight" && viewList.length > 1) stepViewer(1);
+});
+
+document.addEventListener("click", e => {
+  const view = e.target.closest("[data-view]"), input = e.target.closest("[data-input]");
+  if (view) {
+    e.preventDefault();
+    const paths = view.closest("#outs") ? outputs.map(o => o.path) : state.jobs.flatMap(j => j.outputs);
+    const list = paths.filter(path => fileKind(path) !== "audio");
+    openViewer(list, list.indexOf(view.dataset.view));
+  } else if (input) {
+    e.preventDefault();
+    if (!imageTask()) return;
+    say("");
+    keepImage({ output: input.dataset.input });
+    toast("That image is attached: write what to do with it.");
+    $("prompt").focus();
+  }
+});
+
+// --- a request again: its prompt, model, task, numbers, seed, LoRAs and image back in the composer ---------------
+function settingsText(job) {
+  const v = job.values || {}, parts = [];
+  if (v.width && v.height) parts.push(`${v.width} × ${v.height}`);
+  for (const [name, value] of Object.entries(v)) {
+    if (name !== "width" && name !== "height") parts.push(`${(LABELS[name] || name).toLowerCase()} ${value}`);
+  }
+  return parts.join(" · ");
+}
+
+function useAgain(id) {
+  // As it is now: its seed is only known once it has started
+  const job = state.jobs.find(j => j.id === id);
+  if (!job) return;
+  if (!state.models.some(m => m.id === job.model)) { say(`${job.model_name} isn't offered on this rig any more`, true); return; }
+  picked = job.model;
+  task = job.task;
+  const values = kept[picked + "/" + task] = {};
+  for (const [name, value] of Object.entries(job.values || {})) values[name] = String(value);
+  values.seed = job.seed == null ? "" : String(job.seed);
+  loraSlots = (job.loras || []).map(slot => ({ name: slot.name, low: slot.low || "", strength: slot.strength }));
+  $("prompt").value = job.prompt;
+  $("tasks").dataset.key = $("loraslots").dataset.key = "";
+  drawModels();
+  drawComposer();
+  saveSettings();
+  if (job.image) keepImage({ job: job.id });
+  toast(job.seed == null ? "That request's prompt and settings are back."
+    : "That request's prompt and settings are back, with its seed: clear Seed for a different result.");
+  $("prompt").focus();
+}
+
+// --- the tab's title and a sound: how far the open chat's request is, and that it ended, without looking --------
+const TITLE = document.title;
+const watched = new Map();  // the requests seen waiting or running
+let doneMark = false, soundOn = false, audio = null;
+try { soundOn = localStorage.getItem("sound") === "1"; } catch { /* no storage: off */ }
+$("sound").checked = soundOn;
+
+function beep() {
+  try {
+    audio = audio || new AudioContext();
+    [880, 1175].forEach((pitch, i) => {
+      const tone = audio.createOscillator(), gain = audio.createGain();
+      const at = audio.currentTime + i * 0.16;
+      tone.frequency.value = pitch;
+      tone.connect(gain);
+      gain.connect(audio.destination);
+      gain.gain.setValueAtTime(0.0001, at);
+      gain.gain.exponentialRampToValueAtTime(0.2, at + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, at + 0.3);
+      tone.start(at);
+      tone.stop(at + 0.32);
+    });
+  } catch { /* a browser without sound for pages */ }
+}
+
+// Heard once when turned on: it says what it will sound like, and browsers only let a page make sound after a click
+$("sound").onchange = e => {
+  soundOn = e.target.checked;
+  try { localStorage.setItem("sound", soundOn ? "1" : "0"); } catch { /* as above */ }
+  if (soundOn) beep();
+};
+
+function watchJobs() {
+  for (const job of state.jobs) {
+    if (job.state === "queued" || job.state === "running") watched.set(job.id, true);
+    else if (watched.delete(job.id)) {
+      if (document.hidden) doneMark = true;
+      if (soundOn) beep();
+    }
+  }
+  const run = state.jobs.find(j => j.state === "running");
+  document.title = (run && run.progress != null ? `${Math.floor(100 * run.progress)}% · `
+    : run || state.chats.some(c => c.busy) ? "Working · " : doneMark ? "Done · " : "") + TITLE;
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && doneMark) { doneMark = false; if (state) watchJobs(); } });
+
+// --- the running request: one bar for all of it, the time gone and the time left ----------------------------------
+// The rig says how far the whole request is (loading, every pass of steps, decoding and saving) and how long is left,
+// from the pace of this request and how long the last one like it took. The clock runs on between its answers.
+let running = null;
+const clock = seconds => {
+  const s = Math.max(0, Math.round(seconds));
+  return s >= 3600 ? `${Math.floor(s / 3600)}:${String(Math.floor(s / 60) % 60).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`
+    : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+};
+
+function drawRunning(rig, job) {
+  if (!rig.querySelector(".run")) {
+    rig.innerHTML = `<div class="who"></div><div class="run"><div class="stage"></div>
+      <div class="row"><div class="bar"><div></div></div><span class="pct"></span><button class="small">Stop</button></div>
+      <div class="hint times"></div></div>`;
+    rig.querySelector("button").onclick = () => post("/api/cancel", { job: job.id }).then(refresh);
+  }
+  rig.querySelector(".who").textContent = `${job.variant} · seed ${job.seed ?? "random"}`;
+  const sampled = job.all_steps && job.all_step >= job.all_steps && job.pass >= job.passes;
+  const pace = job.it_s ? ` · ${job.it_s >= 1 ? job.it_s.toFixed(2) + " it/s" : (1 / job.it_s).toFixed(1) + " s/step"}` : "";
+  rig.querySelector(".stage").textContent = job.note ? job.note
+    : sampled ? "Finishing: decoding and saving…"
+    : job.all_step ? `Step ${job.all_step} of ${job.all_steps}${job.passes > 1 ? ` · pass ${job.pass} of ${job.passes}` : ""}${pace}`
+    : "Loading the model…";
+  const known = job.progress != null;
+  rig.querySelector(".bar").classList.toggle("wait", !known);
+  rig.querySelector(".bar > div").style.width = known ? (100 * job.progress).toFixed(1) + "%" : "";
+  rig.querySelector(".pct").textContent = known ? Math.floor(100 * job.progress) + "%" : "";
+  running = { rig, job, at: performance.now() };
+  drawTimes();
+}
+
+function drawTimes() {
+  if (!running || !running.rig.isConnected) return;
+  const { job, rig, at } = running;
+  if (job.elapsed == null) { rig.querySelector(".times").textContent = ""; return; }
+  const since = (performance.now() - at) / 1000;
+  const left = job.eta == null ? null : job.eta - since;
+  rig.querySelector(".times").textContent = `${clock(job.elapsed + since)} elapsed`
+    + (left == null ? (job.all_step ? "" : " · the time left shows from the first step")
+      : job.eta_rough ? (left < 1 ? "" : ` · at least ${clock(left)} left`) + " · a rough guess: the first request like this one"
+      : left < 1 ? " · almost done" : ` · about ${clock(left)} left`);
+}
+setInterval(drawTimes, 500);
 
 function drawMessages() {
   const box = $("messages");
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
+  running = null;
+  const empty = box.querySelector(".empty");
+  if (state.jobs.length) { if (empty) empty.remove(); }
+  else if (!empty) box.innerHTML = `<div class="empty"><b>Nothing made in this chat yet</b>Pick a model, write a prompt and press Generate.</div>`;
   for (const job of state.jobs) {
-    const key = JSON.stringify([job.state, job.step, job.steps, job.outputs.length, job.error, job.note]);
+    const key = JSON.stringify([job.state, job.outputs.length, job.error, job.note, job.ahead, job.wait == null ? null : Math.round(job.wait / 10)]);
     let pair = shown.get(job.id);
     if (pair && pair.key === key) continue;
     if (!pair) {
       const you = document.createElement("div");
       you.className = "msg you";
-      you.innerHTML = `<div class="who">${esc(job.model_name)} · ${esc(TASKS[job.task] || job.task)}</div>${esc(job.prompt)}`
-        + (job.image ? `<div class="hint">with ${esc(job.image)}</div>` : "")
-        + (job.loras || []).map(slot => `<div class="hint">LoRA ${esc(loraText(slot))}</div>`).join("");
+      const set = settingsText(job);
+      you.innerHTML = `<div class="who">${esc(job.model_name)} · ${esc(TASKS[job.task] || job.task)}</div><div class="text">${esc(job.prompt)}</div>`
+        + (set ? `<div class="hint">${esc(set)}</div>` : "")
+        + (job.image ? `<div class="hint">from an image</div>` : "")
+        + (job.loras || []).map(slot => `<div class="hint">LoRA ${esc(loraText(slot))}</div>`).join("")
+        + `<div class="links"><a href="#" title="Its prompt, settings, seed, LoRAs and image back in the composer">Use again</a></div>`;
+      you.querySelector(".links a").onclick = e => { e.preventDefault(); useAgain(job.id); };
       const rig = document.createElement("div");
       rig.className = "msg rig";
       box.appendChild(you); box.appendChild(rig);
@@ -926,15 +1358,15 @@ function drawMessages() {
       shown.set(job.id, pair);
     }
     pair.key = key;
+    // Updated in place, so the bar moves on rather than starting over and Stop stays under the pointer
+    if (job.state === "running") { pair.key = ""; drawRunning(pair.rig, job); continue; }
     let html = `<div class="who">${esc(job.variant)} · seed ${esc(job.seed ?? "random")}</div>`;
-    if (job.state === "queued") html += `Waiting in the queue <button class="small" data-job="${job.id}">Cancel</button>`;
-    else if (job.state === "running") {
-      const pct = job.steps ? Math.floor(100 * job.step / job.steps) : 0;
-      html += job.note ? esc(job.note) : job.steps ? `Step ${job.step}/${job.steps}${job.it_s ? ` · ${job.it_s >= 1 ? job.it_s.toFixed(2) + " it/s" : (1 / job.it_s).toFixed(1) + " s/step"}` : ""}` : "Loading the model…";
-      html += `<div class="row"><div class="bar"><div style="width:${pct}%"></div></div><button class="small" data-job="${job.id}">Stop</button></div>`;
-    } else if (job.state === "done") {
-      const took = job.finished && job.started ? ` in ${Math.round(job.finished - job.started)} s` : "";
-      html += `<div class="hint">Done${took}</div>` + job.outputs.map(media).join("")
+    if (job.state === "queued") {
+      html += `Waiting in the queue${job.ahead ? `: ${job.ahead} before it` : ""}${job.wait != null ? ` · starts in about ${clock(job.wait)}` : ""} <button class="small" data-job="${job.id}">Cancel</button>`;
+    }
+    else if (job.state === "done") {
+      const took = job.finished && job.started ? ` in ${clock(job.finished - job.started)}` : "";
+      html += `<div class="hint">Done${took}</div>` + job.outputs.map(path => media(path, true)).join("")
         + (job.removed ? `<div class="hint">${job.removed === 1 ? "A file it made was" : job.removed + " files it made were"} deleted</div>` : "");
     } else if (job.state === "cancelled") html += `<div class="hint">Cancelled</div>`;
     else html += `<div class="error">${esc(job.error || "Failed")}</div>`;

@@ -234,7 +234,7 @@ start_page() {
     address=$(ch_lan_address)
     mkdir -p "$CH_PAGE_DATA" "$CH_OUTPUTS" "$CH_INPUTS" "$CH_MODELS"
     HF_TOKEN="$CH_HF_TOKEN" PYTHONUNBUFFERED=1 setsid "$CH_VENV/bin/python" "$CH_DIR/page.py" \
-        --bind "$address" --port "$CH_PAGE_PORT" --comfy "http://$address:$CH_PORT" --gpu "$CH_GPUS" \
+        --bind "$address" --port "$CH_PAGE_PORT" --comfy "http://$address:$CH_PORT" --gpu "$CH_GPUS" --allow-docker "$CH_ALLOW_DOCKER" \
         --catalog "$CH_DIR/catalog.json" --workflows "$CH_DIR/workflows" --models "$CH_MODELS" \
         --outputs "$CH_OUTPUTS" --inputs "$CH_INPUTS" --data "$CH_PAGE_DATA" \
         --state-file "$CH_RUN_DIR/state" --page-file "$CH_RUN_DIR/page.json" --log "$LOG_FILE" \

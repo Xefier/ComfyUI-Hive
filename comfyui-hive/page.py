@@ -15,6 +15,9 @@ h-run.sh runs it beside ComfyUI, on the rig's LAN address at ComfyUI's port + 1.
   /api/state      the rig, its models, the chats, the jobs (?chat=<id>: that chat's), what is happening now
   /api/generate   POST {model, task, prompt, chat?, image?, width?, height?, length?, seed?, loras?}: queues a job
   /api/chat-new   POST {title?}: starts a chat; /api/chat-update {chat, title?, archived?}; /api/chat-delete {chat}
+  /api/chat-settings  POST {chat, settings}: what the page's composer is set to in that chat, to open it with again
+  /api/chat-image     POST {chat, image}: the image attached in that chat (null: none), or {chat, job} for the one a
+                      request started from, or {chat, output} for an image the rig made; GET ?chat=<id>: that image
   /api/outputs    every file in the outputs folder; /api/outputs-delete POST {paths}: deletes some
   /api/cancel     POST {job}: drops a queued job or stops the running one
   /api/download   POST {model}: downloads the model's files; /api/cancel-download and /api/delete likewise
@@ -53,11 +56,18 @@ KEEP_JOBS = 2000  # across all chats
 SHOW_JOBS = 100  # of a chat, on the page
 DEFAULT_CHAT = "default"  # where a request without a chat goes: the Claude Code tools, and the history from before chats
 MAX_UPLOAD = 40 * 1024 * 1024
+MAX_SETTINGS = 50000  # characters of a chat's settings as JSON
+IMAGE_KINDS = {"png": "image/png", "jpg": "image/jpeg", "webp": "image/webp"}
 MAX_LORA = 8 * 1024 ** 3
 LORA_DIR = "loras"  # in the models folder, where ComfyUI looks for them
 LORA_EXT = ".safetensors"
 SPARE_DISK = 2 * 1024 ** 3  # left free on the data drive after a download
 OUTPUT_PREFIX = "comfyui-hive"
+# The nodes that take the steps. A workflow can have several (Wan 2.2 14B's high-noise and low-noise halves, LTX's two
+# stages): each is a pass of the request, and counts its own steps.
+SAMPLERS = ("KSampler", "KSamplerAdvanced", "SamplerCustom", "SamplerCustomAdvanced")
+# What is worked out while a request runs, and not kept with it afterwards
+RUN_FIELDS = ("est", "shown", "begun", "first", "last", "rate", "all_step", "all_steps", "pass", "passes")
 
 args = None
 lock = threading.RLock()
@@ -84,6 +94,20 @@ def write_json(path, value):
     os.replace(temp, path)
 
 
+def read_image(text):
+    """An image sent as a data URL: its kind (png, jpg, webp) and bytes, or None and why not."""
+    match = re.match(r"^data:image/(png|jpeg|webp);base64,(.+)$", str(text or ""), re.S)
+    if not match:
+        return None, None, "That isn't a PNG, JPEG or WebP image"
+    try:
+        data = base64.b64decode(match.group(2))
+    except ValueError:
+        return None, None, "The image didn't arrive whole"
+    if len(data) > MAX_UPLOAD:
+        return None, None, "The image is too big"
+    return "jpg" if match.group(1) == "jpeg" else match.group(1), data, None
+
+
 def read_line(path):
     try:
         with open(path, encoding="utf-8") as handle:
@@ -106,6 +130,49 @@ def gpu_info():
                 "compute": float(cap), "load": load, "temp": temp, "power": power}
     except (OSError, IndexError, ValueError, subprocess.SubprocessError):
         return None
+
+
+def rental():
+    """What says someone else may have the GPU, a rental above all, or "": a GPU process that isn't ComfyUI, or a
+    running Docker container (a rented one can be idle). What h-run.sh waits for before it starts, asked again before
+    each request: a rental can begin while this flight sheet is on."""
+    def ours(pid, server):
+        # ComfyUI, or a process it started
+        for _ in range(20):
+            if pid == server:
+                return True
+            try:
+                with open(f"/proc/{pid}/stat", encoding="ascii", errors="replace") as handle:
+                    pid = handle.read().rsplit(")", 1)[1].split()[1]
+            except (OSError, IndexError):
+                return False
+        return False
+
+    def lines(command):
+        try:
+            out = subprocess.run(command, capture_output=True, text=True, timeout=10).stdout
+        except (OSError, subprocess.SubprocessError):
+            return []
+        return [line.strip() for line in out.splitlines() if line.strip()]
+
+    # Without ComfyUI's pid its own process can't be told from another's, so the GPU's processes aren't looked at
+    server = read_line(os.path.join(os.path.dirname(args.state_file), "server.pid"))
+    if server:
+        apps = lines(["nvidia-smi", "--query-compute-apps=pid,process_name", "--format=csv,noheader"])
+        apps = [app for app in apps if not ours(app.split(",")[0].strip(), server)]
+        if apps:
+            return "the GPU is in use by " + "; ".join(apps)
+    if not args.allow_docker:
+        containers = lines(["docker", "ps", "--format", "{{.Names}}"])
+        if containers:
+            return ("Docker containers are running: " + ", ".join(containers)
+                    + ". If they are safe to share with, set allow_docker=1 in the flight sheet")
+    return ""
+
+
+def rental_refusal():
+    found = rental()
+    return f"A rental may be active on this rig, so nothing was started: {found}" if found else ""
 
 
 def ram_gb():
@@ -237,6 +304,7 @@ class Rig:
         self.settings = read_json(os.path.join(args.data, "settings.json"), {})
         self.token = read_line(os.path.join(args.data, "hf_token")) or os.environ.get("HF_TOKEN", "")
         self.last_model = None
+        self.rental = ""  # what says a rental may be active, looked at every few seconds for the page
         try:
             # An upload the miner stopped in the middle of
             for name in os.listdir(lora_root()):
@@ -570,6 +638,7 @@ class Rig:
             if any(job["state"] in ("queued", "running") for job in mine):
                 return "A request is waiting or running in it: cancel that first"
             self.remove_outputs([path for job in mine for path in job["outputs"]])
+            self.drop_image(chat)
             for job in mine:
                 if job.get("image"):
                     try:
@@ -582,6 +651,96 @@ class Rig:
             self.save_jobs()
         log(f"Chat {chat['title'] or chat_id} deleted with {len(mine)} requests")
         return None
+
+    def set_settings(self, chat_id, settings):
+        """Keeps what the page's composer is set to in a chat: the model, the task, the numbers, the LoRAs."""
+        if not isinstance(settings, dict) or len(json.dumps(settings)) > MAX_SETTINGS:
+            return "Those aren't a chat's settings"
+        with lock:
+            chat = self.find_chat(chat_id)
+            if chat is None:
+                return "No such chat"
+            chat["settings"] = settings
+            self.save_chats()
+        return None
+
+    # The image attached in a chat is kept in the inputs folder, apart from the copies its requests started from: it
+    # is there again when the chat is opened, on any PC or phone.
+
+    def image_path(self, chat):
+        return os.path.join(args.inputs, chat["image"]["name"]) if chat.get("image") else None
+
+    def drop_image(self, chat):
+        if chat.get("image"):
+            try:
+                os.remove(self.image_path(chat))
+            except OSError:
+                pass
+            chat.pop("image")
+
+    def keep_image(self, chat, kind, data):
+        """Makes an image the chat's attached one. Returns what tells it from the one before."""
+        with lock:
+            old = self.image_path(chat)
+            name = f"chat-{chat['id']}.{kind}"
+            try:
+                if old and chat["image"]["name"] == name and os.path.getsize(old) == len(data):
+                    with open(old, "rb") as handle:
+                        if handle.read() == data:
+                            return chat["image"]["stamp"]
+            except OSError:
+                pass
+            self.drop_image(chat)
+            with open(os.path.join(args.inputs, name), "wb") as handle:
+                handle.write(data)
+            chat["image"] = {"name": name, "stamp": time.time()}
+            self.save_chats()
+            return chat["image"]["stamp"]
+
+    def stored_image(self, job_id, output):
+        """An image already on the rig, to attach again: the one a request started from, or one that was made. Its
+        kind and bytes, or None and why not."""
+        if job_id:
+            with lock:
+                job = next((job for job in self.jobs if job["id"] == job_id), None)
+            path = os.path.join(args.inputs, os.path.basename(job["image"])) if job and job.get("image") else None
+        else:
+            root = os.path.realpath(args.outputs)
+            path = os.path.realpath(os.path.join(root, str(output)))
+            if not path.startswith(root + os.sep):
+                path = None
+        kind = os.path.splitext(path or "")[1].lower().lstrip(".").replace("jpeg", "jpg")
+        if kind not in IMAGE_KINDS:
+            return None, None, "That isn't an image to start from"
+        try:
+            if os.path.getsize(path) > MAX_UPLOAD:
+                return None, None, "The image is too big"
+            with open(path, "rb") as handle:
+                return kind, handle.read(), None
+        except OSError:
+            return None, None, "That image is no longer on the rig"
+
+    def set_image(self, chat_id, image, job_id=None, output=None):
+        """The page's attach and Remove, and attaching an image the rig has. Returns the image's stamp (None: no
+        image now), or None and why not."""
+        kind = data = None
+        if job_id or output:
+            kind, data, error = self.stored_image(job_id, output)
+            if error:
+                return None, error
+        elif image is not None:
+            kind, data, error = read_image(image)
+            if error:
+                return None, error
+        with lock:
+            chat = self.find_chat(chat_id)
+            if chat is None:
+                return None, "No such chat"
+            if data is None:
+                self.drop_image(chat)
+                self.save_chats()
+                return None, None
+            return self.keep_image(chat, kind, data), None
 
     def chat_list(self):
         """The chats, the one last used first, each with how many requests it has and whether one is under way."""
@@ -682,6 +841,9 @@ class Rig:
         prompt = str(request.get("prompt") or "").strip()
         if not prompt:
             return None, "Write a prompt"
+        refusal = rental_refusal()
+        if refusal:
+            return None, refusal
         spec = model["tasks"][task]
         chat = self.find_chat(str(request["chat"])) if request.get("chat") else self.default_chat()
         if chat is None:
@@ -710,17 +872,23 @@ class Rig:
                 return None, f"{name} must be between {low} and {high}"
             job["values"][name] = value
         if any(i["name"] == "image" for i in spec["inputs"]):
-            image = request.get("image") or ""
-            match = re.match(r"^data:image/(png|jpeg|webp);base64,(.+)$", image, re.S)
-            if not match:
-                return None, "This needs an image: attach one"
-            data = base64.b64decode(match.group(2))
-            if len(data) > MAX_UPLOAD:
-                return None, "The image is too big"
-            name = f"{job['id']}.{'jpg' if match.group(1) == 'jpeg' else match.group(1)}"
-            with open(os.path.join(args.inputs, name), "wb") as handle:
-                handle.write(data)
-            job["image"] = name
+            # The request's own copy: the chat's image can change while this waits in the queue
+            if request.get("image"):
+                kind, data, error = read_image(request["image"])
+                if error:
+                    return None, error
+                job["image"] = f"{job['id']}.{kind}"
+                with open(os.path.join(args.inputs, job["image"]), "wb") as handle:
+                    handle.write(data)
+                self.keep_image(chat, kind, data)
+            else:
+                # Sent without one: the image attached in the chat before
+                with lock:
+                    kept = self.image_path(chat)
+                    if not kept or not os.path.isfile(kept):
+                        return None, "This needs an image: attach one"
+                    job["image"] = job["id"] + os.path.splitext(kept)[1]
+                    shutil.copyfile(kept, os.path.join(args.inputs, job["image"]))
         if request.get("seed") not in (None, ""):
             try:
                 job["seed"] = int(request["seed"])
@@ -783,6 +951,8 @@ class Rig:
                 log(f"Job {job['id']} failed: {error}")
             job["finished"] = time.time()
             job.pop("cancel", None)
+            for name in RUN_FIELDS:
+                job.pop(name, None)
             with lock:
                 self.save_jobs()
 
@@ -797,14 +967,25 @@ class Rig:
         model, variant = self.find_model(job["model"])
         if model is None:
             raise RuntimeError("The model is no longer offered on this rig")
+        # Asked when the request came in too; one that waited in the queue may start much later
+        refusal = rental_refusal()
+        if refusal:
+            raise RuntimeError(refusal)
         prompt = build_prompt(model, variant, job)
+        samplers = {node_id for node_id, node in prompt.items() if node["class_type"] in SAMPLERS}
+        job["passes"] = len(samplers)
+        # Loading takes far longer when the model before was another one
+        job["warm"] = self.last_model == job["model"]
+        with lock:
+            job["est"] = self.estimate(job)
         if self.last_model and self.last_model != job["model"]:
             # Another model: let go of the last one's memory first rather than squeezing both
             comfy_post("/free", {"unload_models": True, "free_memory": True})
         self.last_model = job["model"]
         client_id = hashlib.sha1(job["id"].encode()).hexdigest()
-        watcher = ProgressWatcher(client_id, job)
+        watcher = ProgressWatcher(client_id, job, samplers)
         watcher.start()
+        job["begun"] = time.time()
         try:
             answer = comfy_post("/prompt", {"prompt": prompt, "client_id": client_id})
         except urllib.error.HTTPError as error:
@@ -834,6 +1015,43 @@ class Rig:
                         job["outputs"].append(relative)
         if not job["outputs"]:
             raise RuntimeError("ComfyUI finished without saving anything")
+        if job.get("first"):
+            # How long each part took, for the estimate of the next request like this one. The time per step is over
+            # all passes, so what goes on between them (the other half's model loading) is in it.
+            steps = job.get("all_step") or 0
+            job["took"] = {"load": round(job["first"] - job["begun"], 2), "steps": steps,
+                           "rate": round((job["last"] - job["first"]) / (steps - 1), 4) if steps > 1 else None,
+                           "tail": round(time.time() - job["last"], 2)}
+
+    def estimate(self, job):
+        """What the parts of a request will take, from the last ones like it: the time to the first step (load) from
+        one of the same model and task, that started as warm or cold as this one if there is one; the steps, the time of each (rate)
+        and the time after the last (tail) from one with the same settings too. Only what is known is in it."""
+        est, other = {}, None
+        for old in reversed(self.jobs):
+            took = old.get("took")
+            if not took or old["model"] != job["model"] or old["task"] != job["task"]:
+                continue
+            if "load" not in est and old.get("warm") == job["warm"]:
+                est["load"] = took["load"]
+            elif other is None:
+                other = took["load"]
+            if "tail" not in est and old["values"] == job["values"] \
+                    and len(old.get("loras") or []) == len(job.get("loras") or []):
+                est.update(tail=took["tail"], rate=took["rate"], steps=took["steps"])
+            if len(est) == 4:
+                break
+        if "load" not in est and other is not None:
+            # Better than no estimate until the first step: the load of one that started the other way
+            est["load"] = other
+        return est
+
+    def expected(self, job, warm):
+        """The seconds a request not started yet will take, or None when no request like it has been timed."""
+        est = self.estimate(dict(job, warm=warm))
+        if len(est) < 4:
+            return None
+        return est["load"] + max(0, est["steps"] - 1) * (est["rate"] or 0) + est["tail"]
 
     # dashboard ---
 
@@ -862,6 +1080,7 @@ class Rig:
                 tick += 1
                 if tick % 5 == 0:
                     self.gpu = gpu_info() or self.gpu
+                    self.rental = rental()
             except OSError:
                 pass
             time.sleep(2)
@@ -870,8 +1089,28 @@ class Rig:
         """For the page: a chat's requests. Without a chat, the last requests of all of them (the Claude Code tools)."""
         with lock:
             jobs = [j for j in self.jobs if j["chat"] == chat_id][-SHOW_JOBS:] if chat_id else self.jobs[-60:]
-            jobs = [{k: v for k, v in j.items() if k != "cancel"} for j in jobs]
+            jobs = [{k: v for k, v in j.items() if k not in ("cancel", "est", "shown", "took")} for j in jobs]
+            shown = {job["id"]: job for job in jobs}
+            now = time.time()
+            running = next((j for j in self.jobs if j["state"] == "running"), None)
+            # How long until each waiting request starts: what is left of the running one, and the ones before it
+            wait, ahead, before = 0, 0, self.last_model
+            if running:
+                fraction, left, rough = job_progress(running, now) if running.get("begun") else (None, None, True)
+                wait, ahead, before = None if rough else left, 1, running["model"]
+                if running["id"] in shown and running.get("begun"):
+                    shown[running["id"]].update(progress=fraction, eta=None if left is None else round(left, 1),
+                                                eta_rough=rough, elapsed=round(now - running["begun"], 1))
+            for job in self.jobs:
+                if job["state"] != "queued":
+                    continue
+                if job["id"] in shown:
+                    shown[job["id"]].update(ahead=ahead, wait=None if wait is None else round(wait))
+                took = self.expected(job, before == job["model"])
+                wait = None if wait is None or took is None else wait + took
+                ahead, before = ahead + 1, job["model"]
         return {
+            "rental": self.rental,
             "chat": chat_id, "chats": self.chat_list(),
             "version": args.version, "state": read_line(args.state_file) or "stopped",
             "comfy_url": args.comfy, "gpu": self.gpu, "ram_gb": self.ram,
@@ -961,13 +1200,53 @@ def build_prompt(model, variant, job):
     return copy.deepcopy(prompt)
 
 
-class ProgressWatcher:
-    """Follows ComfyUI's websocket for one job: the sampler's step and speed. Standard library websocket client: text
-    frames only, the binary preview frames are skipped."""
+def job_progress(job, now):
+    """How far a running request is as a whole, 0 to 1, the seconds left (each None when it can't be told yet), and
+    whether those seconds are only the steps', the end's being unknown.
 
-    def __init__(self, client_id, job):
+    The time left is what is left of loading, the steps left of all passes at the pace of this request (of the last
+    one like it before the second step), and what came after the last step in the last one like it (decoding,
+    saving). How far it is, is the time gone over the time gone and left: so the bar fills once, and is full at the
+    end. It never goes back when the estimate grows, and waits just short of full when the end comes later than
+    estimated."""
+    begun = job.get("begun")
+    if not begun:
+        return None, None, True
+    est = job.get("est") or {}
+    elapsed = now - begun
+    done, total = job.get("all_step") or 0, job.get("all_steps") or est.get("steps") or 0
+    rate = job.get("rate") or est.get("rate")
+    tail = est.get("tail") or 0
+    left = None
+    if not done:
+        if total and rate is not None and est.get("load") is not None:
+            left = max(0, est["load"] - elapsed) + (total - 1) * rate + tail
+    elif rate is not None:
+        since = now - job["last"]
+        left = max(0, (total - done) * rate - since) + tail if done < total else max(0, tail - since)
+    rough = est.get("tail") is None
+    if done and total and (left is None or rough):
+        # The first request of its kind: how long the end takes isn't known, so the steps fill most of the bar
+        fraction = 0.9 * min(1, (done + (min(1, (now - job["last"]) / rate) if rate and done < total else 0)) / total)
+    elif left is not None:
+        fraction = elapsed / (elapsed + left) if elapsed + left > 0 else 0
+    else:
+        return None, None, rough
+    job["shown"] = round(min(0.99, max(fraction, job.get("shown", 0))), 4)
+    return job["shown"], left, rough
+
+
+class ProgressWatcher:
+    """Follows ComfyUI's websocket for one job: each sampler's step, and the pace over all of them. Standard library
+    websocket client: text frames only, the binary preview frames are skipped."""
+
+    def __init__(self, client_id, job, samplers):
         self.client_id = client_id
         self.job = job
+        self.samplers = samplers
+        self.seen = {}  # sampler node -> (step, steps)
+        self.timed = 0  # seconds between steps of the same pass, and how many steps those were
+        self.counted = 0
         self.prompt_id = None
         self.running = True
         self.sock = None
@@ -1043,15 +1322,30 @@ class ProgressWatcher:
         if self.prompt_id and data.get("prompt_id") not in (None, self.prompt_id):
             return
         if message.get("type") == "progress":
-            value, maximum = data.get("value", 0), data.get("max", 0)
+            value, maximum, node = data.get("value", 0), data.get("max", 0), data.get("node")
+            if self.samplers and node not in self.samplers:
+                # Another node counting its own work (a decode in tiles): part of what comes after the steps
+                return
             now = time.time()
-            if self.last and value > self.last[0] and maximum == self.job.get("steps"):
-                speed = (value - self.last[0]) / max(1e-3, now - self.last[1])
-                previous = self.job.get("it_s") or speed
-                self.job["it_s"] = round(0.5 * previous + 0.5 * speed, 4)
-            if not self.last or value != self.last[0]:
-                self.last = (value, now)
-            self.job["step"], self.job["steps"] = value, maximum
+            job, before = self.job, self.seen.get(node)
+            if before and value > before[0]:
+                self.timed += now - self.last
+                self.counted += value - before[0]
+                job["rate"] = round(self.timed / self.counted, 4)
+                job["it_s"] = round(self.counted / max(1e-3, self.timed), 4)
+            if not before or value != before[0]:
+                self.last = now
+                if value:
+                    job.setdefault("first", now)
+                    job["last"] = now
+            self.seen[node] = (value, maximum)
+            job["step"], job["steps"] = value, maximum
+            # Over all passes: one not reached yet counts as many steps as those so far do
+            passes = max(job.get("passes") or 0, len(self.seen))
+            steps = sum(most for _, most in self.seen.values())
+            job["pass"], job["passes"] = len(self.seen), passes
+            job["all_step"] = sum(step for step, _ in self.seen.values())
+            job["all_steps"] = round(steps * passes / len(self.seen))
         elif message.get("type") == "executing" and data.get("node"):
             self.job["node"] = data.get("display_node") or data.get("node")
 
@@ -1085,6 +1379,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send(200, rig.state(urllib.parse.parse_qs(url.query).get("chat", [None])[0]))
         elif url.path == "/api/outputs":
             self.send(200, {"outputs": rig.outputs()})
+        elif url.path == "/api/chat-image":
+            chat = rig.find_chat(urllib.parse.parse_qs(url.query).get("chat", [""])[0])
+            path = rig.image_path(chat) if chat else None
+            try:
+                with open(path, "rb") as handle:
+                    self.send(200, handle.read(), IMAGE_KINDS[path.rsplit(".", 1)[1]])
+            except (OSError, TypeError):
+                self.send(404, {"error": "not found"})
         elif url.path == "/log":
             self.send(200, tail(args.log, 64 * 1024), "text/plain; charset=utf-8")
         elif url.path.startswith("/files/"):
@@ -1122,6 +1424,12 @@ class Handler(http.server.BaseHTTPRequestHandler):
         elif path == "/api/chat-delete":
             error = rig.delete_chat(str(body.get("chat")))
             self.send(400 if error else 200, {"error": error})
+        elif path == "/api/chat-settings":
+            error = rig.set_settings(str(body.get("chat")), body.get("settings"))
+            self.send(400 if error else 200, {"error": error})
+        elif path == "/api/chat-image":
+            stamp, error = rig.set_image(str(body.get("chat")), body.get("image"), body.get("job"), body.get("output"))
+            self.send(400 if error else 200, {"error": error} if error else {"stamp": stamp})
         elif path == "/api/outputs-delete":
             count, error = rig.delete_outputs(body.get("paths"))
             self.send(400 if error else 200, {"error": error} if error else {"deleted": count})
@@ -1213,6 +1521,7 @@ def main():
         parser.add_argument(f"--{name}", required=True)
     parser.add_argument("--port", type=int, required=True)
     parser.add_argument("--gpu", type=int, default=0)
+    parser.add_argument("--allow-docker", type=int, default=0)
     parser.add_argument("--version", default="")
     args = parser.parse_args()
     for folder in (args.models, args.outputs, args.inputs, args.data):

@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.5.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.7.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -49,14 +49,43 @@ versions of this miner.
   downloaded once. **Delete** frees the space again, keeping files another downloaded model still uses.
 - **The chat:** pick a downloaded model and what to make (text to image, edit image, text to video, image to video), write the
   prompt, and press Generate (or Ctrl+Enter). Size, length and seed can be changed; empty means the model's default
-  and a random seed. Requests queue and run one at a time; each shows its progress (step, speed), then the image or
+  and a random seed. Requests queue and run one at a time; each shows its progress, then the image or
   video with **Download** and **Open** links, or what went wrong. The history stays on the rig.
+- **Progress:** one bar for the whole request, full when it is done: loading the model, every pass of steps (Wan 2.2
+  14B and LTX have two) and the decoding and saving after them, with the step over all passes, the pace, the time
+  gone and about how long is left. The time left comes from this request's pace and from how long the load and the
+  end took in the last request like it (same model and task; same settings for the end), so the first request of a
+  kind fills the bar by its steps, says "a rough guess", and has no estimate before its first step. The bar never
+  goes back; when a request takes longer than estimated it waits just short of full.
+- **A request again:** **Use again** under a request puts its prompt, model, task, numbers, seed, LoRAs and image
+  back in the composer (clear Seed for a different result). **Use as input** under an image the rig made attaches it,
+  switching to the model's task that starts from an image. Each request shows the size and numbers it was made with.
+- **The queue:** a waiting request says how many are before it and, once requests like them have been timed, about
+  when it starts.
+- **Without looking:** the tab's title shows how far the open chat's request is ("46% · ComfyUI-Hive"), "Working"
+  while another chat is busy, and "Done" when one ended while the tab was in the background. **Sound when done** (at
+  the top, remembered by the browser) plays a short sound. Browser notifications aren't used: browsers only allow
+  them on https pages, and the rig's page is plain http on the LAN.
+- **Looking at results:** click an image (or **View large** under a video) to see it large, with the arrow keys or
+  the buttons going through the chat's other results, and Esc to close. The same in the Outputs view.
+- **The prompt being written** is kept with the chat like its other settings.
+- **Models to download** are folded under the ones on the rig ("7 more to download").
+- **A rental is never interrupted by a request:** before a request is taken, and again before one that waited in the
+  queue starts, the rig checks what it checks before starting ComfyUI: a GPU process that isn't ComfyUI, or a running
+  Docker container (unless `allow_docker=1`). If there is one, the request is refused with what was found and nothing
+  starts. This holds for the Claude Code tools too. The page shows a warning above the chat and turns Generate off
+  within about ten seconds of one being found.
 - **Chats:** the requests are kept in chats, listed above the models. **New chat** starts one; it is named after its
   first prompt until you **Rename** it. Click a chat to open it; which chat is open is each browser's own, so a PC and
   a phone can be in different chats of the same rig. **Archive** takes a chat off the list without removing anything
   (**Show archived** brings the archived ones back to open or unarchive; a new request in one unarchives it).
   **Delete** removes the chat with its requests and the images and videos they made, unless a request is waiting or
   running in it. The requests from before chats, and those of the Claude Code tools, are in a chat named General.
+- **Each chat has its own settings:** the model, what to make, the size and the other numbers (kept per model and
+  task within the chat), the seed, the LoRAs with their strengths, and the image last attached in it. They are kept
+  on the rig with the chat, so opening it again, after a reload or on another PC or phone, brings them back. A chat
+  that has none yet (a new one, or one from before this) starts from what is set at that moment, without the image.
+  A request from the Claude Code tools with an image makes it the image of General.
 - **Outputs** (the link at the top, `http://<rig>:8189/#outputs`) lists every file in the outputs folder, newest first:
   a preview, its size and date, the prompt, model and chat it came from (files made in ComfyUI's own editor are listed
   too), with **Download** and **Open**. **Delete** removes one, or tick several (or **Select all**) and **Delete
@@ -287,6 +316,24 @@ For the high and low pairing (v0.6), the page run on Windows with stand-in LoRA 
 whose high-noise file is on the rig fills the slot with the high one and **low noise** with the low one; a low-noise file
 alone is warned about on Wan 2.2 14B, and both halves on Wan 2.2 5B; a file that isn't a half gets no warning; no
 errors in the browser's console.
+
+For the page's polish (use again, use as input, the queue's wait, the title, the viewer, the prompt kept per chat,
+the folded models, the new look), the page run on a PC against the same stand-in for ComfyUI, in a browser, dark and
+light and at a phone's width: each tried once and working, with no errors in the console. The rental warning was
+shown by setting it by hand, and the sound was turned on but not listened to. Not run: any of it on a rig.
+
+For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
+with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like
+it fills once from start to end with the time left counting down to within a few seconds, and the bar never goes
+back. For the rental check, `rental()` of `page.py` on made-up answers of `nvidia-smi` and `docker`: a container
+refuses a request, `allow_docker=1` lets it through, ComfyUI's own GPU process is not counted and another one is.
+Not run: either on a rig, with real timings, a real Docker rental, or a real ComfyUI's progress messages.
+
+For each chat's own settings and image, the page run on a PC without ComfyUI, on stand-in model and LoRA files, in a
+browser: the model, task, numbers, seed and LoRAs set in one chat come back when it is opened again and after a
+reload, while the other chats keep theirs; an attached image is back with its size, a request sent with it uses the
+rig's copy, **Remove** and deleting the chat delete it from the rig; a new chat starts from what was set and then
+keeps its own. Not run: any of it on a rig, or two browsers in the same chat at once.
 
 For the chats and the Outputs view (v0.5), the page run on a PC without ComfyUI, on a made-up history and image files:
 the history from before chats opens as General; a new chat, its name from the first prompt, rename, archive and
