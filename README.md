@@ -80,7 +80,8 @@ versions of this miner.
   "replace the car with a bicycle", "remove the text"); the result keeps the image's size. A prompt-refining model
   first turns the instruction into a fuller one, as in ComfyUI's own template.
 - **LoRAs:** Wan 2.2 (14B and 5B) and HunyuanVideo 1.5 take up to 3 of your own LoRAs per request, in **LoRAs**
-  under the task buttons: each slot is a file and a strength (1 by default, negative allowed); a slot left on "none"
+  under the task buttons: each slot is a file and a strength (1 by default, negative allowed), set with the slider (-5 to 5, for slider LoRAs
+  that are used at either side of 0; double-click it to go back to 1) or typed (-10 to 10); a slot left on "none"
   isn't used. They are added on top of what the model's workflow already applies, the Wan 2.2 14B speed-up LoRAs
   included. Wan 2.2 14B is two models, a high-noise and a low-noise one, and every LoRA goes to both: a LoRA that comes
   as one file (a Wan 2.1 LoRA, say) is used for both, and for one that comes as a high and a low file, pick the high

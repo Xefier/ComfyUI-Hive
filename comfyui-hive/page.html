@@ -94,6 +94,7 @@ details.loras summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 details.loras[open] summary { margin-bottom: 8px; }
 details.loras .row { margin-bottom: 6px; }
 details.loras select { max-width: 280px; }
+details.loras input[type=range] { width: 150px; accent-color: var(--accent); }
 .lorafile { display: flex; gap: 8px; align-items: center; font-size: 13px; margin-top: 4px; }
 .lorafile .name { overflow-wrap: anywhere; }
 .hint { color: var(--muted); font-size: 13px; }
@@ -155,6 +156,7 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
           <span class="hint" id="lorapct"></span>
           <button class="small" id="loracancel">Cancel</button>
         </div>
+        <datalist id="lorazero"><option value="0"></option></datalist>
         <div class="status" id="lorastatus"></div>
         <div id="lorafiles"></div>
       </details>
@@ -483,6 +485,7 @@ $("prompt").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlK
 // A task takes them when the catalog gives it an input of kind "loras": so many slots, each a file and a strength.
 // A model made of a high-noise and a low-noise part (Wan 2.2 14B) can take a second file for the low-noise part.
 let loraSlots = [];
+const SLIDER = 5;  // the strength slider goes from minus this to this
 const loraQueue = [];
 let loraXhr = null;
 
@@ -521,10 +524,21 @@ function drawLoras() {
     row.className = "row";
     row.innerHTML = `<label>LoRA ${i + 1} <select data-field="name">${options("none")}</select></label>`
       + (paired ? `<label title="For a LoRA that comes as a high-noise and a low-noise file: the low-noise one. Otherwise the same file goes to both.">low noise <select data-field="low">${options("same file")}</select></label>` : "")
-      + `<label>Strength <input type="number" data-field="strength" min="${item.strength.min}" max="${item.strength.max}" step="0.05"></label>`;
+      // The slider is for slider LoRAs, used anywhere from negative to positive: it covers the range they are made
+      // for, and the number beside it takes anything the model does
+      + `<label title="Drag for a slider LoRA; double-click to go back to ${item.strength.default}">Strength <input type="range" data-field="strength" list="lorazero" min="${Math.max(item.strength.min, -SLIDER)}" max="${Math.min(item.strength.max, SLIDER)}" step="0.05">`
+      + `<input type="number" data-field="strength" min="${item.strength.min}" max="${item.strength.max}" step="0.05"></label>`;
     for (const input of row.querySelectorAll("[data-field]")) {
-      input.value = slot[input.dataset.field];
-      input.onchange = () => { slot[input.dataset.field] = input.value; drawLoras(); };
+      const field = input.dataset.field;
+      const set = value => {
+        slot[field] = value;
+        // The slider and the number are one strength
+        for (const same of row.querySelectorAll(`[data-field="${field}"]`)) if (same !== input || same.value !== String(value)) same.value = value;
+      };
+      input.value = slot[field];
+      input.oninput = () => set(input.value);
+      input.onchange = () => { set(input.value); drawLoras(); };
+      if (input.type === "range") input.ondblclick = () => set(item.strength.default);
     }
     box.appendChild(row);
   }
