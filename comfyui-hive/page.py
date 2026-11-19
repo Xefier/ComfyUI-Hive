@@ -17,7 +17,8 @@ h-run.sh runs it beside ComfyUI, on the rig's LAN address at ComfyUI's port + 1.
   /api/chat-new   POST {title?}: starts a chat; /api/chat-update {chat, title?, archived?}; /api/chat-delete {chat}
   /api/chat-settings  POST {chat, settings}: what the page's composer is set to in that chat, to open it with again
   /api/chat-image     POST {chat, image}: the image attached in that chat (null: none), or {chat, job} for the one a
-                      request started from, or {chat, output} for an image the rig made; GET ?chat=<id>: that image
+                      request started from, or {chat, output} for an image the rig made; GET ?chat=<id>: that image,
+                      ?job=<id>: the one that request started from
   /api/outputs    every file in the outputs folder; /api/outputs-delete POST {paths}: deletes some
   /api/cancel     POST {job}: drops a queued job or stops the running one
   /api/download   POST {model}: downloads the model's files; /api/cancel-download and /api/delete likewise
@@ -1660,8 +1661,14 @@ class Handler(http.server.BaseHTTPRequestHandler):
         elif url.path == "/api/outputs":
             self.send(200, {"outputs": rig.outputs()})
         elif url.path == "/api/chat-image":
-            chat = rig.find_chat(urllib.parse.parse_qs(url.query).get("chat", [""])[0])
-            path = rig.image_path(chat) if chat else None
+            query = urllib.parse.parse_qs(url.query)
+            if "job" in query:
+                with lock:
+                    job = next((j for j in rig.jobs if j["id"] == query["job"][0]), None)
+                path = os.path.join(args.inputs, job["image"]) if job and job.get("image") else None
+            else:
+                chat = rig.find_chat(query.get("chat", [""])[0])
+                path = rig.image_path(chat) if chat else None
             try:
                 with open(path, "rb") as handle:
                     self.send(200, handle.read(), IMAGE_KINDS[path.rsplit(".", 1)[1]])

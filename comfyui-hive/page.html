@@ -79,7 +79,7 @@ button.small { padding: 3px 9px; font-size: 13px; border-radius: 7px; }
 .chatitem .name > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .chatitem .name .tag { flex: none; font-weight: 500; }
 .chip.name { color: var(--text); font-weight: 600; }
-#newrig { font-size: 13px; text-transform: none; letter-spacing: 0; max-width: 130px; padding: 2px 4px; }
+#newrig, .onrig { font-size: 13px; text-transform: none; letter-spacing: 0; max-width: 130px; padding: 2px 4px; }
 .model .meta, .chatitem .meta { color: var(--muted); font-size: 12.5px; }
 .model .note { color: var(--warn); font-size: 12.5px; margin-top: 4px; }
 .model .actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
@@ -504,7 +504,13 @@ function drawRigs() {
   $("rigsbox").hidden = !rigs.length && !rigsOn;
   $("rigson").checked = rigsOn;
   $("rigscount").textContent = rigs.length ? ` (${rigs.length})` : "";
-  const select = $("newrig"), options = [{ id: "", name: homeName }, ...rigs];
+  fillRigs($("newrig"));
+  drawRigPicks();
+}
+
+// A list to choose a rig from: this page's own first, the open chat's chosen
+function fillRigs(select) {
+  const options = [{ id: "", name: homeName }, ...rigs];
   const key = JSON.stringify(options);
   if (select.dataset.key !== key) {
     select.dataset.key = key;
@@ -513,6 +519,11 @@ function drawRigs() {
     select.value = rigOf;
   }
   select.hidden = !rigsOn || !rigs.length;
+}
+
+// The one beside Use again and Continue under each request: on which rig to do it
+function drawRigPicks() {
+  for (const select of $("messages").querySelectorAll("select.onrig")) fillRigs(select);
 }
 
 async function refreshRigs() {
@@ -1390,10 +1401,11 @@ function restore(job, forTask, seed) {
   saveSettings();
 }
 
-function useAgain(id) {
+function useAgain(id, where = rigOf) {
   // As it is now: its seed is only known once it has started
   const job = state.jobs.find(j => j.id === id);
   if (!job) return;
+  if (where !== rigOf) { useElsewhere(job, where, false); return; }
   if (!state.models.some(m => m.id === job.model)) { say(`${job.model_name} isn't offered on this rig any more`, true); return; }
   setContinuing(null);
   restore(job, job.task, job.seed);
@@ -1437,12 +1449,16 @@ function lastFrame(url) {
   });
 }
 
-async function continueFrom(id) {
+// The model's task that makes a video from an image: the request's own when it is one
+const videoFrom = (m, job) => m.tasks[job.task] && needsImage(m, job.task) ? job.task : Object.keys(m.tasks).find(t => needsImage(m, t) && t.endsWith("2v"));
+
+async function continueFrom(id, where = rigOf) {
   const job = state.jobs.find(j => j.id === id), video = job && ownVideo(job);
   if (!video) return;
+  if (where !== rigOf) { useElsewhere(job, where, true); return; }
   const m = state.models.find(m => m.id === job.model);
   if (!m) { say(`${job.model_name} isn't offered on this rig any more`, true); return; }
-  const from = needsImage(m, job.task) ? job.task : Object.keys(m.tasks).find(t => needsImage(m, t) && t.endsWith("2v"));
+  const from = videoFrom(m, job);
   if (!from) { say(`${m.name} can't start a video from an image: pick a model that can, and use the video's last frame`, true); return; }
   const asked = chatKey();
   let frame;
@@ -1454,6 +1470,48 @@ async function continueFrom(id) {
   if (!await attach(frame, "The last frame of that video")) return;
   setContinuing(id);
   toast("Its prompt and settings are back, starting from the video's last frame: change the prompt to say what happens next.");
+  $("prompt").focus();
+}
+
+// --- a request again or continued on another rig: in a new chat there, named after this one ----------------------
+// The page carries it over: the prompt and settings, and the image it started from or its video's last frame. What
+// the other rig doesn't have (the model, a LoRA) is said, and left for the choosing there. A video continued there
+// can't be stitched with this one: each rig only has its own files.
+async function useElsewhere(job, where, continued) {
+  const name = rigName(where), title = (state.chats.find(c => c.id === chat) || {}).title || "";
+  let picture = null;
+  try {
+    if (continued) picture = await lastFrame(fileUrl(ownVideo(job)));
+    else if (job.image) {
+      const response = await fetch(at("/api/chat-image?job=" + encodeURIComponent(job.id)));
+      if (!response.ok) throw new Error("gone");
+      picture = await response.blob();
+    }
+  } catch { say(continued ? "This browser couldn't read the video's last frame" : "The image it started from is no longer on this rig", true); return; }
+  let made;
+  try { made = (await post("/api/chat-new", { title }, where)).chat; }
+  catch (e) { say(`${name}: ${e.message}`, true); return; }
+  openChat(made, where);
+  await refresh();
+  // It didn't answer, or another chat was opened meanwhile
+  if (chat !== made || rigOf !== where || !state.chats.some(c => c.id === made)) return;
+  $("prompt").value = job.prompt;
+  const m = state.models.find(m => m.id === job.model);
+  const forTask = m && (continued ? videoFrom(m, job) : m.tasks[job.task] && job.task);
+  if (!forTask) {
+    saveSettings();
+    if (picture) await attach(picture, continued ? "The last frame of that video" : "From that request");
+    say(`${job.model_name} ${m ? "can't do that" : "isn't offered"} on ${name}: the prompt${picture ? " and the image are" : " is"} here, pick a model for it`, true);
+    return;
+  }
+  const have = new Set(state.loras.map(f => f.name));
+  const loras = (job.loras || []).filter(slot => have.has(slot.name) && (!slot.low || have.has(slot.low)));
+  const left = (job.loras || []).length - loras.length;
+  restore({ ...job, loras }, forTask, continued ? null : job.seed);
+  if (picture) await attach(picture, continued ? "The last frame of that video" : "From that request");
+  toast(`In a new chat on ${name}` + (continued ? ", starting from the video's last frame" : "")
+    + (left ? `. ${left === 1 ? "A LoRA it used isn't" : left + " LoRAs it used aren't"} on ${name}: left out` : "")
+    + (m.installed ? "." : `. ${m.name} isn't downloaded there yet.`));
   $("prompt").focus();
 }
 
@@ -1570,9 +1628,12 @@ function drawMessages() {
         + (job.via ? `<div class="hint">sent from the page of ${esc(job.via)}</div>` : "")
         + (job.loras || []).map(slot => `<div class="hint">LoRA ${esc(loraText(slot))}</div>`).join("")
         + `<div class="links"><a href="#" data-act="again" title="Its prompt, settings, seed, LoRAs and image back in the composer">Use again</a>`
-        + `<a href="#" data-act="continue" hidden title="Its prompt, settings and LoRAs back in the composer, starting from the last frame of the video it made: to go on where it ended">Continue</a></div>`;
-      you.querySelector("[data-act=again]").onclick = e => { e.preventDefault(); useAgain(job.id); };
-      you.querySelector("[data-act=continue]").onclick = e => { e.preventDefault(); continueFrom(job.id); };
+        + `<a href="#" data-act="continue" hidden title="Its prompt, settings and LoRAs back in the composer, starting from the last frame of the video it made: to go on where it ended">Continue</a>`
+        + `<select class="onrig" hidden title="On which rig Use again and Continue do it: another one starts a new chat there, with this request's prompt, settings and image"></select></div>`;
+      const where = you.querySelector(".onrig");
+      fillRigs(where);
+      you.querySelector("[data-act=again]").onclick = e => { e.preventDefault(); useAgain(job.id, where.value); };
+      you.querySelector("[data-act=continue]").onclick = e => { e.preventDefault(); continueFrom(job.id, where.value); };
       const rig = document.createElement("div");
       rig.className = "msg rig";
       box.appendChild(you); box.appendChild(rig);

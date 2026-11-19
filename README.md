@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.10.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.11.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -68,6 +68,11 @@ versions of this miner.
   with their sound. It is made from the videos themselves each time, never from an earlier stitched one, with PyAV,
   which ComfyUI has installed. The last frame is taken as the browser plays the video, so a little softer than the
   model made it.
+- **A request taken to another rig:** with **Other rigs** on, a list of the rigs stands beside Use again and Continue,
+  set to the open chat's own. With another rig chosen, they start a new chat on that rig, named after this one, with
+  the request's prompt, settings and the image it started from (for Continue, the video's last frame). A LoRA that rig
+  doesn't have is left out and said; a model it doesn't offer leaves the prompt and image for another model. A video
+  continued on another rig isn't stitched with this one: each rig only has its own files.
 - **A file deleted from the chat:** **Delete** at the right of a file's links under a request deletes it from the
   rig, after asking.
 - **Every image hidden:** the eye with a line through it at the top (or Alt+X) hides every image and video on the
@@ -366,6 +371,11 @@ the page: Continue attaching the right last frame, the request carrying which on
 stitch, and a stitched request continued from its own video. Delete in the chat and the eye (with Alt+X) were tried
 on the same page. Not run: a continued request taken and made by a rig, stitching on a rig, and any of it through
 another rig.
+
+For a request taken to another rig (v0.11), between two copies of `page.py` on one PC: Use again with the second rig
+chosen starting a chat there with the first's name, the prompt, seed, size and image, a LoRA the second doesn't have
+left out; and Continue arriving there with the video's last frame and no seed. Not run: a request made from such a
+chat, a model the other rig doesn't offer, and any of it on a rig.
 
 For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
 with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like
