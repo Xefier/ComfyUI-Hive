@@ -142,12 +142,15 @@
   {
    "id": "qwen-image-2.1-turbo",
    "name": "Qwen-Image 2.1 Turbo",
-   "about": "Text to image up to 2K, good at writing text into images.",
+   "about": "Text to image up to 2K, good at writing text into images, and editing an image by instruction.",
    "tasks": {
     "t2i": {"template": "image_qwen_image_2_1_turbo_t2i", "inputs": [
      {"name": "prompt", "kind": "text", "param": "positive_prompt"},
      {"name": "width", "kind": "int", "param": "width", "default": 1024, "min": 256, "max": 2048, "step": 32},
-     {"name": "height", "kind": "int", "param": "height", "default": 1024, "min": 256, "max": 2048, "step": 32}]}
+     {"name": "height", "kind": "int", "param": "height", "default": 1024, "min": 256, "max": 2048, "step": 32}]},
+    "edit": {"template": "image_qwen_image_2_1_turbo_image_edit", "inputs": [
+     {"name": "prompt", "kind": "text", "param": "positive_prompt"},
+     {"name": "image", "kind": "image"}]}
    },
    "variants": [
     {"id": "bf16", "label": "bf16", "min_vram_gb": 31,

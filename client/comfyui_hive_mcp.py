@@ -35,7 +35,7 @@ STATE_TIMEOUT_SECONDS = 4
 DEFAULT_WAIT_MINUTES = 30
 POLL_SECONDS = 2
 MAX_IMAGE_BYTES = 40 * 1024 * 1024
-TASK_NAMES = {"t2i": "text to image", "t2v": "text to video", "i2v": "image to video"}
+TASK_NAMES = {"t2i": "text to image", "edit": "edit image", "t2v": "text to video", "i2v": "image to video"}
 # By extension: mimetypes knows no .webp on Windows with Python 3.8, and the registry can say image/pjpeg for .jpg
 IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
 MAX_WAIT_MINUTES = 240
@@ -56,7 +56,7 @@ TOOLS = [
         "name": "comfy_generate",
         "description": (
             "Makes an image or a video on a ComfyUI-Hive rig and saves it on this PC; returns the saved file's path. "
-            "task: t2i (text to image), t2v (text to video) or i2v (image to video, needs image). Only models already "
+            "task: t2i (text to image), edit (change an image by instruction: image is the one to change, prompt says how), t2v (text to video) or i2v (image to video: image is the first frame). Only models already "
             "downloaded on a rig can be used: if none has the one needed, ask the user whether to download it and use "
             "comfy_download. Settings left out take the model's defaults; width, height, length (frames) or "
             "duration (seconds) must be within the limits comfy_status shows. A video takes minutes: with wait false "
@@ -67,8 +67,8 @@ TOOLS = [
             "properties": {
                 "prompt": {"type": "string", "description": "What to make, described in full."},
                 "model": {"type": "string", "description": "Model id from comfy_status, e.g. wan2.2-14b. Can be left out when only one downloaded model can do the task."},
-                "task": {"type": "string", "enum": ["t2i", "t2v", "i2v"], "description": "Default: i2v when image is given, else t2v."},
-                "image": {"type": "string", "description": "Path of the image to start from (i2v): PNG, JPEG or WebP."},
+                "task": {"type": "string", "enum": ["t2i", "edit", "t2v", "i2v"], "description": "Default: with image, i2v (or edit for a model that only edits); without, t2v."},
+                "image": {"type": "string", "description": "Path of the image to start from (i2v) or to change (edit): PNG, JPEG or WebP."},
                 "width": {"type": "integer"},
                 "height": {"type": "integer"},
                 "length": {"type": "integer", "description": "Frames, for models that count frames."},
@@ -225,7 +225,8 @@ def describe_inputs(inputs):
             if item.get("step") and item["step"] != 1:
                 limits += " step {}".format(item["step"])
         parts.append("{}={}{}".format(item["name"], item.get("default", "?"), limits))
-    return ", ".join(parts)
+    takes = "prompt and image" if any(item["name"] == "image" for item in inputs) else "prompt"
+    return "{}{}".format(takes, "; " + ", ".join(parts) if parts else " (size from the image)" if takes != "prompt" else "")
 
 
 def status(_arguments):
@@ -463,13 +464,26 @@ def still_running(url, job_id):
             "rig's page.".format(job_id, url, job_id, url))
 
 
+def default_task(arguments):
+    """The task a request means when it doesn't say: with an image, image to video, unless the model named can only
+    edit images; without, text to video."""
+    if not arguments.get("image"):
+        return "t2v"
+    if arguments.get("model"):
+        for _url, state in all_states():
+            model = next((m for m in (state or {}).get("models", []) if m.get("id") == arguments["model"]), None)
+            if model is not None:
+                return "i2v" if "i2v" in model["tasks"] else ("edit" if "edit" in model["tasks"] else "i2v")
+    return "i2v"
+
+
 def generate(arguments, progress, stop):
     prompt = str(arguments.get("prompt") or "").strip()
     if not prompt:
         raise ToolError("prompt is empty")
-    task = arguments.get("task") or ("i2v" if arguments.get("image") else "t2v")
+    task = arguments.get("task") or default_task(arguments)
     if task not in TASK_NAMES:
-        raise ToolError("task must be t2i, t2v or i2v")
+        raise ToolError("task must be t2i, edit, t2v or i2v")
     url, _state, model = choose(arguments, task)
     names = {item["name"] for item in model["tasks"][task]}
     body = {"model": model["id"], "task": task, "prompt": prompt}
@@ -478,7 +492,9 @@ def generate(arguments, progress, stop):
             raise ToolError("{} {} needs image: the path of a picture to start from".format(model["id"], task))
         body["image"] = read_image(arguments["image"])
     elif arguments.get("image"):
-        raise ToolError("{} {} doesn't take an image; use task i2v".format(model["id"], task))
+        takes = [t for t, inputs in model["tasks"].items() if any(i["name"] == "image" for i in inputs)]
+        raise ToolError("{} {} doesn't take an image; {}".format(model["id"], task, "use task {}".format(
+            " or ".join(takes)) if takes else "this model can't start from one"))
     ignored = []
     for name in ("width", "height", "length", "duration", "seed"):
         if arguments.get(name) is None:

@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.3.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.4.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -43,18 +43,20 @@ versions of this miner.
 - **Models for this GPU** lists only the models that fit this rig's GPU, each in the build that fits it: a 32 GB card gets
   higher-precision builds than a 24 GB one, and a model no build of which fits isn't shown (the page says how many are
   hidden). Each card says what it can do, its build and its size.
-- **Nothing is downloaded until you press Download** on a model. It goes into the models folder with a progress bar
+- **Nothing is downloaded until you press Download** on a model (or say yes when a Claude session asks, see
+  [Claude sessions](#claude-sessions)). It goes into the models folder with a progress bar
   and can be cancelled; a download that was cut off continues where it stopped. Files that two models share are
   downloaded once. **Delete** frees the space again, keeping files another downloaded model still uses.
-- **The chat:** pick a downloaded model and what to make (text to image, text to video, image to video), write the
+- **The chat:** pick a downloaded model and what to make (text to image, edit image, text to video, image to video), write the
   prompt, and press Generate (or Ctrl+Enter). Size, length and seed can be changed; empty means the model's default
   and a random seed. Requests queue and run one at a time; each shows its progress (step, speed), then the image or
   video with **Download** and **Open** links, or what went wrong. The history stays on the rig.
 - **Size:** the **Size** list has common sizes by shape (16:9, 9:16, 1:1, 4:3, 3:4, 21:9), only those the model takes,
   each rounded to the multiple it needs (16 or 32); Width and Height can also be typed.
-- **The image for image to video:** drop it on the chat, paste it (Ctrl+V, from a screenshot or a copied image), or
+- **The image for image to video or to edit:** drop it on the chat, paste it (Ctrl+V, from a screenshot or a copied image), or
   choose a file. A preview shows it with its size; it stays attached across task and model switches until **Remove**.
-  Pasting or dropping an image while on a text task switches to the model's image-to-video task. Images other than
+  Pasting or dropping an image while on a text task switches to the model's task that starts from one (image to
+  video, or edit image for Qwen-Image). Images other than
   PNG, JPEG and WebP are turned into PNG first. Two buttons fit the video's size to the image:
   - **Use image size**: the image's own width and height, so the video starts from the exact image. A bigger image
     than the model takes is scaled down to fit, keeping its shape.
@@ -63,7 +65,10 @@ versions of this miner.
     1280 × 720 with a portrait image becomes 720 × 1280.
 
   Either way each side is rounded to the model's multiple, and the page says when it scaled or rounded. MiniMax H3's
-  image-to-video takes its size from the image by itself, so it has neither button.
+  image-to-video and Qwen-Image's editing take their size from the image by themselves, so they have neither button.
+- **Edit image** (Qwen-Image 2.1 Turbo): attach the image and say in the prompt what to change ("make it night",
+  "replace the car with a bicycle", "remove the text"); the result keeps the image's size. A prompt-refining model
+  first turns the instruction into a fuller one, as in ComfyUI's own template.
 - **LoRAs:** Wan 2.2 (14B and 5B) and HunyuanVideo 1.5 take up to 3 of your own LoRAs per request, in **LoRAs**
   under the task buttons: each slot is a file and a strength (1 by default, negative allowed); a slot left on "none"
   isn't used. They are added on top of what the model's workflow already applies, the Wan 2.2 14B speed-up LoRAs
@@ -103,21 +108,26 @@ Claude Code and Python 3.8 or newer; nothing to install), then either ask Claude
 | `comfyui-hive list` | Lists the rigs, whether each answers, and its downloaded models (also what a double-click does) |
 | `comfyui-hive unregister` | Removes every rig and the server |
 
-It registers for the current Windows user, in every project. New sessions then get four tools:
+It registers for the current Windows user, in every project. New sessions then get five tools:
 
 - `comfy_status`: each rig, its GPU, the models downloaded on it with what they can make and their settings' limits,
   the models that could be downloaded, and the requests running or waiting.
 - `comfy_generate`: makes an image or a video and saves it on this PC, returning the file's path. The session gives
-  the prompt, the model (it can be left out when only one downloaded model can do the task), the task (`t2i`, `t2v`,
-  `i2v`), an image path for image to video, and optionally size, length or duration, and seed. It goes to the least
+  the prompt, the model (it can be left out when only one downloaded model can do the task), the task (`t2i`, `edit`,
+  `t2v`, `i2v`), an image path for image to video or to edit, and optionally size, length or duration, and seed. It goes to the least
   busy rig that has the model. It waits with progress (step and speed) for up to 30 minutes; with `wait: false` it
   returns at once with a job id.
 - `comfy_result`: waits for such a job and saves its result.
 - `comfy_cancel`: stops a job.
+- `comfy_download`: downloads a model onto a rig, **only with your yes**. In the Claude Code CLI the tool asks you
+  itself in a dialog (MCP elicitation), naming the model, the rig, the size and the rig's free space, so a session
+  can't download by deciding to; a no there is final. Where the client shows no such dialog (some surfaces cancel
+  the question by themselves), the session has to ask you in the conversation and the tool refuses until it says you
+  agreed. `comfy_status` then shows the download's progress.
 
-**It never downloads a model.** Only models already downloaded on a rig can be used; if none has the one asked for,
-the tool says which rig's page to press Download on. Results go to `Videos\ComfyUI-Hive` (set `COMFYUI_HIVE_OUT` in your
-environment before `add` for another folder). An image to animate is read only from the session's folder, the results
+Only models downloaded on a rig can be used: if none has the one a request needs, the session asks you whether to
+download it. Results go to `Videos\ComfyUI-Hive` (set `COMFYUI_HIVE_OUT` in your
+environment before `add` for another folder). An image to animate or edit is read only from the session's folder, the results
 folder (so an image it made can be animated next), Pictures, Downloads, Desktop and Claude's scratch folders. After
 pulling a client change, new sessions pick it up; after moving the clone, run `add` again.
 
@@ -131,7 +141,7 @@ pulling a client change, new sessions pick it up; after moving the clone, run `a
 | LTX-2.5 | text/image to video with sound | not offered | int8 | 42 GB | Gated: accept the license at [Lightricks/LTX-2.5](https://huggingface.co/Lightricks/LTX-2.5) and give the account's token. Free for organisations under $10M yearly revenue |
 | MiniMax H3 | text/image to video with sound, text to image | pruned w6a8 | pruned int8 | 39 / 44 GB | Commercial use of what it makes needs a MiniMax license (sold through Comfy) |
 | Z-Image Turbo | text to image | bf16 | bf16 | 19 GB | |
-| Qwen-Image 2.1 Turbo | text to image, up to 2K | int8 | bf16 | 25 / 31 GB | |
+| Qwen-Image 2.1 Turbo | text to image, up to 2K; edit image | int8 | bf16 | 34 / 40 GB | Editing has its own prompt-refining text encoder, included in the download |
 
 The workflows are ComfyUI's own templates for each model, as its editor offers them (with their defaults: speed-up LoRAs
 on, sizes, lengths); only the prompt, image, size, length and seed are set by the page, and your LoRAs added. **Which build fits which card is
@@ -230,6 +240,13 @@ For the LoRAs (v0.3), with a CPU-only ComfyUI v0.45.0 and an RTX 4090 rig runnin
 
 Not run for the LoRAs: v0.3 itself on a rig (the upload of a real, large file to it, a request through its page), a
 LoRA of your own, and Wan 2.2 5B or HunyuanVideo 1.5 generating with one.
+
+For image editing and `comfy_download` (v0.4), with a CPU-only ComfyUI v0.45.0: every workflow, Qwen-Image's edit in
+both builds included, is taken by ComfyUI (`tools/check.py`); an edit request from the page and from the Claude tools
+reaches ComfyUI and fails only at loading the empty stand-in model files; the page switches to Edit image when an image
+is pasted on Qwen-Image. `comfy_download` against the page, with a small real file from Hugging Face: a yes and a no in
+the dialog, a dialog the client cancels by itself (then the session's yes in the conversation), and a refusal without
+any yes. Not run: a real edit, and the dialog in a real Claude Code session.
 
 Not yet run: a real model generating (no model has been downloaded and run), the memory each build really needs, the
 dashboard stats (no `jq` where it was tested), and anything on a real Hive rig (firewall rules, watchdog).

@@ -141,7 +141,7 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
   </section>
 </main>
 <script>
-const TASKS = { t2i: "Text to image", t2v: "Text to video", i2v: "Image to video" };
+const TASKS = { t2i: "Text to image", edit: "Edit image", t2v: "Text to video", i2v: "Image to video" };
 const LABELS = { width: "Width", height: "Height", length: "Frames", duration: "Seconds", steps: "Steps", seed: "Seed" };
 let state = null, picked = null, task = null, image = null, shown = new Map();
 
@@ -238,6 +238,7 @@ function drawComposer() {
     sbox.innerHTML = "";
     // The attached image stays when switching task or model, so it can be tried with another one
     $("imagebox").hidden = !needsImage(m, task);
+    $("prompt").placeholder = task === "edit" ? "Say what to change in the image…" : "Describe what to make…";
     for (const item of (m && task ? m.tasks[task] : [])) {
       if (item.name === "prompt" || item.name === "image" || item.kind === "loras") continue;
       const label = document.createElement("label");
@@ -421,7 +422,7 @@ async function attach(blob, how) {
   if (!blob || !blob.type.startsWith("image/")) { say("That isn't an image", true); return; }
   let m = current();
   if (!needsImage(m, task)) {
-    // Dropping or pasting an image means image to video: switch to it if this model has it
+    // Dropping or pasting an image means a task that starts from one (image to video, edit image): switch to it
     const other = m && Object.keys(m.tasks).find(t => needsImage(m, t));
     if (!other) { say(`${m ? m.name : "This model"} can't start from an image`, true); return; }
     task = other;
