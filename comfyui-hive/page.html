@@ -52,12 +52,20 @@ button.small { padding: 3px 9px; font-size: 13px; }
 .msg .links { display: flex; gap: 12px; font-size: 13px; margin-top: 6px; }
 .msg .links a { color: var(--accent); }
 .composer { border-top: 1px solid var(--line); padding-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+.imagebox { display: flex; gap: 10px; align-items: center; border: 1.5px dashed var(--line); border-radius: 8px; padding: 8px; }
+.imagebox img { max-height: 96px; max-width: 160px; border-radius: 6px; display: block; }
+.imagehint { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
+.imagehint .imagesize { color: var(--text); }
+.imagehint .choose { color: var(--accent); cursor: pointer; text-decoration: underline; }
+.chat.dropping { outline: 2px dashed var(--accent); outline-offset: -6px; }
+.chat.dropping .imagebox { border-color: var(--accent); }
 .tasks { display: flex; gap: 6px; flex-wrap: wrap; }
 .tasks button.on { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
 textarea { font: inherit; width: 100%; min-height: 76px; resize: vertical; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--text); padding: 8px; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 .row label { font-size: 13px; color: var(--muted); display: flex; gap: 4px; align-items: center; }
 .row input[type=number] { width: 84px; font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+.row select { font: inherit; font-size: 14px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
 .hint { color: var(--muted); font-size: 13px; }
 .status { font-size: 13px; color: var(--muted); }
 .status.bad { color: var(--bad); }
@@ -89,6 +97,17 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
     <div class="messages" id="messages"></div>
     <div class="composer">
       <div class="tasks" id="tasks"></div>
+      <div class="imagebox" id="imagebox" hidden>
+        <img id="imagepreview" alt="" hidden>
+        <div class="imagehint">
+          <span id="imagetext">Drop an image here, paste one (Ctrl+V), or</span>
+          <label class="choose">choose a file<input type="file" id="imagefile" accept="image/*" hidden></label>
+          <button class="small" id="imageremove" hidden>Remove</button>
+          <span id="imagesize" class="imagesize"></span>
+          <button class="small" id="imageuse" hidden title="Set Width and Height to this image's size, so the video starts from the whole image">Use image size</button>
+          <button class="small" id="imageratio" hidden title="Keep about as many pixels as the size set now, in the image's shape">Match aspect ratio</button>
+        </div>
+      </div>
       <textarea id="prompt" placeholder="Describe what to make…"></textarea>
       <div class="row" id="settings"></div>
       <div class="row">
@@ -194,28 +213,20 @@ function drawComposer() {
     }
     const sbox = $("settings");
     sbox.innerHTML = "";
-    image = null;
+    // The attached image stays when switching task or model, so it can be tried with another one
+    $("imagebox").hidden = !needsImage(m, task);
     for (const item of (m && task ? m.tasks[task] : [])) {
-      if (item.name === "prompt") continue;
+      if (item.name === "prompt" || item.name === "image") continue;
       const label = document.createElement("label");
-      if (item.name === "image") {
-        label.innerHTML = `Image <input type="file" accept="image/png,image/jpeg,image/webp">`;
-        label.querySelector("input").onchange = e => {
-          const file = e.target.files[0];
-          if (!file) { image = null; return; }
-          const reader = new FileReader();
-          reader.onload = () => { image = reader.result; };
-          reader.readAsDataURL(file);
-        };
-      } else {
-        label.innerHTML = `${LABELS[item.name] || item.name} <input type="number" data-name="${item.name}" value="${item.default ?? ""}"
-          ${item.min != null ? `min="${item.min}"` : ""} ${item.max != null ? `max="${item.max}"` : ""} step="${item.step || (item.kind === "float" ? 0.5 : 1)}">`;
-      }
+      label.innerHTML = `${LABELS[item.name] || item.name} <input type="number" data-name="${item.name}" value="${item.default ?? ""}"
+        ${item.min != null ? `min="${item.min}"` : ""} ${item.max != null ? `max="${item.max}"` : ""} step="${item.step || (item.kind === "float" ? 0.5 : 1)}">`;
       sbox.appendChild(label);
     }
     const seed = document.createElement("label");
     seed.innerHTML = `Seed <input type="number" data-name="seed" placeholder="random">`;
     if (m && task) sbox.appendChild(seed);
+    addPresets(sbox);
+    showImageSize();
   }
   const ready = m && m.installed && state.state === "ready";
   $("go").disabled = !m || !m.installed;
@@ -230,8 +241,8 @@ $("go").onclick = async () => {
   if (!prompt) { say("Write a prompt", true); return; }
   const body = { model: m.id, task, prompt };
   for (const input of $("settings").querySelectorAll("input[type=number]")) if (input.value !== "") body[input.dataset.name] = input.value;
-  if (m.tasks[task].some(i => i.name === "image")) {
-    if (!image) { say("Attach an image", true); return; }
+  if (needsImage(m, task)) {
+    if (!image) { say("Attach an image: drop it, paste it or choose a file", true); return; }
     body.image = image;
   }
   $("go").disabled = true;
@@ -241,6 +252,238 @@ $("go").onclick = async () => {
   refresh();
 };
 $("prompt").addEventListener("keydown", e => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) $("go").click(); });
+
+// --- the image of image-to-video: a file, a drop or a paste -------------------------------------------------------
+
+function needsImage(m, t) { return !!(m && t && m.tasks[t].some(i => i.name === "image")); }
+
+// The rig takes PNG, JPEG and WebP. Anything else the browser can show (a GIF, BMP, AVIF, a screenshot in another
+// format) is turned into a PNG first.
+const TAKEN = ["image/png", "image/jpeg", "image/webp"];
+const MAX_IMAGE = 40 * 1024 * 1024;
+
+function readAsDataURL(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function toPng(blob) {
+  const bitmap = await createImageBitmap(blob);
+  const canvas = document.createElement("canvas");
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
+  canvas.getContext("2d").drawImage(bitmap, 0, 0);
+  return canvas.toDataURL("image/png");
+}
+
+async function attach(blob, how) {
+  if (!blob || !blob.type.startsWith("image/")) { say("That isn't an image", true); return; }
+  let m = current();
+  if (!needsImage(m, task)) {
+    // Dropping or pasting an image means image to video: switch to it if this model has it
+    const other = m && Object.keys(m.tasks).find(t => needsImage(m, t));
+    if (!other) { say(`${m ? m.name : "This model"} can't start from an image`, true); return; }
+    task = other;
+    drawComposer();
+  }
+  try {
+    const data = TAKEN.includes(blob.type) ? await readAsDataURL(blob) : await toPng(blob);
+    if (data.length * 0.75 > MAX_IMAGE) { say("The image is too big (40 MB at most)", true); return; }
+    // From the image itself: the preview's own size isn't known yet while it loads
+    const bitmap = await createImageBitmap(blob);
+    imageSize = [bitmap.width, bitmap.height];
+    bitmap.close();
+    image = data;
+    const preview = $("imagepreview");
+    preview.src = data;
+    preview.hidden = false;
+    $("imagetext").textContent = `${how}. Drop, paste or`;
+    $("imageremove").hidden = false;
+    showImageSize();
+    say("");
+  } catch {
+    say("This browser can't read that image", true);
+  }
+}
+
+// --- the size: Width and Height, the Size list, and the attached image's size or shape ----------------------------
+// The model's limits always apply: a size bigger than it takes is scaled down to fit, keeping its shape, and each
+// side is rounded to the model's step.
+let imageSize = null;
+
+function sizeInputs() {
+  const find = name => $("settings").querySelector(`input[data-name="${name}"]`);
+  return [find("width"), find("height")];
+}
+
+function limits(input) {
+  return { min: Number(input.min) || 1, max: Number(input.max) || Infinity, step: Number(input.step) || 1 };
+}
+
+function fitSize(width, height, w, h) {
+  const lw = limits(w), lh = limits(h);
+  const scale = Math.min(1, lw.max / width, lh.max / height);
+  const round = (value, l) => Math.min(l.max, Math.max(l.min, Math.round(value * scale / l.step) * l.step));
+  // And the size before rounding, to tell whether rounding changed it
+  return [round(width, lw), round(height, lh), scale < 1, [width * scale, height * scale]];
+}
+
+function setSize(width, height) {
+  const [w, h] = sizeInputs();
+  w.value = width;
+  h.value = height;
+  syncPreset();
+}
+
+function showImageSize() {
+  const [w, h] = sizeInputs();
+  $("imagesize").textContent = imageSize ? `${imageSize[0]} × ${imageSize[1]}` : "";
+  // A task without size settings (MiniMax H3) already takes its size from the image
+  $("imageuse").hidden = $("imageratio").hidden = !imageSize || !w || !h;
+}
+
+// How a size came out, beside the buttons rather than in the status line, which the page's refresh clears
+function explain(width, height, unrounded, scaled, w, h) {
+  const notes = [];
+  if (scaled) notes.push(`scaled down to fit this model's ${w.max} × ${h.max}`);
+  if (width !== Math.round(unrounded[0]) || height !== Math.round(unrounded[1])) notes.push(`rounded to multiples of ${w.step}`);
+  return notes.length ? ` (${notes.join(", ")})` : "";
+}
+
+$("imageuse").onclick = () => {
+  const [w, h] = sizeInputs();
+  if (!imageSize || !w || !h) return;
+  const [width, height, scaled, unrounded] = fitSize(imageSize[0], imageSize[1], w, h);
+  setSize(width, height);
+  $("imagesize").textContent = `${imageSize[0]} × ${imageSize[1]} → ${width} × ${height}`
+    + explain(width, height, unrounded, scaled, w, h);
+};
+
+// The image's shape, keeping the shorter side of the size set now: video models are made for a class of size named by
+// it (480p, 720p), which the time and memory follow. So 1280 x 720 with a portrait image becomes 720 x 1280, where a
+// fixed width would be over the limit and a fixed height a far smaller video.
+$("imageratio").onclick = () => {
+  const [w, h] = sizeInputs();
+  if (!imageSize || !w || !h) return;
+  const short = Math.min(Number(w.value) || Number(w.defaultValue) || 640, Number(h.value) || Number(h.defaultValue) || 640);
+  const ratio = imageSize[0] / imageSize[1];
+  const wanted = ratio >= 1 ? [short * ratio, short] : [short, short / ratio];
+  const [width, height, scaled, unrounded] = fitSize(wanted[0], wanted[1], w, h);
+  setSize(width, height);
+  $("imagesize").textContent = `${imageSize[0]} × ${imageSize[1]} → ${width} × ${height}, its shape with the short side kept at ${short}`
+    + explain(width, height, unrounded, scaled, w, h);
+};
+
+// Common sizes, by shape. Only those the model takes are listed, each rounded to its step.
+const PRESETS = [
+  ["16:9", [[640, 360], [832, 480], [1280, 720], [1920, 1080]]],
+  ["9:16", [[360, 640], [480, 832], [720, 1280], [1080, 1920]]],
+  ["1:1", [[512, 512], [640, 640], [768, 768], [1024, 1024], [1536, 1536], [2048, 2048]]],
+  ["4:3", [[640, 480], [960, 720], [1024, 768], [1440, 1080]]],
+  ["3:4", [[480, 640], [720, 960], [768, 1024], [1080, 1440]]],
+  ["21:9", [[1280, 544], [1680, 720]]],
+];
+
+function presetList(w, h) {
+  const lw = limits(w), lh = limits(h);
+  const round = (value, l) => Math.round(value / l.step) * l.step;
+  const groups = [];
+  for (const [shape, sizes] of PRESETS) {
+    const options = [];
+    for (const [pw, ph] of sizes) {
+      const width = round(pw, lw), height = round(ph, lh);
+      if (width < lw.min || width > lw.max || height < lh.min || height > lh.max) continue;
+      const name = shape.startsWith("16:9") || shape.startsWith("9:16") ? ` (${Math.min(pw, ph)}p)` : "";
+      options.push([width, height, `${width} × ${height}${name}`]);
+    }
+    if (options.length) groups.push([shape, options]);
+  }
+  return groups;
+}
+
+function addPresets(sbox) {
+  const [w, h] = sizeInputs();
+  if (!w || !h) return;
+  const label = document.createElement("label");
+  label.innerHTML = `Size <select id="sizepreset"><option value="">Custom</option></select>`;
+  const select = label.querySelector("select");
+  for (const [shape, options] of presetList(w, h)) {
+    const group = document.createElement("optgroup");
+    group.label = shape;
+    for (const [width, height, text] of options) group.appendChild(new Option(text, `${width}x${height}`));
+    select.appendChild(group);
+  }
+  select.onchange = () => {
+    if (!select.value) return;
+    const [width, height] = select.value.split("x").map(Number);
+    setSize(width, height);
+    showImageSize();
+  };
+  w.addEventListener("input", syncPreset);
+  h.addEventListener("input", syncPreset);
+  sbox.insertBefore(label, w.closest("label"));
+  syncPreset();
+}
+
+// The list shows the size set now, or Custom
+function syncPreset() {
+  const select = $("sizepreset");
+  const [w, h] = sizeInputs();
+  if (!select || !w || !h) return;
+  const value = `${w.value}x${h.value}`;
+  select.value = [...select.options].some(o => o.value === value) ? value : "";
+}
+
+function clearImage() {
+  image = null;
+  imageSize = null;
+  showImageSize();
+  $("imagepreview").hidden = true;
+  $("imagepreview").removeAttribute("src");
+  $("imagetext").textContent = "Drop an image here, paste one (Ctrl+V), or";
+  $("imageremove").hidden = true;
+  $("imagefile").value = "";
+}
+
+function imageIn(items) {
+  for (const item of items || []) {
+    if (item.kind === "file" && item.type.startsWith("image/")) return item.getAsFile();
+  }
+  return null;
+}
+
+$("imagefile").onchange = e => { if (e.target.files[0]) attach(e.target.files[0], "Chosen"); };
+$("imageremove").onclick = clearImage;
+
+// Paste anywhere on the page, except text into the prompt or a number box (an image pasted there still counts)
+document.addEventListener("paste", e => {
+  const file = imageIn(e.clipboardData && e.clipboardData.items);
+  if (!file) return;
+  e.preventDefault();
+  attach(file, "Pasted");
+});
+
+// Drop anywhere on the chat; the browser would otherwise open the file in place of the page
+const chat = document.querySelector(".chat");
+let dragDepth = 0;
+const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
+chat.addEventListener("dragenter", e => { if (hasFiles(e)) { dragDepth++; chat.classList.add("dropping"); } });
+chat.addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; chat.classList.remove("dropping"); } });
+chat.addEventListener("dragover", e => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } });
+chat.addEventListener("drop", e => {
+  e.preventDefault();
+  dragDepth = 0;
+  chat.classList.remove("dropping");
+  const file = imageIn(e.dataTransfer.items) || (e.dataTransfer.files || [])[0];
+  if (file) attach(file, "Dropped");
+});
+// A file dropped beside the chat is ignored rather than opened in place of the page
+window.addEventListener("dragover", e => { if (hasFiles(e)) e.preventDefault(); });
+window.addEventListener("drop", e => { if (hasFiles(e)) e.preventDefault(); });
 
 function media(path) {
   const url = "/files/" + path.split("/").map(encodeURIComponent).join("/");

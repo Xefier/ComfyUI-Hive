@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.1.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.2.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -50,6 +50,20 @@ versions of this miner.
   prompt, and press Generate (or Ctrl+Enter). Size, length and seed can be changed; empty means the model's default
   and a random seed. Requests queue and run one at a time; each shows its progress (step, speed), then the image or
   video with **Download** and **Open** links, or what went wrong. The history stays on the rig.
+- **Size:** the **Size** list has common sizes by shape (16:9, 9:16, 1:1, 4:3, 3:4, 21:9), only those the model takes,
+  each rounded to the multiple it needs (16 or 32); Width and Height can also be typed.
+- **The image for image to video:** drop it on the chat, paste it (Ctrl+V, from a screenshot or a copied image), or
+  choose a file. A preview shows it with its size; it stays attached across task and model switches until **Remove**.
+  Pasting or dropping an image while on a text task switches to the model's image-to-video task. Images other than
+  PNG, JPEG and WebP are turned into PNG first. Two buttons fit the video's size to the image:
+  - **Use image size**: the image's own width and height, so the video starts from the exact image. A bigger image
+    than the model takes is scaled down to fit, keeping its shape.
+  - **Match aspect ratio**: the image's shape at the current resolution, keeping the shorter side of the size set now.
+    Video models are made for a class of size named by that side (480p, 720p), which the time and memory follow, so
+    1280 × 720 with a portrait image becomes 720 × 1280.
+
+  Either way each side is rounded to the model's multiple, and the page says when it scaled or rounded. MiniMax H3's
+  image-to-video takes its size from the image by itself, so it has neither button.
 - **Switching model** is picking another card. The rig lets go of the last model's memory first, so the first request
   on a new model takes longer while it loads.
 - The page also links ComfyUI's own editor (`http://<rig>:8188`), for building or changing workflows by hand, and shows
