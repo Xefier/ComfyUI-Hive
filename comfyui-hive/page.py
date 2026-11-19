@@ -759,14 +759,18 @@ class Rig:
 
     def chat_list(self):
         """The chats, the one last used first, each with how many requests it has and whether one is under way:
-        how far the running one is and how long it has left, for the bar in the list of chats."""
+        how far the running one is and how long it has left, for the bar in the list of chats. And when its last
+        request ended, done or failed, for the mark the page shows until the chat is looked at."""
         with lock:
             out, now = [], time.time()
             for chat in self.chats:
                 mine = [job for job in self.jobs if job["chat"] == chat["id"]]
                 running = next((j for j in mine if j["state"] == "running"), None)
                 fraction, left, rough = job_progress(running, now) if running and running.get("begun") else (None, None, True)
+                ended = max((j for j in mine if j["state"] in ("done", "failed") and j.get("finished")),
+                            key=lambda j: j["finished"], default=None)
                 out.append(dict(chat, jobs=len(mine), busy=any(j["state"] in ("queued", "running") for j in mine),
+                                ended=ended["finished"] if ended else 0, ended_ok=bool(ended and ended["state"] == "done"),
                                 running=bool(running), progress=fraction,
                                 eta=None if left is None or rough else round(left),
                                 last=max([chat["created"]] + [j["created"] for j in mine])))

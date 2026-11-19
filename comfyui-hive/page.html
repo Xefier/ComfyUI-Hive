@@ -90,6 +90,7 @@ button.small { padding: 3px 9px; font-size: 13px; border-radius: 7px; }
 details.more > summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 6px 2px; }
 details.more[open] > summary { margin-bottom: 4px; }
 .tag { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
+.tag.bad { color: var(--bad); border-color: color-mix(in srgb, var(--bad) 50%, transparent); background: color-mix(in srgb, var(--bad) 10%, transparent); }
 .tag.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 50%, transparent); background: color-mix(in srgb, var(--ok) 10%, transparent); }
 #showarchived { font-size: 13px; }
 
@@ -417,10 +418,33 @@ function pickChat() {
   return false;
 }
 
+// When each chat's last finished request was looked at in this browser: one that ended since has a mark on its card
+// in the list, until the chat is opened. A chat first met here counts as looked at, so only what ends from then on
+// is marked.
+let seen = {};
+try { seen = JSON.parse(localStorage.getItem("seen")) || {}; } catch { /* no storage: marks last until the page is closed */ }
+
+function unseen(list) {
+  const before = JSON.stringify(seen), known = new Set();
+  for (const c of list) {
+    const key = c.rig + "|" + c.id;
+    known.add(key);
+    if (!(key in seen) || mine(c) && !document.hidden) seen[key] = c.ended || 0;
+    c.fresh = (c.ended || 0) > seen[key];
+  }
+  // Deleted chats are forgotten; those of a rig that isn't listed just now are kept
+  for (const key of Object.keys(seen)) {
+    if (!known.has(key) && rigChats.has(key.slice(0, key.indexOf("|")))) delete seen[key];
+  }
+  if (JSON.stringify(seen) !== before) try { localStorage.setItem("seen", JSON.stringify(seen)); } catch { /* as above */ }
+}
+document.addEventListener("visibilitychange", () => { if (!document.hidden && state) drawChats(); });
+
 function drawChats() {
   const box = $("chats");
   const all = chatList();
   const archived = all.filter(c => c.archived).length;
+  unseen(all);
   const list = all.filter(c => showArchived || !c.archived || mine(c));
   // How far each is changes all the time: it is filled in below, so the list isn't built again for it
   const key = JSON.stringify([list.map(c => ({ ...c, progress: 0, eta: 0 })), chat, rigOf, rigChats.size]);
@@ -431,7 +455,7 @@ function drawChats() {
     for (const c of list) {
       const div = document.createElement("div");
       div.className = "chatitem" + (mine(c) ? " picked" : "");
-      div.innerHTML = `<div class="name"><span>${esc(c.title || "New chat")}</span>${rigChats.size > 1 ? `<span class="tag">${esc(c.rigName)}</span>` : ""}</div>
+      div.innerHTML = `<div class="name"><span>${esc(c.title || "New chat")}</span>${rigChats.size > 1 ? `<span class="tag">${esc(c.rigName)}</span>` : ""}${c.fresh ? `<span class="tag ${c.ended_ok ? "ok" : "bad"}" title="Since this chat was last looked at">${c.ended_ok ? "finished" : "failed"}</span>` : ""}</div>
         <div class="meta">${c.jobs} ${c.jobs === 1 ? "request" : "requests"}<span class="doing"></span>${c.archived ? " · archived" : ""}</div>
         ${c.busy ? `<div class="bar"><div></div></div>` : ""}
         <div class="actions"><button class="small" data-act="rename">Rename</button><button class="small" data-act="archive">${c.archived ? "Unarchive" : "Archive"}</button><button class="small" data-act="delete">Delete</button></div>`;

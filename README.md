@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.11.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.12.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -97,6 +97,10 @@ versions of this miner.
   needs this version, and with `allow=` set, the rigs' own addresses must be in it for them to reach each other.
 - **Progress in the list of chats:** a chat with a request under way has a bar on its card in the list, with how far
   it is and the time left, or "waiting its turn" behind another request: every rig's work at a glance.
+- **Finished, until looked at:** when a chat's request ends, its card in the list gets a mark beside its name,
+  **finished** or **failed**, which goes away when the chat is opened. The open chat gets none, unless it ended while
+  the browser's tab was in the background. Each browser keeps its own account of what was looked at, and only what
+  ends after a chat was first seen there is marked.
 - **One scroll bar:** on a desktop screen the page itself doesn't scroll, only the chat's messages do (and the side
   panel when its lists are longer than the window). A phone scrolls as one page.
 - **A rental is never interrupted by a request:** before a request is taken, and again before one that waited in the
@@ -376,6 +380,10 @@ For a request taken to another rig (v0.11), between two copies of `page.py` on o
 chosen starting a chat there with the first's name, the prompt, seed, size and image, a LoRA the second doesn't have
 left out; and Continue arriving there with the video's last frame and no seed. Not run: a request made from such a
 chat, a model the other rig doesn't offer, and any of it on a rig.
+
+For the mark of a finished chat (v0.12), on a PC with made-up requests: none on the first visit, **finished** and
+**failed** on chats whose last request ended after they were looked at, none for a cancelled one or the open chat, and
+the mark gone after opening the chat. Not run: a request that ends while the page is open, and any of it on a rig.
 
 For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
 with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like
