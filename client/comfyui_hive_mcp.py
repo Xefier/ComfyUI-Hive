@@ -3,7 +3,8 @@
 
 It talks to each rig's chat page (page.py, port 8189), the same way the page in a browser does: it sends the request,
 follows its progress, and saves what the rig made into a folder on this PC, so the session gets file paths back, never
-the image or video itself. It never downloads a model onto a rig: that is done on the rig's page, by a person.
+the image or video itself. A model is downloaded onto a rig only with the user's yes (comfy_download): asked in the
+client's own dialog when it has one (MCP elicitation), or else in the conversation, before the session may call it.
 
 Environment:
   COMFYUI_HIVE_RIGS   The rigs' pages, comma separated (http://192.168.1.189:8189,...). A rig switched to another flight
@@ -56,8 +57,8 @@ TOOLS = [
         "description": (
             "Makes an image or a video on a ComfyUI-Hive rig and saves it on this PC; returns the saved file's path. "
             "task: t2i (text to image), t2v (text to video) or i2v (image to video, needs image). Only models already "
-            "downloaded on a rig can be used: this never downloads one (if none has it, ask the user to press Download "
-            "on the rig's page). Settings left out take the model's defaults; width, height, length (frames) or "
+            "downloaded on a rig can be used: if none has the one needed, ask the user whether to download it and use "
+            "comfy_download. Settings left out take the model's defaults; width, height, length (frames) or "
             "duration (seconds) must be within the limits comfy_status shows. A video takes minutes: with wait false "
             "it returns at once with a job to collect later with comfy_result."
         ),
@@ -104,6 +105,28 @@ TOOLS = [
             "type": "object",
             "properties": {"job": {"type": "string"}, "rig": {"type": "string"}},
             "required": ["job", "rig"],
+        },
+    },
+    {
+        "name": "comfy_download",
+        "description": (
+            "Downloads a model onto a rig, so it can be used. Models are tens of GB, so this needs the user's yes: "
+            "when the client can, this tool asks them itself, in a dialog; otherwise ask the user in the "
+            "conversation first (name the model, the rig and the size comfy_status shows) and call it with "
+            "user_approved true only after they agree. Never call it on your own initiative or to retry a failure "
+            "without asking again. The download goes on on the rig after this returns; comfy_status shows how far "
+            "it is, and wait true follows it here."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "model": {"type": "string", "description": "Model id from comfy_status."},
+                "rig": {"type": "string", "description": "The rig to download it onto. Can be left out when only one answering rig offers the model and lacks it."},
+                "user_approved": {"type": "boolean", "description": "True only if the user agreed to this download in the conversation. Not needed when the tool can ask them itself."},
+                "wait": {"type": "boolean", "description": "Follow the download until it is done (default false: return once it has started)."},
+                "wait_minutes": {"type": "number", "description": "With wait, how long to follow it. Default 30."},
+            },
+            "required": ["model"],
         },
     },
 ]
@@ -221,15 +244,30 @@ def status(_arguments):
                 for task, inputs in model["tasks"].items():
                     lines.append("    {} {}: {}".format(task, TASK_NAMES.get(task, task), describe_inputs(inputs)))
             else:
-                download = model.get("download") or {}
-                doing = " (downloading now)" if download.get("state") in ("queued", "downloading") else ""
-                lines.append("  {} ({}): not downloaded{}, {} to download on the rig's page; can do {}".format(
-                    model["id"], model["name"], doing, gb(model.get("to_download")), ", ".join(model["tasks"])))
+                lines.append("  {} ({}, {}): not downloaded{}, {} to download (comfy_download, with the user's "
+                             "yes); can do {}".format(model["id"], model["name"], model.get("variant"),
+                                                      download_note(model.get("download")),
+                                                      gb(model.get("to_download")), ", ".join(model["tasks"])))
         for job in state.get("jobs", []):
             if job.get("state") in ("queued", "running"):
                 lines.append("  job {} {}: {} {} \"{}\"".format(job["id"], job["state"], job["model"], job["task"],
                                                              job["prompt"][:60]))
     return "\n".join(lines)
+
+
+def download_note(download):
+    """How a model's download on the rig stands, from the page's state."""
+    download = download or {}
+    if download.get("state") == "queued":
+        return " (download queued)"
+    if download.get("state") == "downloading":
+        total = download.get("total") or 0
+        percent = int(100 * (download.get("done") or 0) / total) if total else 0
+        speed = (download.get("speed") or 0) / 1024 ** 2
+        return " (downloading: {}%, {:.0f} MB/s)".format(percent, speed)
+    if download.get("state") == "failed":
+        return " (the last download failed: {})".format(download.get("error") or "no reason given")
+    return ""
 
 
 def choose(arguments, task):
@@ -247,8 +285,9 @@ def choose(arguments, task):
     if not candidates:
         if elsewhere:
             names = ", ".join(sorted({"{} on {}".format(m["id"], u) for u, _, m in elsewhere}))
-            raise ToolError("No rig has a model for {} downloaded yet. It can be downloaded on the rig's page "
-                            "(ask the user to press Download there): {}".format(TASK_NAMES.get(task, task), names))
+            raise ToolError("No rig has a model for {} downloaded yet. These could be downloaded: {}. Ask the user "
+                            "whether to download one (comfy_status shows the sizes), then use comfy_download."
+                            .format(TASK_NAMES.get(task, task), names))
         what = "model {}".format(wanted_model) if wanted_model else "any model for {}".format(TASK_NAMES.get(task, task))
         raise ToolError("No answering rig{} offers {}. comfy_status lists what each rig has.".format(
             " " + wanted_rig if wanted_rig else "", what))
@@ -484,11 +523,79 @@ def cancel(arguments, _progress, _stop):
     return "Asked {} to stop job {}.".format(url, arguments["job"])
 
 
+def download(arguments, progress, stop):
+    """Starts a model's download on a rig, once the user has said yes: asked here when the client can show them a
+    question (MCP elicitation), or else in the conversation, which the session confirms with user_approved."""
+    model_id = str(arguments.get("model") or "")
+    wanted_rig = resolve(arguments["rig"]) if arguments.get("rig") else None
+    offers = []
+    for url, state in all_states():
+        if state is None or (wanted_rig and url != wanted_rig):
+            continue
+        model = next((m for m in state.get("models", []) if m.get("id") == model_id), None)
+        if model is not None:
+            offers.append((url, state, model))
+    if not offers:
+        raise ToolError("No answering rig{} offers {} (a model too big for a rig's GPU isn't offered on it). "
+                        "comfy_status lists them.".format(" " + wanted_rig if wanted_rig else "", model_id))
+    lacking = [offer for offer in offers if not offer[2].get("installed")]
+    if not lacking:
+        return "{} is already downloaded on {}.".format(model_id, ", ".join(url for url, _, _ in offers))
+    if len(lacking) > 1:
+        raise ToolError("{} could be downloaded on several rigs: {}. Say which with rig.".format(
+            model_id, ", ".join(url for url, _, _ in lacking)))
+    url, state, model = lacking[0]
+    current = model.get("download") or {}
+    if current.get("state") in ("queued", "downloading"):
+        return "{} is already downloading on {}{}.".format(model_id, url, download_note(current))
+    size = gb(model.get("to_download"))
+    question = "Download {} ({}) onto the rig at {}? It takes {} of its {} free.".format(
+        model["name"], model.get("variant"), url, size, gb(state.get("disk_free")))
+    if model.get("note"):
+        question += " " + model["note"]
+    answer = ask_user(question, stop)
+    if answer is None:
+        # The client can't ask: the session must have
+        if arguments.get("user_approved") is not True:
+            raise ToolError("Ask the user first: \"{}\" Then call comfy_download again with user_approved true if "
+                            "they agree.".format(question))
+    elif not answer:
+        return ("The user declined in the download dialog: {} was not downloaded. (If no dialog appeared to them, "
+                "this client answers by itself: ask them in the conversation instead.)".format(model_id))
+    request(url + "/api/download", {"model": model_id}, timeout=30)
+    started = "Downloading {} ({}) onto {}: {}.".format(model_id, model.get("variant"), url, size)
+    if not arguments.get("wait"):
+        return started + " comfy_status shows how far it is."
+    minutes = arguments.get("wait_minutes")
+    try:
+        minutes = DEFAULT_WAIT_MINUTES if minutes is None else min(MAX_WAIT_MINUTES, max(0.0, float(minutes)))
+    except (TypeError, ValueError):
+        raise ToolError("wait_minutes must be a number")
+    deadline = time.time() + minutes * 60
+    while time.time() < deadline:
+        if stop.wait(POLL_SECONDS * 2) or SHUTDOWN.is_set():
+            return started + " Stopped following it; it goes on on the rig."
+        state = rig_state(url)
+        if state is None:
+            continue
+        model = next((m for m in state.get("models", []) if m.get("id") == model_id), {})
+        if model.get("installed"):
+            return "{} is downloaded on {} and ready to use.".format(model_id, url)
+        status_now = model.get("download") or {}
+        if status_now.get("state") == "failed":
+            raise ToolError("The download of {} on {} failed: {}".format(model_id, url, status_now.get("error")))
+        if status_now.get("state") == "cancelled":
+            return "The download of {} on {} was cancelled on the rig's page.".format(model_id, url)
+        progress(download_note(status_now).strip(" ()") or "download queued")
+    return started + " Still downloading; comfy_status shows how far it is."
+
+
 HANDLERS = {
     "comfy_status": lambda arguments, _progress, _stop: status(arguments),
     "comfy_generate": generate,
     "comfy_result": result,
     "comfy_cancel": cancel,
+    "comfy_download": download,
 }
 
 
@@ -497,6 +604,42 @@ HANDLERS = {
 WRITE_LOCK = threading.Lock()
 # Tool calls in progress: request id -> the event that stops their wait
 RUNNING = {}
+# What the client said it can do when it connected (initialize): whether it can put a question to the user
+CLIENT = {"elicitation": False}
+# Requests this server sent the client (a question for the user): id -> [event, answer]
+PENDING = {}
+PENDING_LOCK = threading.Lock()
+ASK_TIMEOUT_SECONDS = 600
+
+
+def ask_user(question, stop):
+    """Asks the user a yes or no question through the client (MCP elicitation): True, False, or None when the client
+    can't ask, so the session has to."""
+    if not CLIENT["elicitation"]:
+        return None
+    with PENDING_LOCK:
+        request_id = "comfyui-hive-ask-{}".format(len(PENDING) + int(time.time() * 1000))
+        waiter = [threading.Event(), None]
+        PENDING[request_id] = waiter
+    write({"jsonrpc": "2.0", "id": request_id, "method": "elicitation/create", "params": {
+        "message": question,
+        "requestedSchema": {"type": "object", "properties": {
+            "download": {"type": "boolean", "title": "Download it", "default": True}}},
+    }})
+    deadline = time.time() + ASK_TIMEOUT_SECONDS
+    while not waiter[0].wait(1):
+        if stop.is_set() or SHUTDOWN.is_set() or time.time() > deadline:
+            with PENDING_LOCK:
+                PENDING.pop(request_id, None)
+            raise ToolError("No answer from the user: nothing was downloaded.")
+    answer = waiter[1] or {}
+    result = answer.get("result") if isinstance(answer.get("result"), dict) else {}
+    # An error, or "cancel": the client said it can ask but didn't show the question (some clients cancel every
+    # question by themselves, in a mode without dialogs): the session has to ask instead
+    if "error" in answer or result.get("action") not in ("accept", "decline"):
+        return None
+    content = result.get("content") if isinstance(result.get("content"), dict) else {}
+    return result.get("action") == "accept" and content.get("download", True) is not False
 
 
 def write(message):
@@ -536,6 +679,14 @@ def handle(message):
     method = message.get("method")
     request_id = message.get("id")
     params = message.get("params") if isinstance(message.get("params"), dict) else {}
+    if method is None and ("result" in message or "error" in message):
+        # The client's answer to a question this server asked (ask_user)
+        with PENDING_LOCK:
+            waiter = PENDING.pop(request_id, None)
+        if waiter is not None:
+            waiter[1] = message
+            waiter[0].set()
+        return
     if method == "notifications/cancelled":
         stop = RUNNING.get(params.get("requestId"))
         if stop is not None:
@@ -544,6 +695,8 @@ def handle(message):
     if request_id is None:
         return
     if method == "initialize":
+        capabilities = params.get("capabilities") if isinstance(params.get("capabilities"), dict) else {}
+        CLIENT["elicitation"] = "elicitation" in capabilities
         body = {"protocolVersion": PROTOCOL_VERSION, "capabilities": {"tools": {}},
                 "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION}}
     elif method == "ping":
