@@ -16,6 +16,8 @@
   }
 }
 * { box-sizing: border-box; }
+/* A display set below would otherwise show an element that is hidden */
+[hidden] { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
 header { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; padding: 12px 16px; border-bottom: 1px solid var(--line); background: var(--panel); }
 header h1 { font-size: 17px; margin: 0; }
@@ -66,6 +68,27 @@ textarea { font: inherit; width: 100%; min-height: 76px; resize: vertical; borde
 .row label { font-size: 13px; color: var(--muted); display: flex; gap: 4px; align-items: center; }
 .row input[type=number] { width: 84px; font: inherit; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
 .row select { font: inherit; font-size: 14px; padding: 4px 6px; border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
+h2.row { justify-content: space-between; }
+h2.next { margin-top: 16px; }
+.chatitem { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; margin-bottom: 6px; cursor: pointer; }
+.chatitem.picked { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.chatitem .name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chatitem .meta { color: var(--muted); font-size: 12.5px; }
+.chatitem .actions { display: none; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+.chatitem.picked .actions, .chatitem:hover .actions { display: flex; }
+#showarchived { color: var(--accent); }
+.outputs { margin: 16px; }
+.outputs h2 { margin: 0; }
+.outs { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-top: 12px; }
+.out { border: 1px solid var(--line); border-radius: 8px; padding: 8px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; }
+.out.on { border-color: var(--accent); }
+.out img, .out video { max-width: 100%; max-height: 190px; border-radius: 6px; display: block; margin: 0 auto; }
+.out audio { width: 100%; }
+.out .links { display: flex; gap: 12px; }
+.out .links a { color: var(--accent); }
+.out .name { overflow-wrap: anywhere; }
+.out .prompt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.out .row { justify-content: space-between; margin-top: auto; }
 details.loras { border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
 details.loras summary { cursor: pointer; font-size: 13px; color: var(--muted); }
 details.loras[open] summary { margin-bottom: 8px; }
@@ -87,10 +110,25 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
   <span class="rig" id="rig">…</span>
   <a id="comfy" href="#" target="_blank" rel="noopener">ComfyUI editor</a>
   <a href="#" id="showlog">Miner log</a>
+  <a href="#outputs" id="viewlink">Outputs</a>
 </header>
-<main>
+<section class="panel outputs" id="outputsview" hidden>
+  <div class="row">
+    <h2>Outputs</h2>
+    <span class="hint" id="outsummary"></span>
+    <button class="small" id="outall">Select all</button>
+    <button class="small" id="outdelete" disabled>Delete selected</button>
+    <button class="small" id="outrefresh">Refresh</button>
+    <span class="status" id="outstatus"></span>
+  </div>
+  <div class="outs" id="outs"></div>
+</section>
+<main id="chatview">
   <section class="panel">
-    <h2>Models for this GPU</h2>
+    <h2 class="row">Chats <button class="small" id="newchat">New chat</button></h2>
+    <div id="chats"></div>
+    <div class="hint"><a href="#" id="showarchived"></a></div>
+    <h2 class="next">Models for this GPU</h2>
     <div id="models"></div>
     <div class="hint" id="hidden"></div>
     <div id="tokenbox" hidden>
@@ -159,7 +197,14 @@ async function post(path, body) {
 function say(text, bad) { $("status").textContent = text || ""; $("status").className = "status" + (bad ? " bad" : ""); }
 
 async function refresh() {
-  try { state = await (await fetch("/api/state")).json(); } catch { $("rig").textContent = "The rig doesn't answer"; return; }
+  const asked = chat;
+  let got;
+  try { got = await (await fetch("/api/state" + (asked ? "?chat=" + encodeURIComponent(asked) : ""))).json(); }
+  catch { $("rig").textContent = "The rig doesn't answer"; return; }
+  // Another chat was picked while this was on its way
+  if (asked !== chat) return;
+  state = got;
+  if (!pickChat()) { refresh(); return; }
   const g = state.gpu;
   $("rig").textContent = (g ? `${g.name}, ${g.vram_gb} GB (${g.used_gb} GB used, ${g.load}% load)` : "no GPU found")
     + ` · RAM ${state.ram_gb ?? "?"} GB · ${gb(state.disk_free)} free · ComfyUI ${state.state} · ${state.version}`;
@@ -169,10 +214,159 @@ async function refresh() {
     picked = (state.models.find(m => m.id === remembered) || state.models.find(m => m.installed) || state.models[0] || {}).id || null;
     if (picked && state.settings.task) task = state.settings.task;
   }
+  drawChats();
   drawModels();
   drawComposer();
   drawMessages();
 }
+
+// --- chats: each a name over some of the requests, kept on the rig ------------------------------------------------
+// Which chat is open is this browser's own: another PC or phone can be in another chat of the same rig.
+let chat = null, showArchived = false;
+try { chat = localStorage.getItem("chat"); } catch { /* no storage: the last used chat opens */ }
+
+function openChat(id) {
+  if (id === chat) return;
+  chat = id;
+  try { id ? localStorage.setItem("chat", id) : localStorage.removeItem("chat"); } catch { /* as above */ }
+  $("messages").innerHTML = "";
+  shown.clear();
+}
+
+// The open chat, or the one last used when it is gone or none was open. False when it changed: the requests shown
+// are another chat's then, and are asked for again.
+function pickChat() {
+  const known = state.chats.some(c => c.id === chat);
+  if (known && state.chat === chat) return true;
+  if (!known) {
+    const first = state.chats.find(c => !c.archived);
+    if (!first && !chat) { state.jobs = []; return true; }
+    openChat(first ? first.id : null);
+  }
+  return false;
+}
+
+function drawChats() {
+  const box = $("chats");
+  const archived = state.chats.filter(c => c.archived).length;
+  const list = state.chats.filter(c => showArchived || !c.archived || c.id === chat);
+  const key = JSON.stringify([list, chat]);
+  if (box.dataset.key !== key) {
+    box.dataset.key = key;
+    box.innerHTML = "";
+    if (!list.length) box.innerHTML = `<div class="hint">No chat yet: the first request starts one.</div>`;
+    for (const c of list) {
+      const div = document.createElement("div");
+      div.className = "chatitem" + (c.id === chat ? " picked" : "");
+      div.innerHTML = `<div class="name">${esc(c.title || "New chat")}</div>
+        <div class="meta">${c.jobs} ${c.jobs === 1 ? "request" : "requests"}${c.busy ? " · working" : ""}${c.archived ? " · archived" : ""}</div>
+        <div class="actions"><button class="small" data-act="rename">Rename</button><button class="small" data-act="archive">${c.archived ? "Unarchive" : "Archive"}</button><button class="small" data-act="delete">Delete</button></div>`;
+      div.onclick = e => {
+        const act = e.target.dataset && e.target.dataset.act;
+        if (act) { e.stopPropagation(); chatAction(act, c); return; }
+        openChat(c.id);
+        refresh();
+      };
+      box.appendChild(div);
+    }
+  }
+  $("showarchived").textContent = archived ? (showArchived ? "Hide archived" : `Show archived (${archived})`) : "";
+}
+
+async function chatAction(act, c) {
+  try {
+    if (act === "rename") {
+      const title = prompt("Name of the chat", c.title);
+      if (title === null) return;
+      await post("/api/chat-update", { chat: c.id, title });
+    } else if (act === "archive") {
+      await post("/api/chat-update", { chat: c.id, archived: !c.archived });
+      // An archived chat leaves the list: the one last used opens
+      if (!c.archived && c.id === chat) openChat((state.chats.find(o => !o.archived && o.id !== c.id) || {}).id || null);
+    } else if (act === "delete") {
+      if (!confirm(`Delete the chat "${c.title || "New chat"}" with its ${c.jobs} ${c.jobs === 1 ? "request" : "requests"}? The images and videos they made are deleted from the rig too. Archive it instead to keep them.`)) return;
+      await post("/api/chat-delete", { chat: c.id });
+      if (c.id === chat) openChat(null);
+    }
+    say("");
+  } catch (e) { say(e.message, true); }
+  refresh();
+}
+
+$("newchat").onclick = async () => {
+  // An empty chat that is already there is opened again rather than adding another
+  const empty = state && state.chats.find(c => !c.jobs && !c.archived && !c.title);
+  try { openChat(empty ? empty.id : (await post("/api/chat-new", {})).chat); } catch (e) { say(e.message, true); }
+  await refresh();
+  $("prompt").focus();
+};
+$("showarchived").onclick = e => { e.preventDefault(); showArchived = !showArchived; drawChats(); };
+
+// --- outputs: every file the rig made, to look through and delete -------------------------------------------------
+// The other view of the page, at #outputs. Listed when opened and on Refresh, not on a timer: the videos would
+// start over each time.
+let outputs = [], outPicked = new Set();
+const when = seconds => new Date(seconds * 1000).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+const mb = bytes => bytes >= 1024 ** 3 ? gb(bytes) : (bytes / 1024 ** 2).toFixed(1) + " MB";
+function osay(text, bad) { $("outstatus").textContent = text || ""; $("outstatus").className = "status" + (bad ? " bad" : ""); }
+
+function showView() {
+  const out = location.hash === "#outputs";
+  $("outputsview").hidden = !out;
+  $("chatview").hidden = out;
+  $("viewlink").textContent = out ? "Back to the chat" : "Outputs";
+  $("viewlink").href = out ? "#" : "#outputs";
+  if (out) loadOutputs();
+}
+
+async function loadOutputs() {
+  try { outputs = (await (await fetch("/api/outputs")).json()).outputs; } catch { osay("The rig doesn't answer", true); return; }
+  outPicked = new Set(outputs.map(o => o.path).filter(p => outPicked.has(p)));
+  const box = $("outs");
+  box.innerHTML = outputs.length ? "" : `<div class="hint">Nothing has been made yet.</div>`;
+  for (const o of outputs) {
+    const chatOf = state && state.chats.find(c => c.id === o.chat);
+    const div = document.createElement("div");
+    div.className = "out" + (outPicked.has(o.path) ? " on" : "");
+    div.innerHTML = media(o.path)
+      + `<div class="name">${esc(o.path)}</div><div class="hint">${mb(o.size)} · ${esc(when(o.modified))}</div>`
+      + (o.prompt ? `<div class="prompt" title="${esc(o.prompt)}">${esc(o.prompt)}</div><div class="hint">${esc(o.model)} · ${esc(TASKS[o.task] || o.task)}${chatOf ? ` · ${esc(chatOf.title || "New chat")}` : ""}</div>`
+        : `<div class="hint">Not from a request of this page</div>`)
+      + `<div class="row"><label><input type="checkbox" ${outPicked.has(o.path) ? "checked" : ""}> Select</label><button class="small">Delete</button></div>`;
+    div.querySelector("input").onchange = e => {
+      e.target.checked ? outPicked.add(o.path) : outPicked.delete(o.path);
+      div.classList.toggle("on", e.target.checked);
+      drawOutSummary();
+    };
+    div.querySelector("button").onclick = () => deleteOutputs([o.path]);
+    box.appendChild(div);
+  }
+  drawOutSummary();
+}
+
+function drawOutSummary() {
+  const size = list => mb(list.reduce((sum, o) => sum + o.size, 0));
+  const picked = outputs.filter(o => outPicked.has(o.path));
+  $("outsummary").textContent = `${outputs.length} ${outputs.length === 1 ? "file" : "files"}, ${size(outputs)}`
+    + (picked.length ? ` · ${picked.length} selected, ${size(picked)}` : "");
+  $("outdelete").disabled = !picked.length;
+  $("outall").textContent = outputs.length && picked.length === outputs.length ? "Select none" : "Select all";
+}
+
+async function deleteOutputs(paths) {
+  if (!confirm(paths.length === 1 ? `Delete ${paths[0]} from the rig?` : `Delete these ${paths.length} files from the rig?`)) return;
+  try { const done = await post("/api/outputs-delete", { paths }); osay(`${done.deleted} deleted`); }
+  catch (e) { osay(e.message, true); }
+  loadOutputs();
+}
+
+$("outall").onclick = () => {
+  outPicked = new Set(outPicked.size === outputs.length ? [] : outputs.map(o => o.path));
+  loadOutputs();
+};
+$("outdelete").onclick = () => deleteOutputs([...outPicked]);
+$("outrefresh").onclick = () => { osay(""); loadOutputs(); };
+window.addEventListener("hashchange", showView);
 
 function drawModels() {
   const box = $("models");
@@ -219,7 +413,8 @@ function current() { return state && state.models.find(m => m.id === picked); }
 
 function drawComposer() {
   const m = current();
-  $("chattitle").textContent = m ? `Chat · ${m.name}` : "Chat";
+  const open = state.chats.find(c => c.id === chat);
+  $("chattitle").textContent = [open ? open.title || "New chat" : "Chat", m && m.name].filter(Boolean).join(" · ");
   const tasks = m ? Object.keys(m.tasks) : [];
   if (!tasks.includes(task)) task = tasks[0] || null;
   const tbox = $("tasks");
@@ -262,9 +457,9 @@ function drawComposer() {
 
 $("go").onclick = async () => {
   const m = current();
-  const prompt = $("prompt").value.trim();
-  if (!prompt) { say("Write a prompt", true); return; }
-  const body = { model: m.id, task, prompt };
+  const text = $("prompt").value.trim();
+  if (!text) { say("Write a prompt", true); return; }
+  const body = { model: m.id, task, prompt: text };
   for (const input of $("settings").querySelectorAll("input[type=number]")) if (input.value !== "") body[input.dataset.name] = input.value;
   if (needsImage(m, task)) {
     if (!image) { say("Attach an image: drop it, paste it or choose a file", true); return; }
@@ -272,7 +467,12 @@ $("go").onclick = async () => {
   }
   if (loraInput(m, task)) body.loras = usedLoras();
   $("go").disabled = true;
-  try { await post("/api/generate", body); say(""); $("prompt").value = ""; }
+  try {
+    // The first request of a rig without a chat starts one
+    if (!chat) openChat((await post("/api/chat-new", {})).chat);
+    body.chat = chat;
+    await post("/api/generate", body); say(""); $("prompt").value = "";
+  }
   catch (e) { say(e.message, true); }
   $("go").disabled = false;
   refresh();
@@ -606,16 +806,16 @@ document.addEventListener("paste", e => {
 });
 
 // Drop anywhere on the chat; the browser would otherwise open the file in place of the page
-const chat = document.querySelector(".chat");
+const chatBox = document.querySelector(".chat");
 let dragDepth = 0;
 const hasFiles = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files");
-chat.addEventListener("dragenter", e => { if (hasFiles(e)) { dragDepth++; chat.classList.add("dropping"); } });
-chat.addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; chat.classList.remove("dropping"); } });
-chat.addEventListener("dragover", e => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } });
-chat.addEventListener("drop", e => {
+chatBox.addEventListener("dragenter", e => { if (hasFiles(e)) { dragDepth++; chatBox.classList.add("dropping"); } });
+chatBox.addEventListener("dragleave", () => { if (--dragDepth <= 0) { dragDepth = 0; chatBox.classList.remove("dropping"); } });
+chatBox.addEventListener("dragover", e => { if (hasFiles(e)) { e.preventDefault(); e.dataTransfer.dropEffect = "copy"; } });
+chatBox.addEventListener("drop", e => {
   e.preventDefault();
   dragDepth = 0;
-  chat.classList.remove("dropping");
+  chatBox.classList.remove("dropping");
   // A .safetensors file is a LoRA for the rig; anything else is the image to animate
   const loras = [...(e.dataTransfer.files || [])].filter(f => /\.safetensors$/i.test(f.name));
   if (loras.length) { uploadLoras(loras); return; }
@@ -629,7 +829,7 @@ window.addEventListener("drop", e => { if (hasFiles(e)) e.preventDefault(); });
 function media(path) {
   const url = "/files/" + path.split("/").map(encodeURIComponent).join("/");
   const ext = path.split(".").pop().toLowerCase();
-  const view = ["mp4", "webm"].includes(ext) ? `<video src="${url}" controls loop playsinline></video>`
+  const view = ["mp4", "webm"].includes(ext) ? `<video src="${url}" controls loop playsinline preload="metadata"></video>`
     : ["mp3", "flac", "wav"].includes(ext) ? `<audio src="${url}" controls></audio>` : `<img src="${url}" alt="">`;
   return `${view}<div class="links"><a href="${url}?download=1">Download</a><a href="${url}" target="_blank" rel="noopener">Open</a></div>`;
 }
@@ -662,7 +862,8 @@ function drawMessages() {
       html += `<div class="row"><div class="bar"><div style="width:${pct}%"></div></div><button class="small" data-job="${job.id}">Stop</button></div>`;
     } else if (job.state === "done") {
       const took = job.finished && job.started ? ` in ${Math.round(job.finished - job.started)} s` : "";
-      html += `<div class="hint">Done${took}</div>` + job.outputs.map(media).join("");
+      html += `<div class="hint">Done${took}</div>` + job.outputs.map(media).join("")
+        + (job.removed ? `<div class="hint">${job.removed === 1 ? "A file it made was" : job.removed + " files it made were"} deleted</div>` : "");
     } else if (job.state === "cancelled") html += `<div class="hint">Cancelled</div>`;
     else html += `<div class="error">${esc(job.error || "Failed")}</div>`;
     pair.rig.innerHTML = html;
@@ -684,6 +885,7 @@ $("savetoken").onclick = async () => {
   refresh();
 };
 
+showView();
 refresh();
 setInterval(refresh, 1500);
 </script>

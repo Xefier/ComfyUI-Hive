@@ -12,8 +12,10 @@ h-run.sh runs it beside ComfyUI, on the rig's LAN address at ComfyUI's port + 1.
 - writes what it is doing to --page-file for h-stats.sh, so the Hive dashboard shows it too.
 
   /               the page (page.html)
-  /api/state      the rig, its models, the jobs, what is happening now
-  /api/generate   POST {model, task, prompt, image?, width?, height?, length?, seed?, loras?}: queues a job
+  /api/state      the rig, its models, the chats, the jobs (?chat=<id>: that chat's), what is happening now
+  /api/generate   POST {model, task, prompt, chat?, image?, width?, height?, length?, seed?, loras?}: queues a job
+  /api/chat-new   POST {title?}: starts a chat; /api/chat-update {chat, title?, archived?}; /api/chat-delete {chat}
+  /api/outputs    every file in the outputs folder; /api/outputs-delete POST {paths}: deletes some
   /api/cancel     POST {job}: drops a queued job or stops the running one
   /api/download   POST {model}: downloads the model's files; /api/cancel-download and /api/delete likewise
   /api/token      POST {token}: the Hugging Face token for gated models, kept on the rig
@@ -47,7 +49,9 @@ import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CHUNK = 4 * 1024 * 1024
-KEEP_JOBS = 500
+KEEP_JOBS = 2000  # across all chats
+SHOW_JOBS = 100  # of a chat, on the page
+DEFAULT_CHAT = "default"  # where a request without a chat goes: the Claude Code tools, and the history from before chats
 MAX_UPLOAD = 40 * 1024 * 1024
 MAX_LORA = 8 * 1024 ** 3
 LORA_DIR = "loras"  # in the models folder, where ComfyUI looks for them
@@ -225,11 +229,15 @@ class Rig:
                     os.remove(os.path.join(lora_root(), name))
         except OSError:
             pass
+        self.chats = read_json(os.path.join(args.data, "chats.json"), [])
         for line in self.read_jobs():
             if line.get("state") in ("queued", "running"):
                 line["state"] = "failed"
                 line["error"] = "The miner stopped before this was done"
+            line.setdefault("chat", DEFAULT_CHAT)
             self.jobs.append(line)
+        if any(job["chat"] == DEFAULT_CHAT for job in self.jobs):
+            self.default_chat()
 
     # models ---
 
@@ -504,6 +512,127 @@ class Rig:
             return None, f"{item['slots']} LoRAs at most"
         return slots, None
 
+    # chats ---
+    # A chat is a name over some of the requests: each job says which chat it is in.
+
+    def find_chat(self, chat_id):
+        return next((chat for chat in self.chats if chat["id"] == chat_id), None)
+
+    def save_chats(self):
+        write_json(os.path.join(args.data, "chats.json"), self.chats)
+
+    def new_chat(self, title="", chat_id=None):
+        chat = {"id": chat_id or f"{time.strftime('%Y%m%d-%H%M%S')}-{random.randrange(16 ** 4):04x}",
+                "title": str(title or "").strip()[:80], "created": time.time(), "archived": False}
+        with lock:
+            self.chats.append(chat)
+            self.save_chats()
+        return chat
+
+    def default_chat(self):
+        with lock:
+            return self.find_chat(DEFAULT_CHAT) or self.new_chat("General", DEFAULT_CHAT)
+
+    def update_chat(self, chat_id, title=None, archived=None):
+        with lock:
+            chat = self.find_chat(chat_id)
+            if chat is None:
+                return "No such chat"
+            if title is not None:
+                chat["title"] = str(title).strip()[:80]
+            if archived is not None:
+                chat["archived"] = bool(archived)
+            self.save_chats()
+        return None
+
+    def delete_chat(self, chat_id):
+        """Deletes a chat with its requests, and the files they made and started from."""
+        with lock:
+            chat = self.find_chat(chat_id)
+            if chat is None:
+                return "No such chat"
+            mine = [job for job in self.jobs if job["chat"] == chat_id]
+            if any(job["state"] in ("queued", "running") for job in mine):
+                return "A request is waiting or running in it: cancel that first"
+            self.remove_outputs([path for job in mine for path in job["outputs"]])
+            for job in mine:
+                if job.get("image"):
+                    try:
+                        os.remove(os.path.join(args.inputs, os.path.basename(job["image"])))
+                    except OSError:
+                        pass
+            self.jobs = [job for job in self.jobs if job["chat"] != chat_id]
+            self.chats.remove(chat)
+            self.save_chats()
+            self.save_jobs()
+        log(f"Chat {chat['title'] or chat_id} deleted with {len(mine)} requests")
+        return None
+
+    def chat_list(self):
+        """The chats, the one last used first, each with how many requests it has and whether one is under way."""
+        with lock:
+            out = []
+            for chat in self.chats:
+                mine = [job for job in self.jobs if job["chat"] == chat["id"]]
+                out.append(dict(chat, jobs=len(mine), busy=any(j["state"] in ("queued", "running") for j in mine),
+                                last=max([chat["created"]] + [j["created"] for j in mine])))
+        return sorted(out, key=lambda chat: -chat["last"])
+
+    # outputs ---
+
+    def outputs(self):
+        """Every file in the outputs folder, newest first, with the request that made it when the history has it."""
+        root = os.path.realpath(args.outputs)
+        with lock:
+            makers = {path: job for job in self.jobs for path in job["outputs"]}
+        found = []
+        for folder, _, names in os.walk(root):
+            for name in names:
+                full = os.path.join(folder, name)
+                relative = os.path.relpath(full, root).replace(os.sep, "/")
+                try:
+                    entry = {"path": relative, "size": os.path.getsize(full), "modified": os.path.getmtime(full)}
+                except OSError:
+                    continue
+                job = makers.get(relative)
+                if job:
+                    entry.update(job=job["id"], chat=job["chat"], prompt=job["prompt"], model=job["model_name"],
+                                 task=job["task"])
+                found.append(entry)
+        return sorted(found, key=lambda entry: -entry["modified"])
+
+    def remove_outputs(self, paths):
+        """Deletes files of the outputs folder, and takes them off the requests that made them. Returns how many."""
+        root = os.path.realpath(args.outputs)
+        gone = set()
+        for relative in paths:
+            full = os.path.realpath(os.path.join(root, str(relative)))
+            if not full.startswith(root + os.sep) or not os.path.isfile(full):
+                continue
+            try:
+                os.remove(full)
+                gone.add(os.path.relpath(full, root).replace(os.sep, "/"))
+            except OSError:
+                pass
+        with lock:
+            for job in self.jobs:
+                kept = [path for path in job["outputs"] if path not in gone]
+                if len(kept) != len(job["outputs"]):
+                    job["removed"] = job.get("removed", 0) + len(job["outputs"]) - len(kept)
+                    job["outputs"] = kept
+            if gone:
+                self.save_jobs()
+        return len(gone)
+
+    def delete_outputs(self, paths):
+        if not isinstance(paths, list):
+            return None, "paths must be a list"
+        with lock:
+            running = {path for job in self.jobs if job["state"] == "running" for path in job["outputs"]}
+        count = self.remove_outputs([path for path in paths if path not in running])
+        log(f"{count} output files deleted")
+        return count, None
+
     # jobs ---
 
     def read_jobs(self):
@@ -539,7 +668,11 @@ class Rig:
         if not prompt:
             return None, "Write a prompt"
         spec = model["tasks"][task]
+        chat = self.find_chat(str(request["chat"])) if request.get("chat") else self.default_chat()
+        if chat is None:
+            return None, "That chat was deleted: pick or start another"
         job = {"id": f"{time.strftime('%Y%m%d-%H%M%S')}-{random.randrange(16 ** 4):04x}", "model": model["id"],
+               "chat": chat["id"],
                "model_name": model["name"], "variant": variant["label"], "task": task, "prompt": prompt,
                "state": "queued", "created": time.time(), "outputs": [], "error": "", "values": {}}
         for item in spec["inputs"]:
@@ -579,8 +712,15 @@ class Rig:
             except (TypeError, ValueError):
                 return None, "seed must be a number"
         with lock:
+            if self.find_chat(chat["id"]) is None:
+                return None, "That chat was deleted: pick or start another"
+            if not chat["title"]:
+                # A chat is named after its first request, until it is renamed
+                chat["title"] = prompt[:60]
+            chat["archived"] = False
+            self.save_chats()
             self.jobs.append(job)
-            self.settings = {"model": model["id"], "task": task}
+            self.settings ={"model": model["id"], "task": task}
             write_json(os.path.join(args.data, "settings.json"), self.settings)
             self.save_jobs()
             wake_jobs.notify_all()
@@ -711,10 +851,13 @@ class Rig:
                 pass
             time.sleep(2)
 
-    def state(self):
+    def state(self, chat_id=None):
+        """For the page: a chat's requests. Without a chat, the last requests of all of them (the Claude Code tools)."""
         with lock:
-            jobs = [{k: v for k, v in j.items() if k != "cancel"} for j in self.jobs[-60:]]
+            jobs = [j for j in self.jobs if j["chat"] == chat_id][-SHOW_JOBS:] if chat_id else self.jobs[-60:]
+            jobs = [{k: v for k, v in j.items() if k != "cancel"} for j in jobs]
         return {
+            "chat": chat_id, "chats": self.chat_list(),
             "version": args.version, "state": read_line(args.state_file) or "stopped",
             "comfy_url": args.comfy, "gpu": self.gpu, "ram_gb": self.ram,
             "disk_free": disk_free(), "models": self.models(), "jobs": jobs,
@@ -924,7 +1067,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             with open(os.path.join(HERE, "page.html"), "rb") as handle:
                 self.send(200, handle.read(), "text/html; charset=utf-8")
         elif url.path == "/api/state":
-            self.send(200, rig.state())
+            self.send(200, rig.state(urllib.parse.parse_qs(url.query).get("chat", [None])[0]))
+        elif url.path == "/api/outputs":
+            self.send(200, {"outputs": rig.outputs()})
         elif url.path == "/log":
             self.send(200, tail(args.log, 64 * 1024), "text/plain; charset=utf-8")
         elif url.path.startswith("/files/"):
@@ -954,6 +1099,17 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path == "/api/generate":
             job, error = rig.add_job(body)
             self.send(400 if error else 200, {"error": error} if error else {"job": job["id"]})
+        elif path == "/api/chat-new":
+            self.send(200, {"chat": rig.new_chat(body.get("title"))["id"]})
+        elif path == "/api/chat-update":
+            error = rig.update_chat(str(body.get("chat")), body.get("title"), body.get("archived"))
+            self.send(400 if error else 200, {"error": error})
+        elif path == "/api/chat-delete":
+            error = rig.delete_chat(str(body.get("chat")))
+            self.send(400 if error else 200, {"error": error})
+        elif path == "/api/outputs-delete":
+            count, error = rig.delete_outputs(body.get("paths"))
+            self.send(400 if error else 200, {"error": error} if error else {"deleted": count})
         elif path == "/api/cancel":
             rig.cancel_job(str(body.get("job")))
             self.send(200, {})

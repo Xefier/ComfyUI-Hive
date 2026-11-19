@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.4.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.5.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -51,6 +51,16 @@ versions of this miner.
   prompt, and press Generate (or Ctrl+Enter). Size, length and seed can be changed; empty means the model's default
   and a random seed. Requests queue and run one at a time; each shows its progress (step, speed), then the image or
   video with **Download** and **Open** links, or what went wrong. The history stays on the rig.
+- **Chats:** the requests are kept in chats, listed above the models. **New chat** starts one; it is named after its
+  first prompt until you **Rename** it. Click a chat to open it; which chat is open is each browser's own, so a PC and
+  a phone can be in different chats of the same rig. **Archive** takes a chat off the list without removing anything
+  (**Show archived** brings the archived ones back to open or unarchive; a new request in one unarchives it).
+  **Delete** removes the chat with its requests and the images and videos they made, unless a request is waiting or
+  running in it. The requests from before chats, and those of the Claude Code tools, are in a chat named General.
+- **Outputs** (the link at the top, `http://<rig>:8189/#outputs`) lists every file in the outputs folder, newest first:
+  a preview, its size and date, the prompt, model and chat it came from (files made in ComfyUI's own editor are listed
+  too), with **Download** and **Open**. **Delete** removes one, or tick several (or **Select all**) and **Delete
+  selected**; the page says how much the selection takes. A request whose file was deleted says so in its chat.
 - **Size:** the **Size** list has common sizes by shape (16:9, 9:16, 1:1, 4:3, 3:4, 21:9), only those the model takes,
   each rounded to the multiple it needs (16 or 32); Width and Height can also be typed.
 - **The image for image to video or to edit:** drop it on the chat, paste it (Ctrl+V, from a screenshot or a copied image), or
@@ -88,7 +98,7 @@ versions of this miner.
   the end of the miner log.
 
 The page and ComfyUI have no login: like Ollama-Hive's API, anything on the LAN that can reach them can use them,
-including starting a download, deleting a model, and uploading or deleting a LoRA. They listen only on the private LAN address, and `allow=` limits
+including starting a download, deleting a model, a chat or an output, and uploading or deleting a LoRA. They listen only on the private LAN address, and `allow=` limits
 which addresses can connect.
 
 ## Claude sessions
@@ -247,6 +257,12 @@ reaches ComfyUI and fails only at loading the empty stand-in model files; the pa
 is pasted on Qwen-Image. `comfy_download` against the page, with a small real file from Hugging Face: a yes and a no in
 the dialog, a dialog the client cancels by itself (then the session's yes in the conversation), and a refusal without
 any yes. Not run: a real edit, and the dialog in a real Claude Code session.
+
+For the chats and the Outputs view (v0.5), the page run on a PC without ComfyUI, on a made-up history and image files:
+the history from before chats opens as General; a new chat, its name from the first prompt, rename, archive and
+unarchive, delete (its requests, their files and the image one started from are gone); the outputs listed with their
+requests, one and several deleted, paths outside the outputs folder refused; a request without a chat (the Claude
+tools) lands in General. Not run: requests that finish in a chat, video previews, and any of it on a rig.
 
 Not yet run: a real model generating (no model has been downloaded and run), the memory each build really needs, the
 dashboard stats (no `jq` where it was tested), and anything on a real Hive rig (firewall rules, watchdog).
