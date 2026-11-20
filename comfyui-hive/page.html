@@ -1131,6 +1131,39 @@ function loraText(slot) {
   return `${slot.name}${slot.low ? ` (low noise: ${slot.low})` : ""} × ${slot.strength}`;
 }
 
+// --- a LoRA's trigger prompt: the words it is called up with, kept on the rig with the file ----------------------
+const triggerOf = name => (state.loras.find(f => f.name === name) || {}).trigger || "";
+
+// Beside each slot's strength: puts the trigger prompt of the slot's LoRA in the prompt, or asks for it first
+function drawTriggers() {
+  [...$("loraslots").children].forEach((row, i) => {
+    const name = (loraSlots[i] || {}).name, has = !!triggerOf(name), use = row.querySelector("[data-trigger]");
+    use.hidden = !name;
+    use.textContent = has ? "Use trigger prompt" : "Set trigger prompt";
+    use.title = has ? `Adds to the prompt: ${triggerOf(name)}` : "Write the words this LoRA is called up with, once: they are kept on the rig";
+    row.querySelector("[data-trigger-edit]").hidden = !name || !has;
+  });
+}
+
+async function editTrigger(name) {
+  const text = prompt(`Trigger prompt of ${name} (empty: none)`, triggerOf(name));
+  if (text === null) return false;
+  try { await post("/api/lora-trigger", { name, trigger: text }); }
+  catch (e) { lsay(e.message, true); return false; }
+  await refresh();
+  return true;
+}
+
+async function useTrigger(name) {
+  if (!triggerOf(name) && !await editTrigger(name)) return;
+  const words = triggerOf(name), box = $("prompt");
+  if (!words) return;
+  if (box.value.includes(words)) { toast("The prompt has it already."); return; }
+  box.value = box.value.trim() ? box.value.replace(/[\s,]+$/, "") + ", " + words : words;
+  saveSettings();
+  box.focus();
+}
+
 function drawLoras() {
   const item = loraInput(current(), task);
   $("lorabox").hidden = !item;
@@ -1146,7 +1179,7 @@ function drawLoras() {
   $("lorasummary").textContent = `LoRAs · ${used ? used + " used" : "none used"} · ${names.length} on this rig`;
   const key = JSON.stringify([item, state.loras]);
   const box = $("loraslots");
-  if (box.dataset.key === key) { drawLoraWarnings(item); return; }
+  if (box.dataset.key === key) { drawLoraWarnings(item); drawTriggers(); return; }
   box.dataset.key = key;
   box.innerHTML = "";
   const paired = loraPaired(item);
@@ -1161,6 +1194,7 @@ function drawLoras() {
       // for, and the number beside it takes anything the model does
       + `<label title="Drag for a slider LoRA; double-click to go back to ${item.strength.default}">Strength <input type="range" data-field="strength" list="lorazero" min="${Math.max(item.strength.min, -SLIDER)}" max="${Math.min(item.strength.max, SLIDER)}" step="0.05">`
       + `<input type="number" data-field="strength" min="${item.strength.min}" max="${item.strength.max}" step="0.05"></label>`
+      + `<button class="small" data-trigger hidden></button><button class="small" data-trigger-edit hidden title="Change or remove this LoRA's trigger prompt">Edit</button>`
       + `<div class="status bad" data-warn hidden></div>`;
     for (const input of row.querySelectorAll("[data-field]")) {
       const field = input.dataset.field;
@@ -1183,9 +1217,12 @@ function drawLoras() {
       };
       if (input.type === "range") input.ondblclick = () => set(item.strength.default);
     }
+    row.querySelector("[data-trigger]").onclick = () => useTrigger(slot.name);
+    row.querySelector("[data-trigger-edit]").onclick = () => editTrigger(slot.name);
     box.appendChild(row);
   }
   drawLoraWarnings(item);
+  drawTriggers();
   const files = $("lorafiles");
   files.innerHTML = "";
   for (const file of state.loras) {

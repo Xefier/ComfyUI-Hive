@@ -25,7 +25,7 @@ h-run.sh runs it beside ComfyUI, on the rig's LAN address at ComfyUI's port + 1.
   /api/download   POST {model}: downloads the model's files; /api/cancel-download and /api/delete likewise
   /api/token      POST {token}: the Hugging Face token for gated models, kept on the rig
   /api/lora-upload  POST ?name=<file>.safetensors with the file as the body: adds one of your own LoRAs
-  /api/lora-delete  POST {name}: deletes one
+  /api/lora-delete  POST {name}: deletes one; /api/lora-trigger POST {name, trigger}: its trigger prompt ("": none)
   /files/<path>   an output, ?download=1 to save it
   /log            the end of the miner log
   /api/hello      who this rig is, for the other rigs; /api/rigs: the other rigs it found; /api/chats: its chats
@@ -80,6 +80,7 @@ ANNOUNCE = b"comfyui-hive "  # then the page's port: what a rig tells the LAN ev
 PEER_HEARD = 60  # seconds a rig is asked who it is after it last announced itself
 PEER_KEPT = 20  # seconds a rig stays listed after it last answered
 MAX_STITCH = 40  # videos in one row
+MAX_TRIGGER = 2000  # characters of a LoRA's trigger prompt
 MAX_REPEAT = 20  # requests of one prompt asked for at once
 RUN_FIELDS = ("est", "shown", "begun", "first", "last", "rate", "all_step", "all_steps", "pass", "passes")
 
@@ -317,6 +318,7 @@ class Rig:
         self.done = 0
         self.failed = 0
         self.settings = read_json(os.path.join(args.data, "settings.json"), {})
+        self.triggers = read_json(os.path.join(args.data, "lora_triggers.json"), {})  # LoRA name -> its trigger prompt
         self.token = read_line(os.path.join(args.data, "hf_token")) or os.environ.get("HF_TOKEN", "")
         self.last_model = None
         self.rental = ""  # what says a rental may be active, looked at every few seconds for the page
@@ -515,7 +517,7 @@ class Rig:
 
     def loras(self):
         """Your LoRAs: every .safetensors under the loras folder that no catalog model brought, by the name ComfyUI
-        gives it (with its folder, for one copied into a subfolder by hand)."""
+        gives it (with its folder, for one copied into a subfolder by hand), each with the trigger prompt kept for it."""
         root, skip, found = lora_root(), self.catalog_loras(), []
         for folder, _, names in os.walk(root, followlinks=True):
             for name in names:
@@ -523,7 +525,8 @@ class Rig:
                 if not name.lower().endswith(LORA_EXT) or relative in skip:
                     continue
                 try:
-                    found.append({"name": relative, "size": os.path.getsize(os.path.join(folder, name))})
+                    found.append({"name": relative, "size": os.path.getsize(os.path.join(folder, name)),
+                                  "trigger": self.triggers.get(relative, "")})
                 except OSError:
                     pass
         return sorted(found, key=lambda entry: entry["name"].lower())
@@ -569,6 +572,24 @@ class Rig:
         log(f"LoRA {name} uploaded: {length / 1024 ** 2:.0f} MB")
         return name, None
 
+    def set_trigger_gone(self, name):
+        with lock:
+            if self.triggers.pop(name, None) is not None:
+                write_json(os.path.join(args.data, "lora_triggers.json"), self.triggers)
+
+    def set_trigger(self, name, text):
+        """Keeps the words a LoRA is called up with (none: forgets them), for the page to put in a prompt."""
+        if name not in {entry["name"] for entry in self.loras()}:
+            return "No such LoRA on this rig"
+        text = str(text or "").strip()[:MAX_TRIGGER]
+        with lock:
+            if text:
+                self.triggers[name] = text
+            else:
+                self.triggers.pop(name, None)
+            write_json(os.path.join(args.data, "lora_triggers.json"), self.triggers)
+        return None
+
     def delete_lora(self, name):
         if name not in {entry["name"] for entry in self.loras()}:
             return "No such LoRA on this rig"
@@ -581,6 +602,7 @@ class Rig:
             os.remove(os.path.join(lora_root(), name))
         except OSError as error:
             return f"{name}: {error}"
+        self.set_trigger_gone(name)
         log(f"LoRA {name} deleted")
         return None
 
@@ -1830,6 +1852,9 @@ class Handler(http.server.BaseHTTPRequestHandler):
             self.send(200, {})
         elif path == "/api/delete":
             error = rig.delete_model(str(body.get("model")))
+            self.send(400 if error else 200, {"error": error})
+        elif path == "/api/lora-trigger":
+            error = rig.set_trigger(str(body.get("name")), body.get("trigger"))
             self.send(400 if error else 200, {"error": error})
         elif path == "/api/lora-delete":
             error = rig.delete_lora(str(body.get("name")))

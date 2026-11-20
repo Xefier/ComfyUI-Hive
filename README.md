@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.16.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.17.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -58,6 +58,10 @@ versions of this miner.
   end took in the last request like it (same model and task; same settings for the end), so the first request of a
   kind fills the bar by its steps, says "a rough guess", and has no estimate before its first step. The bar never
   goes back; when a request takes longer than estimated it waits just short of full.
+- **A LoRA's trigger prompt:** beside a slot's strength, **Set trigger prompt** asks once for the words the slot's
+  LoRA is called up with and keeps them on the rig with the file; from then on **Use trigger prompt** adds them to the
+  end of the prompt (not twice), and **Edit** changes or removes them. Every browser sees the same ones; each rig
+  keeps its own.
 - **A request again:** **Use again** under a request puts its prompt, model, task, numbers, seed, LoRAs and image
   back in the composer (clear Seed for a different result). **Use as input** under an image the rig made attaches it,
   switching to the model's task that starts from an image. Each request shows the size and numbers it was made with.
@@ -417,6 +421,10 @@ For Repeat (v0.14), with the making of a video replaced by a stand-in that write
 3 with and without the stitched video, each from the last frame of the one before; 3 separate tries; a row of 4 that
 ends at its failed second; more than 20, and a row on a model that can't start from an image, refused. Not run: a
 real request, a row's running one stopped, and any of it on a rig.
+
+For a LoRA's trigger prompt (v0.17), on a PC with stand-ins for LoRA files: set, added to a prompt once and not
+twice, changed, removed, the asking cancelled, and one for a file that isn't on the rig refused. Not run: with a real
+LoRA, and on a rig.
 
 For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
 with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like
