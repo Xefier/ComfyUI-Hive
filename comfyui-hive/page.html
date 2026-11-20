@@ -1549,7 +1549,9 @@ function media(path, inChat) {
   const url = fileUrl(path), kind = fileKind(path), at = esc(path);
   const view = kind === "video" ? `<span class="thumb" data-view="${at}" title="Click to play it large"><video src="${url}#t=0.1" muted playsinline preload="metadata"></video></span>`
     : kind === "audio" ? `<audio src="${url}" controls></audio>` : `<img src="${url}" alt="" data-view="${at}" title="Click to see it large">`;
-  return `${view}<div class="links"><a href="${url}?download=1">Download</a><a href="${url}" target="_blank" rel="noopener">Open</a>`
+  return `${view}<div class="links">`
+    + (inChat && kind === "video" ? `<a href="#" data-continue="${at}" title="The request's prompt, settings and LoRAs back in the composer, starting from the last frame of this video: to go on where it ended">Continue</a>` : "")
+    + `<a href="${url}?download=1">Download</a><a href="${url}" target="_blank" rel="noopener">Open</a>`
     + (inChat && ["png", "jpg", "jpeg", "webp"].includes(fileExt(path)) ? `<a href="#" data-input="${at}" title="Attach it: to make a video from it, or to edit it">Use as input</a>` : "")
     + (inChat ? `<a href="#" class="danger" data-delete="${at}" title="Delete this file from the rig">Delete</a>` : "")
     + `</div>`;
@@ -1607,7 +1609,8 @@ document.addEventListener("keydown", e => {
 });
 
 document.addEventListener("click", e => {
-  const view = e.target.closest("[data-view]"), input = e.target.closest("[data-input]"), gone = e.target.closest("[data-delete]");
+  const view = e.target.closest("[data-view]"), input = e.target.closest("[data-input]"), gone = e.target.closest("[data-delete]"),
+    more = e.target.closest("[data-continue]");
   if (view) {
     e.preventDefault();
     const paths = view.closest("#outs") ? outputs.map(o => o.path) : state.jobs.flatMap(shownOutputs);
@@ -1624,6 +1627,11 @@ document.addEventListener("click", e => {
   } else if (gone) {
     e.preventDefault();
     deleteOutputs([gone.dataset.delete], text => toast(text), refresh);
+  } else if (more) {
+    e.preventDefault();
+    // On the rig chosen beside Use again, over the request this video is of
+    const job = state.jobs.find(j => j.outputs.includes(more.dataset.continue));
+    if (job) continueFrom(job.id, shown.get(job.id).you.querySelector(".onrig").value);
   }
 });
 
@@ -1920,12 +1928,10 @@ function drawMessages() {
         + (job.via ? `<div class="hint">sent from the page of ${esc(job.via)}</div>` : "")
         + (job.loras || []).map(slot => `<div class="hint">LoRA ${esc(loraText(slot))}</div>`).join("")
         + `<div class="links"><a href="#" data-act="again" title="Its prompt, settings, seed, LoRAs and image back in the composer">Use again</a>`
-        + `<a href="#" data-act="continue" hidden title="Its prompt, settings and LoRAs back in the composer, starting from the last frame of the video it made: to go on where it ended">Continue</a>`
-        + `<select class="onrig" hidden title="On which rig Use again and Continue do it: another one starts a new chat there, with this request's prompt, settings and image"></select></div>`;
+        + `<select class="onrig" hidden title="On which rig Use again, and Continue under the video, do it: another one starts a new chat there, with this request's prompt, settings and image"></select></div>`;
       const where = you.querySelector(".onrig");
       fillRigs(where);
       you.querySelector("[data-act=again]").onclick = e => { e.preventDefault(); useAgain(job.id, where.value); };
-      you.querySelector("[data-act=continue]").onclick = e => { e.preventDefault(); continueFrom(job.id, where.value); };
       const rig = document.createElement("div");
       rig.className = "msg rig";
       box.appendChild(you); box.appendChild(rig);
@@ -1933,7 +1939,6 @@ function drawMessages() {
       shown.set(job.id, pair);
     }
     pair.key = key;
-    pair.you.querySelector("[data-act=continue]").hidden = !(job.state === "done" && ownVideo(job));
     // Updated in place, so the bar moves on rather than starting over and Stop stays under the pointer
     if (job.state === "running") { pair.key = ""; drawRunning(pair.rig, job); continue; }
     let html = `<div class="who">${esc(job.variant)} · seed ${esc(job.seed ?? "random")}</div>`;

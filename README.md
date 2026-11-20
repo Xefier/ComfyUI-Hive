@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.15.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.16.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -61,7 +61,7 @@ versions of this miner.
 - **A request again:** **Use again** under a request puts its prompt, model, task, numbers, seed, LoRAs and image
   back in the composer (clear Seed for a different result). **Use as input** under an image the rig made attaches it,
   switching to the model's task that starts from an image. Each request shows the size and numbers it was made with.
-- **A video continued:** **Continue**, beside Use again once a request has made a video, does the same but starts
+- **A video continued:** **Continue**, under a video beside Download, does the same as Use again but starts
   from the last frame of that video, with a new seed: to go on where it ended. The request made this way is a video of
   its own; with **Also make one stitched video of them in a row** ticked, the rig also makes one video of the whole
   row when it is done: every video continued up to this one, one after another, the frame they share left out once,
@@ -69,7 +69,7 @@ versions of this miner.
   which ComfyUI has installed. The chat shows only the stitched video under such a request: the part it added is in
   it, stays on the rig for the next stitching, and is listed in Outputs. The last frame is taken as the browser plays the video, so a little softer than the
   model made it.
-- **A request taken to another rig:** with **Other rigs** on, a list of the rigs stands beside Use again and Continue,
+- **A request taken to another rig:** with **Other rigs** on, a list of the rigs stands beside Use again (Continue goes by it too),
   set to the open chat's own. With another rig chosen, they start a new chat on that rig, named after this one, with
   the request's prompt, settings and the image it started from (for Continue, the video's last frame). A LoRA that rig
   doesn't have is left out and said; a model it doesn't offer leaves the prompt and image for another model. A video
