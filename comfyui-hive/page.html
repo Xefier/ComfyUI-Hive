@@ -154,7 +154,7 @@ details.more[open] > summary { margin-bottom: 4px; }
 .msg .text { white-space: pre-wrap; }
 /* Images and videos as thumbnails, opened large in the viewer. --thumb is their height: the slider in the gear's panel
    sets it, and until then it is this, small on a phone. Outputs' are at most as big as its cards are made for. */
-:root { --thumb: 60vh; --outthumb: min(var(--thumb), 190px); }
+:root { --thumb: 60vh; --outthumb: min(var(--thumb), 190px); --inthumb: 96px; }
 .msg img, .msg video { max-width: 100%; max-height: var(--thumb); border-radius: 8px; display: block; margin-top: 6px; }
 .msg img, .out img, .thumb { cursor: zoom-in; }
 .thumb { position: relative; display: block; width: fit-content; max-width: 100%; }
@@ -175,8 +175,8 @@ details.more[open] > summary { margin-bottom: 4px; }
 .tasks { display: inline-flex; gap: 2px; flex-wrap: wrap; align-self: flex-start; background: var(--inset); border: 1px solid var(--line); border-radius: 10px; padding: 3px; }
 .tasks button { border: 0; background: transparent; padding: 5px 12px; border-radius: 7px; color: var(--muted); }
 .tasks button.on, .tasks button.on:hover { background: var(--panel); color: var(--text); font-weight: 600; box-shadow: 0 1px 3px rgba(0, 0, 0, .14); }
-.imagebox { display: flex; gap: 10px; align-items: center; border: 1.5px dashed var(--line); border-radius: 10px; padding: 8px; background: var(--inset); }
-.imagebox img { max-height: 96px; max-width: 160px; border-radius: 6px; display: block; }
+.imagebox { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; border: 1.5px dashed var(--line); border-radius: 10px; padding: 8px; background: var(--inset); }
+.imagebox img { max-height: var(--inthumb); max-width: 100%; border-radius: 6px; display: block; }
 .imagehint { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
 .imagehint .imagesize { color: var(--text); }
 .imagehint .choose { color: var(--accent); cursor: pointer; text-decoration: underline; }
@@ -186,7 +186,7 @@ details.more[open] > summary { margin-bottom: 4px; }
 .chat.dropping { outline: 2px dashed var(--accent); outline-offset: -6px; }
 .continuing { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
 .repeat { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
-.repeat input { width: 58px; }
+.repeat input, #continueat { width: 58px; }
 .continuing label { display: flex; gap: 5px; align-items: center; cursor: pointer; color: var(--text); }
 .continuing input { accent-color: var(--accent); }
 .chat.dropping .imagebox { border-color: var(--accent); }
@@ -303,6 +303,10 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
       <span>Thumbnails <span id="thumbsize"></span></span>
       <input type="range" id="thumbs" min="60" max="800" step="10">
     </label>
+    <label class="slider" title="How big the image a request starts from is shown over the prompt">
+      <span>Input image <span id="inthumbsize"></span></span>
+      <input type="range" id="inthumbs" min="60" max="800" step="10">
+    </label>
     <hr>
     <a href="#models" class="phoneonly" id="modelslink">Models</a>
     <a href="#outputs" id="viewlink">Outputs</a>
@@ -370,9 +374,9 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
         <div id="lorafiles"></div>
       </details>
       <div class="continuing" id="continuing" hidden>
-        <span id="continuingtext">Continues that video from its last frame.</span>
+        <span id="continuingtext">Continues that video from <input type="number" id="continueat" min="0" step="0.01" placeholder="end" title="The second of the video to go on from: empty for its last frame. A stitched video then has it up to that moment. The large player has Continue from here, for the moment it shows"> s<span id="continuelen"></span></span>
         <label id="chainbox" title="Each of the repeated videos starts from the last frame of the one before it, to go on where it ended. Unticked, they are separate tries of the same prompt"><input type="checkbox" id="chain"> Each continues the one before</label>
-        <label id="stitchbox" title="When each one is done, the rig also makes one video of the whole row: every video continued up to it, one after another"><input type="checkbox" id="stitch"> Also make one stitched video of them in a row</label>
+        <label id="stitchbox" title="When each one is done, the rig also makes one video of the whole row: every video continued up to it, one after another"><input type="checkbox" id="stitch" checked> Also make one stitched video of them in a row</label>
         <button class="small" id="continuestop" title="Keep the image, as a request of its own">Not a continuation</button>
       </div>
       <div class="imagebox" id="imagebox" hidden>
@@ -903,31 +907,36 @@ document.addEventListener("click", e => {
   if (popOpen && !popOpen.panel.contains(e.target) && !popOpen.button.contains(e.target)) hidePop();
 });
 document.addEventListener("keydown", e => { if (e.key === "Escape" && $("viewer").hidden) hidePop(); });
-$("gear").onclick = () => { showThumb(); togglePop($("gearpanel"), $("gear")); };
+$("gear").onclick = () => { showThumb(); showInThumb(); togglePop($("gearpanel"), $("gear")); };
 // A link of the panel goes somewhere: the panel closes. Its switches and the slider leave it open.
 $("gearpanel").addEventListener("click", e => { if (e.target.closest("a")) hidePop(); });
 
-// --- the thumbnails' size: --thumb, the CSS's own for the screen until the slider is moved ----------------------
-// The slider shows the size used now, the CSS's own when it wasn't moved: measured, as it can be in vh
-function showThumb() {
-  const probe = document.createElement("div");
-  probe.style.cssText = "position: absolute; visibility: hidden; height: var(--thumb)";
-  document.body.appendChild(probe);
-  $("thumbs").value = probe.offsetHeight;
-  $("thumbsize").textContent = probe.offsetHeight + " px";
-  probe.remove();
+// --- the thumbnails' sizes: --thumb of the chat's and Outputs', --inthumb of the image a request starts from; each
+// the CSS's own for the screen until its slider is moved ------------------------------------------------------------
+// Returns what makes the slider show the size used now, the CSS's own when it wasn't moved: measured, as it can be
+// in vh
+function sizeSlider(variable, slider, label, key) {
+  const show = () => {
+    const probe = document.createElement("div");
+    probe.style.cssText = `position: absolute; visibility: hidden; height: var(${variable})`;
+    document.body.appendChild(probe);
+    $(slider).value = probe.offsetHeight;
+    $(label).textContent = probe.offsetHeight + " px";
+    probe.remove();
+  };
+  const set = px => {
+    document.documentElement.style.setProperty(variable, px + "px");
+    show();
+  };
+  $(slider).oninput = e => {
+    set(e.target.value);
+    try { localStorage.setItem(key, e.target.value); } catch { /* no storage: until the page is closed */ }
+  };
+  try { const px = Number(localStorage.getItem(key)); if (px) set(px); } catch { /* as above */ }
+  return show;
 }
-
-function setThumb(px) {
-  document.documentElement.style.setProperty("--thumb", px + "px");
-  showThumb();
-}
-
-$("thumbs").oninput = e => {
-  setThumb(e.target.value);
-  try { localStorage.setItem("thumb", e.target.value); } catch { /* no storage: until the page is closed */ }
-};
-try { const px = Number(localStorage.getItem("thumb")); if (px) setThumb(px); } catch { /* as above */ }
+const showThumb = sizeSlider("--thumb", "thumbs", "thumbsize", "thumb");
+const showInThumb = sizeSlider("--inthumb", "inthumbs", "inthumbsize", "inthumb");
 
 // Those on the rig, downloading or picked are listed; the rest are folded away under them
 let moreOpen = null;
@@ -1048,6 +1057,7 @@ $("go").onclick = async () => {
     // One kept on the rig from before isn't sent again: the rig uses its own
     if (image !== true) body.image = image;
     if (continuing) body.continues = continuing;
+    if (continuing && continuingAt != null) body.continues_at = continuingAt;
   }
   if (repeats() > 1) { body.repeat = repeats(); body.chain = chained(); }
   if (continuing || chained()) body.stitch = $("stitch").checked;
@@ -1601,7 +1611,8 @@ function media(path, inChat) {
 }
 
 // --- the viewer: an image or a video large, with the others of the chat (or of the Outputs view) before and after --
-let viewList = [], viewAt = 0;
+// viewChat: opened from the chat, so a video of it can be continued from the moment the player shows
+let viewList = [], viewAt = 0, viewChat = false;
 
 function drawViewer() {
   const path = viewList[viewAt], url = fileUrl(path);
@@ -1609,13 +1620,16 @@ function drawViewer() {
   $("viewmedia").innerHTML = fileKind(path) === "video" ? `<video src="${url}" controls loop autoplay playsinline></video>` : `<img src="${url}" alt="">`;
   $("viewcap").innerHTML = (viewList.length > 1 ? `<span>${viewAt + 1} of ${viewList.length}</span>` : "")
     + (job && job.prompt ? `<span>${esc(job.prompt.length > 140 ? job.prompt.slice(0, 140) + "…" : job.prompt)}</span>` : "")
+    + (viewChat && fileKind(path) === "video" && state.jobs.some(j => j.outputs.includes(path))
+      ? `<a href="#" id="viewcontinue" title="The request's prompt, settings and LoRAs back in the composer, starting from the frame the player shows now: pause it at the moment to go on from">Continue from here</a>` : "")
     + `<a href="${url}?download=1">Download</a>`;
   $("viewprev").hidden = $("viewnext").hidden = viewList.length < 2;
 }
 
 // Opened as a step of the browser's history, so a phone's Back closes it rather than leaving the chat
-function openViewer(list, at) {
+function openViewer(list, at, inChat) {
   viewList = list;
+  viewChat = inChat;
   viewAt = Math.max(0, at);
   if (!list.length) return;
   drawViewer();
@@ -1640,6 +1654,27 @@ function stepViewer(by) {
   drawViewer();
 }
 
+// Continue from here: the video's request continued from the second the player is at. Of a stitched video, the
+// request whose part that second is in, at the second of its own video.
+$("viewcap").onclick = e => {
+  if (e.target.id !== "viewcontinue") return;
+  e.preventDefault();
+  const path = viewList[viewAt], player = $("viewmedia").querySelector("video");
+  const job = state.jobs.find(j => j.outputs.includes(path));
+  if (!job || !player) return;
+  let from = job, time = player.currentTime;
+  if (path === job.stitched) {
+    if (!job.stitch_parts) { toast("This one was stitched before a moment of it could be continued from: Continue under it goes on from its end."); return; }
+    const part = [...job.stitch_parts].reverse().find(p => p.at <= time + 0.001) || job.stitch_parts[0];
+    from = state.jobs.find(j => j.id === part.job);
+    if (!from || !ownVideo(from)) { toast(`The video that moment is from is no longer on ${home()}.`); return; }
+    time = time - part.at + part.skip;
+  }
+  const where = shown.get(job.id).you.querySelector(".onrig").value;
+  closeViewer();
+  continueFrom(from.id, where, Math.max(0, time));
+};
+
 $("viewprev").onclick = () => stepViewer(-1);
 $("viewnext").onclick = () => stepViewer(1);
 $("viewclose").onclick = closeViewer;
@@ -1658,7 +1693,7 @@ document.addEventListener("click", e => {
     e.preventDefault();
     const paths = view.closest("#outs") ? outputs.map(o => o.path) : state.jobs.flatMap(shownOutputs);
     const list = paths.filter(path => fileKind(path) !== "audio");
-    openViewer(list, list.indexOf(view.dataset.view));
+    openViewer(list, list.indexOf(view.dataset.view), !view.closest("#outs"));
   } else if (input) {
     e.preventDefault();
     if (!imageTask()) return;
@@ -1730,15 +1765,29 @@ function useAgain(id, where = rigOf) {
   $("prompt").focus();
 }
 
-// --- a request continued: the same again, starting from the last frame of the video it made -----------------------
-// The request sent while this is set says which one it continues, so the rig can stitch the row into one video
-let continuing = null;
+// --- a request continued: the same again, starting from the last frame of the video it made, or from the frame of
+// a moment before its end --------------------------------------------------------------------------------------------
+// The request sent while this is set says which one it continues, and from which second when not from its end, so
+// the rig can stitch the row into one video
+let continuing = null, continuingAt = null;
+const seconds = time => String(Math.round(time * 100) / 100);
+// What the image box says of a frame taken from a video
+const frameName = time => time == null ? "The last frame of that video" : `That video at ${seconds(time)} s`;
 
-function setContinuing(id) {
+// length: how long the continued video is, shown beside the second to go on from
+function setContinuing(id, time = null, length = null) {
   continuing = id;
+  continuingAt = id ? time : null;
+  $("continueat").value = continuingAt == null ? "" : seconds(continuingAt);
+  $("continuelen").textContent = id && length ? ` of ${seconds(length)}` : "";
   drawContinuing();
 }
 $("continuestop").onclick = () => setContinuing(null);
+// Another second typed: the frame of that moment instead, the composer as it is
+$("continueat").onchange = e => {
+  const time = e.target.value === "" ? null : Math.max(0, Number(e.target.value) || 0);
+  if (continuing) continueFrom(continuing, rigOf, time, false);
+};
 
 // --- a request repeated: so many separate tries of it, or videos that each continue the one before ---------------
 // The rig queues the tries at once; of a row it queues each video when the one before is done, from its last frame.
@@ -1759,7 +1808,8 @@ function drawContinuing() {
 }
 $("repeat").oninput = drawContinuing;
 for (const name of ["stitch", "chain"]) {
-  try { $(name).checked = localStorage.getItem(name) === "1"; } catch { /* as above */ }
+  // Until it was set here, as the page has it: the stitched video ticked
+  try { const kept = localStorage.getItem(name); if (kept !== null) $(name).checked = kept === "1"; } catch { /* as above */ }
   $(name).onchange = e => {
     try { localStorage.setItem(name, e.target.checked ? "1" : "0"); } catch { /* as above */ }
     drawContinuing();
@@ -1772,20 +1822,25 @@ for (const name of ["stitch", "chain"]) {
 const shownOutputs = job => job.outputs.includes(job.stitched) ? job.outputs.filter(path => path === job.stitched || fileKind(path) !== "video") : job.outputs;
 const ownVideo = job => job.outputs.find(path => fileKind(path) === "video" && path !== job.stitched);
 
-// The picture a video ends on, as the browser plays it
-function lastFrame(url) {
+// The picture a video shows at a second of it, or ends on (time null), as the browser plays it: {blob, time, the
+// video's duration}. A hair past the second, as the rig cuts the stitched video: so both mean the same frame.
+function frameAt(url, time = null) {
   return new Promise((resolve, reject) => {
     const video = document.createElement("video");
     video.muted = true;
     video.preload = "auto";
     video.onerror = () => reject(new Error("no video"));
-    video.onloadedmetadata = () => { video.currentTime = Math.max(0, video.duration - 0.01); };
+    video.onloadedmetadata = () => {
+      const end = Math.max(0, video.duration - 0.01);
+      if (time != null) time = Math.min(time, video.duration);
+      video.currentTime = time == null ? end : Math.min(time + 0.001, end);
+    };
     video.onseeked = () => {
       const canvas = document.createElement("canvas");
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       canvas.getContext("2d").drawImage(video, 0, 0);
-      canvas.toBlob(blob => blob ? resolve(blob) : reject(new Error("no picture")), "image/png");
+      canvas.toBlob(blob => blob ? resolve({ blob, time, duration: video.duration }) : reject(new Error("no picture")), "image/png");
     };
     video.src = url;
   });
@@ -1794,24 +1849,27 @@ function lastFrame(url) {
 // The model's task that makes a video from an image: the request's own when it is one
 const videoFrom = (m, job) => m.tasks[job.task] && needsImage(m, job.task) ? job.task : Object.keys(m.tasks).find(t => needsImage(m, t) && t.endsWith("2v"));
 
-async function continueFrom(id, where = rigOf) {
+// time: the second of the video to go on from, null for its end. again false: only the image and what is continued
+// change, the composer stays as it is.
+async function continueFrom(id, where = rigOf, time = null, again = true) {
   const job = state.jobs.find(j => j.id === id), video = job && ownVideo(job);
   if (!video) return;
-  if (where !== rigOf) { useElsewhere(job, where, true); return; }
+  if (where !== rigOf) { useElsewhere(job, where, true, time); return; }
   const m = state.models.find(m => m.id === job.model);
   if (!m) { say(`${job.model_name} isn't offered on this rig any more`, true); return; }
   const from = videoFrom(m, job);
   if (!from) { say(`${m.name} can't start a video from an image: pick a model that can, and use the video's last frame`, true); return; }
   const asked = chatKey();
   let frame;
-  try { frame = await lastFrame(fileUrl(video)); }
-  catch { say("This browser couldn't read the video's last frame", true); return; }
-  if (asked !== chatKey()) return;
+  try { frame = await frameAt(fileUrl(video), time); }
+  catch { say("This browser couldn't read the video's frame", true); return; }
+  if (asked !== chatKey() || (!again && continuing !== id)) return;
   // A new seed: the same one on another start repeats the same movement
-  restore(job, from, null);
-  if (!await attach(frame, "The last frame of that video")) return;
-  setContinuing(id);
-  toast("Its prompt and settings are back, starting from the video's last frame: change the prompt to say what happens next.");
+  if (again) restore(job, from, null);
+  if (!await attach(frame.blob, frameName(frame.time))) return;
+  setContinuing(id, frame.time, frame.duration);
+  if (!again) return;
+  toast(`Its prompt and settings are back, starting from ${frame.time == null ? "the video's last frame" : seconds(frame.time) + " s into the video"}: change the prompt to say what happens next.`);
   $("prompt").focus();
 }
 
@@ -1819,17 +1877,17 @@ async function continueFrom(id, where = rigOf) {
 // The page carries it over: the prompt and settings, and the image it started from or its video's last frame. What
 // the other rig doesn't have (the model, a LoRA) is said, and left for the choosing there. A video continued there
 // can't be stitched with this one: each rig only has its own files.
-async function useElsewhere(job, where, continued) {
+async function useElsewhere(job, where, continued, time = null) {
   const name = rigName(where), title = (state.chats.find(c => c.id === chat) || {}).title || "";
   let picture = null;
   try {
-    if (continued) picture = await lastFrame(fileUrl(ownVideo(job)));
+    if (continued) picture = (await frameAt(fileUrl(ownVideo(job)), time)).blob;
     else if (job.image) {
       const response = await fetch(at("/api/chat-image?job=" + encodeURIComponent(job.id)));
       if (!response.ok) throw new Error("gone");
       picture = await response.blob();
     }
-  } catch { say(continued ? "This browser couldn't read the video's last frame" : "The image it started from is no longer on this rig", true); return; }
+  } catch { say(continued ? "This browser couldn't read the video's frame" : "The image it started from is no longer on this rig", true); return; }
   let made;
   try { made = (await post("/api/chat-new", { title }, where)).chat; }
   catch (e) { say(`${name}: ${e.message}`, true); return; }
@@ -1842,7 +1900,7 @@ async function useElsewhere(job, where, continued) {
   const forTask = m && (continued ? videoFrom(m, job) : m.tasks[job.task] && job.task);
   if (!forTask) {
     saveSettings();
-    if (picture) await attach(picture, continued ? "The last frame of that video" : "From that request");
+    if (picture) await attach(picture, continued ? frameName(time) : "From that request");
     say(`${job.model_name} ${m ? "can't do that" : "isn't offered"} on ${name}: the prompt${picture ? " and the image are" : " is"} here, pick a model for it`, true);
     return;
   }
@@ -1850,8 +1908,8 @@ async function useElsewhere(job, where, continued) {
   const loras = (job.loras || []).filter(slot => have.has(slot.name) && (!slot.low || have.has(slot.low)));
   const left = (job.loras || []).length - loras.length;
   restore({ ...job, loras }, forTask, continued ? null : job.seed);
-  if (picture) await attach(picture, continued ? "The last frame of that video" : "From that request");
-  toast(`In a new chat on ${name}` + (continued ? ", starting from the video's last frame" : "")
+  if (picture) await attach(picture, continued ? frameName(time) : "From that request");
+  toast(`In a new chat on ${name}` + (continued ? `, starting from ${time == null ? "the video's last frame" : seconds(time) + " s into the video"}` : "")
     + (left ? `. ${left === 1 ? "A LoRA it used isn't" : left + " LoRAs it used aren't"} on ${name}: left out` : "")
     + (m.installed ? "." : `. ${m.name} isn't downloaded there yet.`));
   $("prompt").focus();
@@ -1966,7 +2024,7 @@ function drawMessages() {
       you.innerHTML = `<div class="who">${esc(job.model_name)} · ${esc(TASKS[job.task] || job.task)}</div><div class="text">${esc(job.prompt)}</div>`
         + (set ? `<div class="hint">${esc(set)}</div>` : "")
         + (job.rounds ? `<div class="hint">${job.round} of ${job.rounds}${job.row ? " in a row" : ""}</div>` : "")
-        + (job.continues ? `<div class="hint">continues a video from its last frame${job.stitch ? ", stitched with it when done" : ""}</div>`
+        + (job.continues ? `<div class="hint">continues a video from ${job.continues_at == null ? "its last frame" : seconds(job.continues_at) + " s in"}${job.stitch ? ", stitched with it when done" : ""}</div>`
           : job.image ? `<div class="hint">from an image</div>` : "")
         + (job.via ? `<div class="hint">sent from the page of ${esc(job.via)}</div>` : "")
         + (job.loras || []).map(slot => `<div class="hint">LoRA ${esc(loraText(slot))}</div>`).join("")

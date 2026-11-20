@@ -80,6 +80,7 @@ ANNOUNCE = b"comfyui-hive "  # then the page's port: what a rig tells the LAN ev
 PEER_HEARD = 60  # seconds a rig is asked who it is after it last announced itself
 PEER_KEPT = 20  # seconds a rig stays listed after it last answered
 MAX_STITCH = 40  # videos in one row
+CUT_SLACK = 0.002  # seconds past a moment a frame may start at and still be the one shown then: the page asks alike
 MAX_TRIGGER = 2000  # characters of a LoRA's trigger prompt
 MAX_REPEAT = 20  # requests of one prompt asked for at once
 RUN_FIELDS = ("est", "shown", "begun", "first", "last", "rate", "all_step", "all_steps", "pass", "passes")
@@ -971,7 +972,7 @@ class Rig:
             if not after:
                 return None, "This model can't start a video from an image, so its videos can't each continue the last"
             # What every next round is asked with: the same, but from the frame, and with a seed of its own
-            again = {k: v for k, v in request.items() if k not in ("image", "seed", "repeat", "continues", "chat")}
+            again = {k: v for k, v in request.items() if k not in ("image", "seed", "repeat", "continues", "continues_at", "chat")}
             again["task"] = after
             return self.add_job(request, via, {"round": 1, "rounds": rounds, "row": True, "chain": {"left": rounds - 1, "request": again}})
         first = None
@@ -1073,6 +1074,12 @@ class Rig:
                 if before and before["chat"] == chat["id"]:
                     job["continues"] = before["id"]
                     job["stitch"] = bool(request.get("stitch"))
+                    if request.get("continues_at") not in (None, ""):
+                        # From a moment of it rather than its end: a stitched video has it up to there
+                        try:
+                            job["continues_at"] = max(0.0, float(request["continues_at"]))
+                        except (TypeError, ValueError):
+                            return None, "continues_at must be a number of seconds"
         if request.get("seed") not in (None, ""):
             try:
                 job["seed"] = int(request["seed"])
@@ -1097,26 +1104,33 @@ class Rig:
 
     def stitch(self, job):
         """Makes one video of a request's and those it continues, in a row, beside the request's own. Each part is
-        taken from the request that made it, never from an earlier stitched one, so nothing is encoded twice over."""
+        taken from the request that made it, never from an earlier stitched one, so nothing is encoded twice over.
+        One that was continued from a moment before its end is in it up to that moment."""
         with lock:
-            parts, link = [], job
+            parts, ends, makers, link, end = [], [], [], job, None
             while link and len(parts) < MAX_STITCH:
                 video = next((path for path in link["outputs"] if is_video(path) and path != link.get("stitched")), None)
                 if video is None:
                     break  # deleted since: the row starts after it
                 parts.insert(0, video)
+                ends.insert(0, end)
+                makers.insert(0, link["id"])
+                end = link.get("continues_at")
                 link = next((j for j in self.jobs if j["id"] == link.get("continues")), None)
         if len(parts) < 2:
             job["stitch_error"] = "Not stitched: the video this continues is no longer on the rig"
             return
         name = os.path.splitext(parts[-1])[0] + "-stitched.mp4"
         try:
-            stitch_videos([os.path.join(args.outputs, path) for path in parts], os.path.join(args.outputs, name))
+            places = stitch_videos([os.path.join(args.outputs, path) for path in parts], os.path.join(args.outputs, name), ends)
         except Exception as error:  # noqa: BLE001 - the request's own video is there all the same
             job["stitch_error"] = f"Not stitched: {error}"
             log(f"Job {job['id']}: not stitched: {error}")
             return
         job["stitched"], job["parts"] = name, len(parts)
+        # Where each request's video is in it, for the page to continue from a moment of the stitched one: "at" the
+        # second it starts at there, "skip" the second of its own video that is
+        job["stitch_parts"] = [{"job": maker, "at": at, "skip": skip} for maker, (at, skip) in zip(makers, places)]
         job["outputs"].append(name)
         log(f"Job {job['id']}: {len(parts)} videos stitched into {name}")
 
@@ -1470,10 +1484,14 @@ def last_frame(source):
     return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
 
 
-def stitch_videos(sources, target):
+def stitch_videos(sources, target, ends=()):
     """Writes the videos one after another into one mp4. Each but the first starts from the frame the one before it
     ended on, so that frame is left out once, with the sound of its moment. They are decoded and encoded again
-    (H.264, close to lossless): joining them as they are can't leave a frame out."""
+    (H.264, close to lossless): joining them as they are can't leave a frame out.
+
+    ends has, for a video the next one was continued from before its end, the second of that moment (None: its end):
+    it is in the result up to the frame shown then. Returns for each video the second it starts at in the result and
+    the second of its own that is."""
     av, numpy = video_tools()
     clips = [av.open(source) for source in sources]
     partial = target + ".part"
@@ -1494,12 +1512,16 @@ def stitch_videos(sources, target):
                 channels = 1 if sound.codec_context.layout.name == "mono" else 2
                 layout, hertz = "stereo" if channels == 2 else "mono", sound.codec_context.sample_rate
                 audio = out.add_stream("aac", rate=hertz, layout=layout)
-            frames, samples = 0, []
+            frames, samples, places = 0, [], []
             for index, clip in enumerate(clips):
                 began = frames
+                end = ends[index] if index < len(ends) else None
+                places.append((float(began / rate), float(1 / rate) if index else 0.0))
                 for count, frame in enumerate(clip.decode(clip.streams.video[0])):
                     if index and count == 0:
                         continue
+                    if end is not None and (count / rate if frame.time is None else frame.time) > end + CUT_SLACK:
+                        break
                     frame = frame.reformat(width, height, "yuv420p")
                     frame.pts, frame.time_base = frames, 1 / rate
                     frames += 1
@@ -1537,6 +1559,7 @@ def stitch_videos(sources, target):
                 for packet in audio.encode():
                     out.mux(packet)
         os.replace(partial, target)
+        return places
     finally:
         for clip in clips:
             clip.close()

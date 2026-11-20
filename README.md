@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.21.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.22.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -70,12 +70,17 @@ versions of this miner.
   switching to the model's task that starts from an image. Each request shows the size and numbers it was made with.
 - **A video continued:** **Continue**, under a video beside Download, does the same as Use again but starts
   from the last frame of that video, with a new seed: to go on where it ended. The request made this way is a video of
-  its own; with **Also make one stitched video of them in a row** ticked, the rig also makes one video of the whole
+  its own; with **Also make one stitched video of them in a row** ticked (it is, until you untick it), the rig also makes one video of the whole
   row when it is done: every video continued up to this one, one after another, the frame they share left out once,
   with their sound. It is made from the videos themselves each time, never from an earlier stitched one, with PyAV,
   which ComfyUI has installed. The chat shows only the stitched video under such a request: the part it added is in
   it, stays on the rig for the next stitching, and is listed in Outputs. The last frame is taken as the browser plays the video, so a little softer than the
   model made it.
+- **Continued from a moment before the end:** the row over the image, *Continues that video from … s*, takes the
+  second to go on from (empty: the last frame), and shows the video's length. Or open the video large, pause it at
+  the moment, and click **Continue from here** under it. The image becomes the frame shown at that second, and a
+  stitched video has the continued one up to that frame only. Continue from here on a stitched video finds the
+  request whose part that moment is in (one stitched before this was added can only be continued from its end).
 - **A request taken to another rig:** with **Other rigs** on, a list of the rigs stands beside Use again (Continue goes by it too),
   set to the open chat's own. With another rig chosen, they start a new chat on that rig, named after this one, with
   the request's prompt, settings and the image it started from (for Continue, the video's last frame). A LoRA that rig
@@ -97,7 +102,8 @@ versions of this miner.
 - **Looking at results:** images and videos are shown as thumbnails, a video as a still with a play mark. Click one
   to see it large (on a phone, filling the screen), where a video plays, with the arrow keys or the buttons going
   through the chat's other results, and Esc or Back to close. The same in the Outputs view. **Thumbnails** under the
-  gear sets their size: small on a phone to begin with, and the browser remembers it.
+  gear sets their size: small on a phone to begin with, and the browser remembers it. **Input image** beside it sets
+  how big the image a request starts from is shown over the prompt.
 - **The prompt being written** is kept with the chat like its other settings.
 - **Models to download** are folded under the ones on the rig ("7 more to download").
 - **Every rig on one page:** the rigs running this miner find each other on the LAN (each announces itself by a
