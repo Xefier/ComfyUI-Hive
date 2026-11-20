@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.14.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.15.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -109,7 +109,8 @@ versions of this miner.
 - **On a phone:** the page opens on the list of chats; a chat opens as a screen of its own, with an arrow (or the
   phone's Back) to return to the list, and the models are a screen reached from the gear. A chat's Rename, Archive and
   Delete are behind the three dots on its card.
-- **The top row:** the title and the worker's name, with an arrow that opens the rig's state: VRAM, GPU load, RAM
+- **The top row:** Comfy's mark and the worker's name, which has the row to itself (the page's title is no longer
+  written there), with an arrow that opens the rig's state: VRAM, GPU load, RAM
   and disk as bars, the GPU, ComfyUI and the version. Folded to begin with, and a rig that doesn't answer, has no GPU
   or may be rented still shows. The gear at the top right holds Other rigs, Sound when done, Thumbnails, Outputs, the
   miner log and the ComfyUI editor; it and the eye stay in their corner when the page scrolls. **+** starts a chat,
