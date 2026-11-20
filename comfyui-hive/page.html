@@ -180,6 +180,9 @@ details.more[open] > summary { margin-bottom: 4px; }
 .imagehint { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; color: var(--muted); font-size: 13px; }
 .imagehint .imagesize { color: var(--text); }
 .imagehint .choose { color: var(--accent); cursor: pointer; text-decoration: underline; }
+/* Straight to the camera, where there is one to hold up: a phone or a tablet */
+.imagehint .camera { display: none; }
+@media (hover: none) { .imagehint .camera { display: inline; } }
 .chat.dropping { outline: 2px dashed var(--accent); outline-offset: -6px; }
 .continuing { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
 .repeat { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
@@ -377,6 +380,7 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
         <div class="imagehint">
           <span id="imagetext">Drop an image here, paste one (Ctrl+V), or</span>
           <label class="choose">choose a file<input type="file" id="imagefile" accept="image/*" hidden></label>
+          <span class="camera">or <label class="choose">take a photo<input type="file" id="imagecamera" accept="image/*" capture="environment" hidden></label></span>
           <button class="small" id="imageremove" hidden>Remove</button>
           <span id="imagesize" class="imagesize"></span>
           <button class="small" id="imageuse" hidden title="Set Width and Height to this image's size, so the video starts from the whole image">Use image size</button>
@@ -1491,7 +1495,7 @@ function clearImage() {
   $("imagepreview").removeAttribute("src");
   $("imagetext").textContent = "Drop an image here, paste one (Ctrl+V), or";
   $("imageremove").hidden = true;
-  $("imagefile").value = "";
+  $("imagefile").value = $("imagecamera").value = "";
 }
 
 // --- the chat's image: the last one attached in it is kept on the rig, and is there when the chat is opened again ---
@@ -1545,6 +1549,7 @@ function imageIn(items) {
 }
 
 $("imagefile").onchange = e => { if (e.target.files[0]) attach(e.target.files[0], "Chosen"); };
+$("imagecamera").onchange = e => { if (e.target.files[0]) attach(e.target.files[0], "Photo taken"); };
 $("imageremove").onclick = () => { clearImage(); keepImage({ image: null }); };
 
 // Paste anywhere on the page, except text into the prompt or a number box (an image pasted there still counts)
