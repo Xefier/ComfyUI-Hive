@@ -7,6 +7,7 @@
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
 . ./h-common.sh
 . ./h-log.sh
+. ./h-update.sh
 
 mkdir -p "$CUSTOM_LOG_BASEDIR" "$CH_RUN_DIR"
 touch "$LOG_FILE"
@@ -322,6 +323,9 @@ done
 
 stop_watchdog
 
+# A newer release, before anything is started: nothing is interrupted by taking it now
+self_update start
+
 tail -n 0 -F "$LOG_FILE" 2>/dev/null &
 echo "$!" > "$CH_RUN_DIR/tail.pid"
 
@@ -349,6 +353,7 @@ while true; do
         # The page is started again if it stops
         while kill -0 "$SERVER_PID" 2>/dev/null; do
             start_page
+            self_update
             pause 15
         done
     fi

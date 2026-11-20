@@ -10,11 +10,11 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.22.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.0.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
-- **Installation URL:** the link to the archive
+- **Installation URL:** the link to the archive. It can stay the same from then on: the miner updates itself (see Updates)
 - **Wallet, worker template, pool:** anything Hive accepts; they are ignored
 - **Extra config arguments:** nothing, or any of the settings below
 
@@ -104,6 +104,12 @@ versions of this miner.
   through the chat's other results, and Esc or Back to close. The same in the Outputs view. **Thumbnails** under the
   gear sets their size: small on a phone to begin with, and the browser remembers it. **Input image** beside it sets
   how big the image a request starts from is shown over the prompt.
+- **A result marked or hidden:** under each image and video, beside its links, are a star (a favorite, gold), a
+  thumbs up (green) and a thumbs down (red). One of them at most: the one chosen stays there alone until it is clicked
+  again, which takes the mark off and brings the other two back. **Hide** folds only that image or video away, its
+  links staying, until **Show**; a thumbs down hides it too. **Favorites** and **Liked**, under the gear and as tabs of
+  the Outputs view, list everything with the star and with the thumbs up; a mark can be taken off there as well. The
+  marks are kept on the rig, so every device sees them.
 - **The prompt being written** is kept with the chat like its other settings.
 - **Models to download** are folded under the ones on the rig ("7 more to download").
 - **Every rig on one page:** the rigs running this miner find each other on the LAN (each announces itself by a
@@ -208,6 +214,21 @@ The page and ComfyUI have no login: like Ollama-Hive's API, anything on the LAN 
 including starting a download, deleting a model, a chat or an output, and uploading or deleting a LoRA. They listen only on the private LAN address, and `allow=` limits
 which addresses can connect.
 
+## Updates
+
+The miner updates itself, so the flight sheet's installation URL never has to change again: any release from v1.0 on
+keeps itself at the newest one. About every quarter of an hour, and once before it starts, it asks GitHub for this
+repository's newest release; a newer one is downloaded, the miner's folder is replaced by it (Hive's config for the
+miner is kept), and the miner starts again as the same process, which takes about as long as a switch of flight sheet.
+
+- **Update automatically**, under the gear, is on until you turn it off: the update is taken by itself.
+- With it off, the gear says which version is available and offers **Update**.
+- Either way it waits until nothing is being made or downloaded and the rig isn't rented, and says what it waits for.
+- A release that can't be downloaded or isn't whole changes nothing: the miner keeps running as it is and says why.
+
+A rig that works for a hub (`hub=`) still gets its worker program from the hub; this update is of the miner's own
+scripts and the program it falls back to.
+
 ## Claude sessions
 
 Claude Code sessions on your PCs can make images and videos on the rigs too. On each PC, clone or pull this repo (needs
@@ -291,6 +312,8 @@ Hive applies overclocks from the OC profile, not the flight sheet: use a stock p
 
 ## Adding or changing a model
 
+The catalog, the workflows and the `tools/` that make them are in `xefier-comfyui`: this is done there.
+
 The miner ships ready-made API workflows (`comfyui-hive/workflows/`) and `comfyui-hive/catalog.json`, both made by
 `tools/build.py` from `tools/catalog-src.json` and ComfyUI's own workflow templates:
 
@@ -328,17 +351,20 @@ curl -s http://$(cat /run/comfyui-hive/address):8188/system_stats | jq
 ## Files
 
 - `h-run.sh`: start-up checks, the install, then runs ComfyUI and the page
-- `page.py`, `page.html`: the chat page, the downloads, your LoRAs, and the requests to ComfyUI
-- `catalog.json`, `workflows/`: the models and their workflows, made by `tools/build.py`
+- `page.py`, `page.html`, `catalog.json`, `workflows/`: the page program, its models and their workflows. They are
+  not kept in this repository: `release.sh` puts them into the package from `xefier-comfyui`, where they are made
+  (and where `tools/` is)
 - `h-stop.sh`: puts the rig back; safe to run repeatedly
+- `h-update.sh`: the miner updating itself to the newest release
 - `h-guard.sh`: runs `h-stop.sh` if `h-run.sh` is killed, and keeps the watchdog off meanwhile
 - `h-stats.sh`: dashboard stats
 - `h-config.sh`: checks the flight sheet settings and writes `comfyui-hive.conf`
 - `h-common.sh`, `h-log.sh`: settings, paths and helpers they share
 - `client/comfyui_hive_mcp.py`: the Claude Code tools (MCP server, runs on the PC); `client/comfyui-hive.cmd` / `.ps1` register it
 
-Build the archive with `Archive.bat`, then rename it to `comfyui-hive-v<version>.tar.gz`: Hive reads the miner's name
-and version from the file name.
+Build the package with `bash release.sh`: it makes `comfyui-hive-v<version>.tar.gz` from what is committed here and
+the page program committed in the clone of `xefier-comfyui` (at `../../../xefier-comfyui`, or where `XEFIER_COMFYUI`
+says). Hive reads the miner's name and version from the file name.
 
 ## Tested
 
