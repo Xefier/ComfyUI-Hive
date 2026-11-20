@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.2.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.3.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -283,6 +283,8 @@ pulling a client change, new sessions pick it up; after moving the clone, run `a
 | SDXL 1.0 | text to image, 1024 px | fp16 | fp16 | 6.5 GB | Stability's base model. Takes your LoRAs (SDXL) |
 | Pony Diffusion V6 XL | text to image, 1024 px | fp16 | fp16 | 6.5 GB | SDXL-based, prompted with tags: start with `score_9, score_8_up, score_7_up`. Clip skip 2 and Euler a, as its author advises. Takes your LoRAs (Pony) |
 | SD 1.5 | text to image, 512 px | fp16 | fp16 | 2 GB | Takes your LoRAs (SD 1.5) |
+| MMAudio | sound for a video, 44.1 kHz | fp16 | fp16 | 5 GB | Needs its node pack, which the miner installs. Weights for non-commercial use |
+| HunyuanVideo-Foley | sound for a video, 48 kHz | fp16 | fp16 | 11 GB | Needs its node pack; fetches two encoders (2.3 GB) on first use. An fp8 build (6 GB) for cards under 16 GB |
 
 SDXL, Pony and SD 1.5 share ComfyUI's SDXL template (one checkpoint, prompt, sampler, decode), with the page also
 setting the steps and CFG and a fixed negative prompt per model. The workflows are ComfyUI's own templates for each model, as its editor offers them (with their defaults: speed-up LoRAs
@@ -290,6 +292,31 @@ on, sizes, lengths); only the prompt, image, size, length and seed are set by th
 an estimate** from the files' sizes and the templates' own notes (the Wan 2.2 template measured its fp8 build at 84% of
 a 24 GB card), not yet measured on these rigs. If a model runs out of memory on a card, raise its `min_vram_gb` in
 `tools/catalog-src.json` and build again.
+
+## Sound for a video
+
+**Add sound** under a video makes a sound for it with a model that follows what moves in the picture: MMAudio (the
+one picked first: small and quick) or HunyuanVideo-Foley (cleaner, slower). Words are optional and steer it
+("footsteps on gravel", "rain"). They make effects and ambience, not speech. Both are listed under Models with the
+others and are downloaded there; clicking one doesn't pick it for the composer.
+
+- **The video stays as it is.** Each sound is a file of its own (FLAC), listed under the video as **Sound: 1 · 2 ·
+  ...**. Ask as often as you like and click the one to keep: it has the tick. Clicking it again plays the video
+  without sound; **×** deletes a sound (or stops one being made).
+- **Playing:** opened large, the video plays with the picked sound, started, paused and moved with it. The list beside
+  Download there switches between the sounds while you watch.
+- **Download** gives one MP4 with the picked sound in it (the picture as it is, the sound as AAC, cut to the
+  picture's length); without a picked sound, the video as it is. Deleting a video deletes its sounds.
+- **Length:** a video of 1 to 60 seconds; the models are made for about 8 to 10. Through a hub the video is sent to
+  the worker, so there it can be 40 MB at most.
+- **The node packs:** these two models use nodes ComfyUI doesn't have by itself. The miner (v1.3 or later) installs
+  them when ComfyUI starts, each at the commit `catalog.json` names under `packs`, with its Python packages; PyTorch
+  and numpy stay as ComfyUI has them. A pack that can't be installed is left out and said in the miner's log, ComfyUI
+  starts without it, and the model's card says it can't be used. MMAudio's pack is taken at the commit of its pull
+  request 70, with which the video's frame rate is given to it: without that its sound covers only part of a 16 fps
+  clip.
+- **Not included: ThinkSound.** Its only ComfyUI nodes have been left unmaintained since July 2025, fail with current
+  `transformers`, and pin old versions of packages ComfyUI shares.
 
 ## What happens on a switch
 

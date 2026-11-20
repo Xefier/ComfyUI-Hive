@@ -224,6 +224,57 @@ write_model_paths() {
     } > "$CH_DATA_DIR/extra_model_paths.yaml"
 }
 
+# The node packs the catalog's models need besides ComfyUI's own nodes (the ones that add sound to a video): each at
+# the commit the catalog names, into ComfyUI's custom_nodes, with its packages. Done again only when the commit
+# changes or ComfyUI was installed anew. One that can't be installed is left out and said: ComfyUI starts without it,
+# and the page says its models can't be used. PyTorch and numpy stay as ComfyUI has them, whatever a pack asks for.
+install_packs() {
+    local program=$CH_DIR list id url commit links folder link kept="$CH_DATA_DIR/pack-constraints.txt"
+    [[ -n $CH_HUB && -f $CH_WORKER/page.py ]] && program=$CH_WORKER
+    list=$("$CH_VENV/bin/python" - "$program/catalog.json" 2>> "$LOG_FILE" <<'PACKS'
+import json, sys
+for pack in json.load(open(sys.argv[1], encoding="utf-8")).get("packs") or []:
+    print(pack["id"], pack["url"], pack["commit"], ",".join(pack.get("links") or []) or "-")
+PACKS
+    ) || return 0
+    [[ -n $list ]] || return 0
+    mkdir -p "$CH_COMFYUI/custom_nodes"
+    while read -r id url commit links; do
+        [[ $id =~ ^[a-z0-9-]+$ && $commit =~ ^[0-9a-f]{7,40}$ ]] || continue
+        folder="$CH_COMFYUI/custom_nodes/$id"
+        # Where the pack looks for its models: in the models folder outside ComfyUI's own, as the others are
+        for link in ${links//,/ }; do
+            [[ $link =~ ^[a-z0-9_-]+$ ]] || continue
+            mkdir -p "$CH_MODELS/$link"
+            rmdir "$CH_COMFYUI/models/$link" 2>/dev/null
+            ln -sfn "$CH_MODELS/$link" "$CH_COMFYUI/models/$link"
+        done
+        [[ -f $folder/.commit && $(< "$folder/.commit") == "$commit" ]] && continue
+        log "Installing the node pack $id ($commit)"
+        rm -rf "$folder" "$folder.new"
+        mkdir -p "$folder.new"
+        ( curl -fsSL --retry 3 "$url" | tar -xz --strip-components=1 -C "$folder.new" ) &
+        if ! wait $!; then
+            log "The node pack $id could not be downloaded: its models can't be used until it is"
+            rm -rf "$folder.new"
+            continue
+        fi
+        if [[ -f $folder.new/requirements.txt ]]; then
+            "$CH_UV" pip freeze --python "$CH_VENV/bin/python" 2>/dev/null \
+                | grep -iE '^(torch|torchvision|torchaudio|numpy)==' > "$kept"
+            "$CH_UV" pip install --python "$CH_VENV/bin/python" --constraint "$kept" \
+                -r "$folder.new/requirements.txt" >> "$LOG_FILE" 2>&1 &
+            if ! wait $!; then
+                log "The packages of the node pack $id could not be installed: its models can't be used until they are"
+                rm -rf "$folder.new"
+                continue
+            fi
+        fi
+        mv "$folder.new" "$folder" && echo "$commit" > "$folder/.commit"
+    done <<< "$list"
+    return 0
+}
+
 page_running() {
     [[ -f $CH_RUN_DIR/page.pid ]] && kill -0 "$(< "$CH_RUN_DIR/page.pid")" 2>/dev/null
 }
@@ -293,6 +344,7 @@ start_comfyui() {
     export HF_HUB_DISABLE_TELEMETRY=1
     mkdir -p "$HOME" "$CH_DATA_DIR/user" "$CH_DATA_DIR/temp"
     write_model_paths
+    install_packs
 
     # Its own process group, so h-stop.sh ends everything it starts
     setsid "$CH_VENV/bin/python" "$CH_COMFYUI/main.py" --listen "$address" --port "$CH_PORT" \
