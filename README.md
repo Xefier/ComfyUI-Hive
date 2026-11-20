@@ -31,6 +31,7 @@ download it (a GitHub release), then make a flight sheet with miner **Custom**:
 | `reset_oc` | `0` | `1` resets clock locks and power limits to default at start |
 | `allow_docker` | `0` | `1` starts even with Docker containers running |
 | `peers` | none | Other rigs of this miner that aren't found by themselves (another subnet): comma-separated addresses, e.g. `10.0.2.15,10.0.2.16` |
+| `hub` | none | The hub this rig works for (xefier-comfyui on a PC or server of the LAN): its address, with `:port` if not 8189, e.g. `192.168.1.10`. The rig then fetches the worker program from the hub and keeps it at the hub's version, and the hub hands it requests. With `allow=` set, the hub's address must be in it. Without a reachable hub the rig runs the program of this miner as before |
 
 **Everything goes on the DOCKER drive**, `/var/lib/docker/comfyui-hive`: ComfyUI and its Python (about 8 GB), the
 models (17 to 64 GB each), your own LoRAs (in `models/loras`, beside the ones the models bring) and what is made. If no drive is mounted at `/var/lib/docker` the miner waits and says so,

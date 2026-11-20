@@ -227,20 +227,52 @@ page_running() {
     [[ -f $CH_RUN_DIR/page.pid ]] && kill -0 "$(< "$CH_RUN_DIR/page.pid")" 2>/dev/null
 }
 
+# With hub= set: fetches the hub's worker program when the rig has none or the hub's is another version, and stops the
+# page so it starts again as that one. Not while a request is being made: that request would be lost. A hub that
+# can't be reached changes nothing, so the rig keeps working with what it has (the program of this folder at first).
+fetch_worker() {
+    [[ -n $CH_HUB ]] || return 0
+    local version fresh="$CH_WORKER.new"
+    version=$(curl -fs --max-time 5 "http://$CH_HUB/api/hello" | sed -n 's/.*"version": *"\([^"]*\)".*/\1/p')
+    [[ -n $version ]] || return 0
+    [[ -f $CH_WORKER/page.py && $(cat "$CH_WORKER/VERSION" 2>/dev/null) == "$version" ]] && return 0
+    grep -q '"generating": *true' "$CH_RUN_DIR/page.json" 2>/dev/null && page_running && return 0
+    rm -rf "$fresh"
+    mkdir -p "$fresh"
+    if curl -fs --max-time 120 "http://$CH_HUB/worker.tar.gz" | tar -xz --no-same-owner -C "$fresh" 2>> "$LOG_FILE" \
+            && [[ -f $fresh/worker/page.py ]]; then
+        # The hub's word for the version, so the same one isn't fetched again
+        echo "$version" > "$fresh/worker/VERSION"
+        rm -rf "$CH_WORKER"
+        mv "$fresh/worker" "$CH_WORKER"
+        log "Worker program $version fetched from the hub at $CH_HUB"
+        page_running && kill "$(< "$CH_RUN_DIR/page.pid")" 2>/dev/null
+    else
+        log "Could not fetch the worker program from the hub at $CH_HUB"
+    fi
+    rm -rf "$fresh"
+}
+
 # The chat page. It keeps running while ComfyUI restarts, and is started again if it stops.
 start_page() {
+    fetch_worker
     page_running && return 0
-    local address name
+    local address name program=$CH_DIR version=(--version "$CUSTOM_VERSION") peers=$CH_PEERS
+    if [[ -n $CH_HUB ]]; then
+        # The hub finds the rig by being named among its peers; the fetched program says its own version
+        peers=${peers:+$peers,}$CH_HUB
+        [[ -f $CH_WORKER/page.py ]] && { program=$CH_WORKER; version=(); }
+    fi
     address=$(ch_lan_address)
     # What the other rigs' pages call this one: the worker's name in Hive
     name=$(. /hive-config/rig.conf 2>/dev/null; echo "$WORKER_NAME")
     mkdir -p "$CH_PAGE_DATA" "$CH_OUTPUTS" "$CH_INPUTS" "$CH_MODELS"
-    HF_TOKEN="$CH_HF_TOKEN" PYTHONUNBUFFERED=1 setsid "$CH_VENV/bin/python" "$CH_DIR/page.py" \
+    HF_TOKEN="$CH_HF_TOKEN" PYTHONUNBUFFERED=1 setsid "$CH_VENV/bin/python" "$program/page.py" \
         --bind "$address" --port "$CH_PAGE_PORT" --comfy "http://$address:$CH_PORT" --gpu "$CH_GPUS" --allow-docker "$CH_ALLOW_DOCKER" \
-        --catalog "$CH_DIR/catalog.json" --workflows "$CH_DIR/workflows" --models "$CH_MODELS" \
+        --catalog "$program/catalog.json" --workflows "$program/workflows" --models "$CH_MODELS" \
         --outputs "$CH_OUTPUTS" --inputs "$CH_INPUTS" --data "$CH_PAGE_DATA" \
         --state-file "$CH_RUN_DIR/state" --page-file "$CH_RUN_DIR/page.json" --log "$LOG_FILE" \
-        --version "$CUSTOM_VERSION" --name "$name" --peers "$CH_PEERS" >> "$LOG_FILE" 2>&1 &
+        "${version[@]}" --name "$name" --peers "$peers" >> "$LOG_FILE" 2>&1 &
     echo "$!" > "$CH_RUN_DIR/page.pid"
     log "The page is at http://$address:$CH_PAGE_PORT/"
 }

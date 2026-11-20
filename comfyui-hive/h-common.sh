@@ -29,6 +29,9 @@ CH_RESET_OC=0
 CH_ALLOW_DOCKER=0
 # Other rigs of this miner the page can't hear announce themselves (another subnet): addresses, with :port if not ours
 CH_PEERS=""
+# The hub this rig works for (xefier-comfyui on a PC or server of the LAN): its address, with :port if not 8189. The
+# rig then runs the worker program the hub hands out, kept up to date with it, instead of the one in this folder.
+CH_HUB=""
 
 [[ -f $CUSTOM_CONFIG_FILENAME ]] && . "$CUSTOM_CONFIG_FILENAME"
 
@@ -42,6 +45,9 @@ CH_COMFYUI="$CH_DATA_DIR/comfyui"
 CH_MODELS="$CH_DATA_DIR/models"
 CH_OUTPUTS="$CH_DATA_DIR/outputs"
 CH_INPUTS="$CH_DATA_DIR/inputs"
+# The worker program fetched from the hub (hub=)
+CH_WORKER="$CH_DATA_DIR/worker"
+[[ -z $CH_HUB || $CH_HUB == *:* ]] || CH_HUB="$CH_HUB:8189"
 # The page's own records: jobs, downloads, the last model picked
 CH_PAGE_DATA="$CH_DATA_DIR/page"
 
