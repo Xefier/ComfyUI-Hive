@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.13.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.14.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -84,8 +84,10 @@ versions of this miner.
   while another chat is busy, and "Done" when one ended while the tab was in the background. **Sound when done** (at
   the top, remembered by the browser) plays a short sound. Browser notifications aren't used: browsers only allow
   them on https pages, and the rig's page is plain http on the LAN.
-- **Looking at results:** click an image (or **View large** under a video) to see it large, with the arrow keys or
-  the buttons going through the chat's other results, and Esc to close. The same in the Outputs view.
+- **Looking at results:** images and videos are shown as thumbnails, a video as a still with a play mark. Click one
+  to see it large (on a phone, filling the screen), where a video plays, with the arrow keys or the buttons going
+  through the chat's other results, and Esc or Back to close. The same in the Outputs view. **Thumbnails** under the
+  gear sets their size: small on a phone to begin with, and the browser remembers it.
 - **The prompt being written** is kept with the chat like its other settings.
 - **Models to download** are folded under the ones on the rig ("7 more to download").
 - **Every rig on one page:** the rigs running this miner find each other on the LAN (each announces itself by a
@@ -104,6 +106,20 @@ versions of this miner.
   ends after a chat was first seen there is marked.
 - **One scroll bar:** on a desktop screen the page itself doesn't scroll, only the chat's messages do (and the side
   panel when its lists are longer than the window). A phone scrolls as one page.
+- **On a phone:** the page opens on the list of chats; a chat opens as a screen of its own, with an arrow (or the
+  phone's Back) to return to the list, and the models are a screen reached from the gear. A chat's Rename, Archive and
+  Delete are behind the three dots on its card.
+- **The top row:** the title and the worker's name, with an arrow that opens the rig's state: VRAM, GPU load, RAM
+  and disk as bars, the GPU, ComfyUI and the version. Folded to begin with, and a rig that doesn't answer, has no GPU
+  or may be rented still shows. The gear at the top right holds Other rigs, Sound when done, Thumbnails, Outputs, the
+  miner log and the ComfyUI editor; it and the eye stay in their corner when the page scrolls. **+** starts a chat,
+  with a choice of the rig when Other rigs is on.
+- **A request repeated:** **Repeat** beside Generate makes the request that many times (20 at most). As it is, they
+  are separate tries of the prompt, each with a seed of its own, all queued at once. For a video, with **Each
+  continues the one before** ticked, they are a row: each starts from the last frame of the one before, which the rig
+  takes from the video itself, so the row goes on with the page closed. With the stitched video ticked too, each one
+  from the second on also gives the stitched video of the row so far. Only the one being made is queued, the next
+  when it is done: one that fails or is stopped ends the row.
 - **A rental is never interrupted by a request:** before a request is taken, and again before one that waited in the
   queue starts, the rig checks what it checks before starting ComfyUI: a GPU process that isn't ComfyUI, or a running
   Docker container (unless `allow_docker=1`). If there is one, the request is refused with what was found and nothing
@@ -388,6 +404,18 @@ the mark gone after opening the chat. Not run: a request that ends while the pag
 
 For a stitched request showing only its stitched video (v0.13), on a PC with a made-up one: the stitched video alone
 under it, Continue still offered, and its own part shown again once the stitched video is deleted.
+
+For the phone's screens, the top row, the gear and the thumbnails (v0.14), in a browser at a phone's size and a
+desktop's, between two copies of `page.py`: the list, a chat's screen and back by the arrow and by Back, the models
+from the gear, the viewer filling the screen and closing on Back, the state folded and opened with its bars (RAM
+read from a sample of `/proc/meminfo`, there being none on the PC), the plus with its choice of rig, and the size of
+the thumbnails from the slider. Not run: a phone itself, iOS Safari (whether a video's thumbnail shows a frame
+there), and touch.
+
+For Repeat (v0.14), with the making of a video replaced by a stand-in that writes a small one, and PyAV 12: a row of
+3 with and without the stitched video, each from the last frame of the one before; 3 separate tries; a row of 4 that
+ends at its failed second; more than 20, and a row on a model that can't start from an image, refused. Not run: a
+real request, a row's running one stopped, and any of it on a rig.
 
 For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
 with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like

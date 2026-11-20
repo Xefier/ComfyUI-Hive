@@ -13,7 +13,8 @@ h-run.sh runs it beside ComfyUI, on the rig's LAN address at ComfyUI's port + 1.
 
   /               the page (page.html)
   /api/state      the rig, its models, the chats, the jobs (?chat=<id>: that chat's), what is happening now
-  /api/generate   POST {model, task, prompt, chat?, image?, width?, height?, length?, seed?, loras?}: queues a job
+  /api/generate   POST {model, task, prompt, chat?, image?, width?, height?, length?, seed?, loras?}: queues a job;
+                  repeat: that many of it, and with chain each a video starting from the last frame of the one before
   /api/chat-new   POST {title?}: starts a chat; /api/chat-update {chat, title?, archived?}; /api/chat-delete {chat}
   /api/chat-settings  POST {chat, settings}: what the page's composer is set to in that chat, to open it with again
   /api/chat-image     POST {chat, image}: the image attached in that chat (null: none), or {chat, job} for the one a
@@ -55,6 +56,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import zlib
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CHUNK = 4 * 1024 * 1024
@@ -78,6 +80,7 @@ ANNOUNCE = b"comfyui-hive "  # then the page's port: what a rig tells the LAN ev
 PEER_HEARD = 60  # seconds a rig is asked who it is after it last announced itself
 PEER_KEPT = 20  # seconds a rig stays listed after it last answered
 MAX_STITCH = 40  # videos in one row
+MAX_REPEAT = 20  # requests of one prompt asked for at once
 RUN_FIELDS = ("est", "shown", "begun", "first", "last", "rate", "all_step", "all_steps", "pass", "passes")
 
 args = None
@@ -186,20 +189,21 @@ def rental_refusal():
     return f"A rental may be active on this rig, so nothing was started: {found}" if found else ""
 
 
-def ram_gb():
+def ram_gb(used=False):
+    """The rig's RAM in GB, or how much of it is in use (what isn't available to a program starting now)."""
     try:
         with open("/proc/meminfo", encoding="ascii") as handle:
-            for line in handle:
-                if line.startswith("MemTotal:"):
-                    return round(int(line.split()[1]) / 1024 ** 2, 1)
-    except (OSError, ValueError):
-        pass
-    return None
+            kb = {line.split(":")[0]: int(line.split()[1]) for line in handle if line.startswith(("MemTotal:", "MemAvailable:"))}
+        return round((kb["MemTotal"] - (kb["MemAvailable"] if used else 0)) / 1024 ** 2, 1)
+    except (OSError, ValueError, KeyError, IndexError):
+        return None
 
 
-def disk_free():
+def disk_free(total=False):
+    """The bytes free where the models are kept, or that disk's size."""
     try:
-        return shutil.disk_usage(args.models).free
+        usage = shutil.disk_usage(args.models)
+        return usage.total if total else usage.free
     except OSError:
         return 0
 
@@ -927,7 +931,58 @@ class Rig:
                 handle.write(json.dumps(job) + "\n")
         os.replace(path + ".tmp", path)
 
-    def add_job(self, request, via=""):
+    def add_jobs(self, request, via=""):
+        """A request, or as many of it as it asks for with repeat. Each of them on its own, with a seed of its own;
+        or, with chain, each a video that starts from the last frame of the one before: only the first is queued
+        now, and each next one when the one before it is done (next_round), so a failed or stopped one ends the row."""
+        try:
+            rounds = int(request.get("repeat") or 1)
+        except (TypeError, ValueError):
+            return None, "repeat must be a number"
+        if not 1 <= rounds <= MAX_REPEAT:
+            return None, f"repeat must be between 1 and {MAX_REPEAT}"
+        if rounds == 1:
+            return self.add_job(request, via)
+        if request.get("chain"):
+            model, _ = self.find_model(request.get("model"))
+            after = model and video_from(model, request.get("task"))
+            if not after:
+                return None, "This model can't start a video from an image, so its videos can't each continue the last"
+            # What every next round is asked with: the same, but from the frame, and with a seed of its own
+            again = {k: v for k, v in request.items() if k not in ("image", "seed", "repeat", "continues", "chat")}
+            again["task"] = after
+            return self.add_job(request, via, {"round": 1, "rounds": rounds, "row": True, "chain": {"left": rounds - 1, "request": again}})
+        first = None
+        for number in range(1, rounds + 1):
+            job, error = self.add_job(request if number == 1 else {k: v for k, v in request.items() if k != "seed"},
+                                      via, {"round": number, "rounds": rounds})
+            if error:
+                return first, None if first else error
+            first = first or job
+            # The first one may have started the chat the others belong in
+            request = dict(request, chat=job["chat"])
+        return first, None
+
+    def next_round(self, job):
+        """Queues what continues a finished video of a row: the same request, from that video's last frame."""
+        chain = job.pop("chain")
+        video = next((path for path in job["outputs"] if is_video(path) and path != job.get("stitched")), None)
+        try:
+            if video is None:
+                raise RuntimeError("it made no video")
+            request = dict(chain["request"], chat=job["chat"], continues=job["id"],
+                           image=last_frame(os.path.join(args.outputs, video)))
+            extra = {"round": job["round"] + 1, "rounds": job["rounds"], "row": True}
+            if chain["left"] > 1:
+                extra["chain"] = {"left": chain["left"] - 1, "request": chain["request"]}
+            _, error = self.add_job(request, job.get("via", ""), extra)
+            if error:
+                raise RuntimeError(error)
+        except Exception as error:  # noqa: BLE001 - said under the request it ends with
+            job["chain_error"] = f"The row ends here: {error}"
+            log(f"Job {job['id']}: the row ends: {error}")
+
+    def add_job(self, request, via="", extra=None):
         model, variant = self.find_model(request.get("model"))
         if model is None:
             return None, "That model doesn't fit this rig's GPU"
@@ -1009,6 +1064,7 @@ class Rig:
                 chat["title"] = prompt[:60]
             chat["archived"] = False
             self.save_chats()
+            job.update(extra or {})
             self.jobs.append(job)
             self.settings ={"model": model["id"], "task": task}
             write_json(os.path.join(args.data, "settings.json"), self.settings)
@@ -1075,6 +1131,8 @@ class Rig:
                 job["state"] = "cancelled" if job.get("cancel") else "done"
                 if job["state"] == "done":
                     self.done += 1
+                    if job.get("chain"):
+                        self.next_round(job)
             except Exception as error:  # noqa: BLE001 - said on the page and in the log
                 job["state"] = "cancelled" if job.get("cancel") else "failed"
                 job["error"] = str(error)
@@ -1223,7 +1281,7 @@ class Rig:
         """For the page: a chat's requests. Without a chat, the last requests of all of them (the Claude Code tools)."""
         with lock:
             jobs = [j for j in self.jobs if j["chat"] == chat_id][-SHOW_JOBS:] if chat_id else self.jobs[-60:]
-            jobs = [{k: v for k, v in j.items() if k not in ("cancel", "est", "shown", "took")} for j in jobs]
+            jobs = [{k: v for k, v in j.items() if k not in ("cancel", "est", "shown", "took", "chain")} for j in jobs]
             shown = {job["id"]: job for job in jobs}
             now = time.time()
             running = next((j for j in self.jobs if j["state"] == "running"), None)
@@ -1247,8 +1305,8 @@ class Rig:
             "rental": self.rental, "name": self.name,
             "chat": chat_id, "chats": self.chat_list(),
             "version": args.version, "state": read_line(args.state_file) or "stopped",
-            "comfy_url": args.comfy, "gpu": self.gpu, "ram_gb": self.ram,
-            "disk_free": disk_free(), "models": self.models(), "jobs": jobs,
+            "comfy_url": args.comfy, "gpu": self.gpu, "ram_gb": self.ram, "ram_used_gb": ram_gb(used=True),
+            "disk_free": disk_free(), "disk_total": disk_free(total=True), "models": self.models(), "jobs": jobs,
             "settings": self.settings, "has_token": bool(self.token),
             "loras": self.loras(), "lora_max": MAX_LORA,
             "hidden": len(self.catalog["models"]) - len(self.models()),
@@ -1338,17 +1396,51 @@ def is_video(path):
     return path.lower().endswith((".mp4", ".webm"))
 
 
-def stitch_videos(sources, target):
-    """Writes the videos one after another into one mp4. Each but the first starts from the frame the one before it
-    ended on, so that frame is left out once, with the sound of its moment. They are decoded and encoded again
-    (H.264, close to lossless): joining them as they are can't leave a frame out.
+def video_from(model, task):
+    """The model's task that makes a video from an image: the one given when it is one. None when it has none."""
+    def from_image(name):
+        return name in model["tasks"] and any(item["name"] == "image" for item in model["tasks"][name]["inputs"])
+    if from_image(task):
+        return task
+    return next((name for name in model["tasks"] if name.endswith("2v") and from_image(name)), None)
 
-    With PyAV, which ComfyUI needs and has installed for its own saving of videos; this page runs in the same Python."""
+
+def video_tools():
+    """PyAV and numpy, which ComfyUI needs and has installed; this page runs in the same Python."""
     try:
         import av
         import numpy
     except ImportError as error:
         raise RuntimeError("ComfyUI's packages aren't installed yet") from error
+    return av, numpy
+
+
+def last_frame(source):
+    """The picture a video ends on, as a PNG in a data URL: what a request is sent an image as."""
+    av, numpy = video_tools()
+    frame = None
+    with av.open(source) as clip:
+        for frame in clip.decode(clip.streams.video[0]):
+            pass
+    if frame is None:
+        raise RuntimeError("the video has no frames")
+    pixels = frame.to_ndarray(format="rgb24")
+    height, width = pixels.shape[:2]
+    # A PNG by hand, so this needs nothing more: each row of pixels after a byte that says it is as it is
+    rows = numpy.concatenate([numpy.zeros((height, 1), dtype="uint8"), pixels.reshape(height, width * 3)], axis=1)
+
+    def chunk(kind, data):
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data) & 0xffffffff)
+    png = (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+           + chunk(b"IDAT", zlib.compress(rows.tobytes(), 3)) + chunk(b"IEND", b""))
+    return "data:image/png;base64," + base64.b64encode(png).decode("ascii")
+
+
+def stitch_videos(sources, target):
+    """Writes the videos one after another into one mp4. Each but the first starts from the frame the one before it
+    ended on, so that frame is left out once, with the sound of its moment. They are decoded and encoded again
+    (H.264, close to lossless): joining them as they are can't leave a frame out."""
+    av, numpy = video_tools()
     clips = [av.open(source) for source in sources]
     partial = target + ".part"
     try:
@@ -1708,7 +1800,7 @@ class Handler(http.server.BaseHTTPRequestHandler):
             return
         path = url.path
         if path == "/api/generate":
-            job, error = rig.add_job(body, urllib.parse.unquote(self.headers.get("X-Hive-From") or "")[:60])
+            job, error = rig.add_jobs(body, urllib.parse.unquote(self.headers.get("X-Hive-From") or "")[:60])
             self.send(400 if error else 200, {"error": error} if error else {"job": job["id"]})
         elif path == "/api/chat-new":
             self.send(200, {"chat": rig.new_chat(body.get("title"))["id"]})

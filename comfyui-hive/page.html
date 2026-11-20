@@ -29,31 +29,50 @@ a:hover { text-decoration: underline; }
 ::selection { background: var(--accent); color: var(--accent-text); }
 * { scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 
-header { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; padding: 10px 18px;
-  border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(10px); }
-header h1 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 9px; letter-spacing: -.01em; }
+/* The right end is left free for the eye and the gear, which stay in the corner */
+header { padding: 10px 104px 10px 18px; border-bottom: 1px solid var(--line); background: color-mix(in srgb, var(--panel) 88%, transparent); backdrop-filter: blur(10px); }
+header .top { display: flex; gap: 12px; align-items: center; min-width: 0; min-height: 30px; }
+header h1 { font-size: 17px; margin: 0; display: flex; align-items: center; gap: 9px; letter-spacing: -.01em; flex: none; white-space: nowrap; }
 header h1::before { content: ""; width: 20px; height: 20px; border-radius: 6px; background: linear-gradient(135deg, var(--accent), var(--accent2));
   box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 45%, transparent); }
-header .rig { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 200px; }
-header nav { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; }
-header nav a { font-size: 13.5px; padding: 5px 10px; border-radius: 8px; color: var(--text); }
-header nav a:hover { background: var(--soft); text-decoration: none; }
+/* What is wrong goes under the name when the row has no room for both */
+header .rig { display: flex; flex-wrap: wrap; gap: 4px 6px; min-width: 0; }
+header .rig .chip { max-width: 100%; }
+.sysbtn { flex: none; padding: 3px 6px; display: inline-flex; color: var(--muted); }
+.sysbtn svg { transition: transform .15s; }
+.sysbtn[aria-expanded=true] svg { transform: rotate(180deg); }
+.sys { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 22px; padding: 10px 0 2px; max-width: 1100px; }
+.meter { display: flex; gap: 8px; align-items: center; font-size: 13px; min-width: 0; }
+.meter .label { color: var(--muted); width: 64px; flex: none; }
+.meter .bar { min-width: 60px; }
+.meter .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.meter .text { overflow-wrap: anywhere; }
 .toggle { display: flex; gap: 5px; align-items: center; font-size: 13px; color: var(--muted); cursor: pointer; padding: 5px 8px; }
 .toggle input { accent-color: var(--accent); }
-.veil { display: flex; align-items: center; padding: 4px 8px; }
+/* The eye and the gear: in the top right corner wherever the page is scrolled to, under the viewer */
+.corner { position: fixed; top: 8px; right: 12px; z-index: 15; display: flex; gap: 6px; }
+.corner > button { width: 36px; height: 36px; padding: 0; display: inline-flex; align-items: center; justify-content: center; box-shadow: var(--shadow); }
 .veil[aria-pressed=true] { color: var(--bad); border-color: var(--bad); }
+.pop { position: absolute; z-index: 16; right: 0; top: calc(100% + 6px); padding: 8px; display: flex; flex-direction: column; gap: 2px;
+  width: max-content; min-width: 200px; max-width: calc(100vw - 24px); font-size: 14px; }
+.pop a, .pop .item { color: var(--text); padding: 6px 8px; border-radius: 8px; text-align: left; border: 0; background: none; }
+.pop a:hover, .pop .item:hover:not(:disabled) { background: var(--soft); text-decoration: none; }
+.pop .item.on { font-weight: 600; }
+.pop hr { border: 0; border-top: 1px solid var(--line); margin: 4px 0; width: 100%; }
+.pop .slider { display: flex; flex-direction: column; gap: 2px; padding: 5px 8px; font-size: 13px; color: var(--muted); }
+.pop .slider input { accent-color: var(--accent); width: 100%; }
+.phoneonly { display: none; }
 /* Hidden, not removed: everything keeps its place, and comes back as it was */
 body.veiled :is(img, video) { visibility: hidden; }
 .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--muted); background: var(--inset);
-  border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px; white-space: nowrap; }
+  border: 1px solid var(--line); border-radius: 99px; padding: 2px 10px; white-space: nowrap; min-width: 0; }
+.chip .cut { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .chip.bad { color: var(--bad); border-color: var(--bad); }
-.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); flex: none; }
 .dot.ok { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); }
 
 main { display: grid; grid-template-columns: 340px 1fr; gap: 16px; padding: 16px; max-width: 1440px; margin: 0 auto; }
 .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; box-shadow: var(--shadow); }
-@media (max-width: 860px) { main { grid-template-columns: 1fr; } }
-}
 h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0 0 8px; font-weight: 600; }
 h2.row { justify-content: space-between; }
 h2.next { margin-top: 18px; }
@@ -79,14 +98,27 @@ button.small { padding: 3px 9px; font-size: 13px; border-radius: 7px; }
 .chatitem .name > span:first-child { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 .chatitem .name .tag { flex: none; font-weight: 500; }
 .chip.name { color: var(--text); font-weight: 600; }
-#newrig, .onrig { font-size: 13px; text-transform: none; letter-spacing: 0; max-width: 130px; padding: 2px 4px; }
+.onrig { font-size: 13px; text-transform: none; letter-spacing: 0; max-width: 130px; padding: 2px 4px; }
 .model .meta, .chatitem .meta { color: var(--muted); font-size: 12.5px; }
 .model .note { color: var(--warn); font-size: 12.5px; margin-top: 4px; }
 .model .actions { display: flex; gap: 8px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
 .chatitem .bar { margin-top: 6px; }
 .chatitem .bar > div { transition: width 1.5s linear; }
 .chatitem .actions { display: none; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
-.chatitem.picked .actions, .chatitem:hover .actions { display: flex; }
+.chatitem .more { display: none; margin-left: auto; flex: none; padding: 0 10px; line-height: 1.4; }
+.chatitem.open .actions { display: flex; }
+@media (hover: hover) { .chatitem.picked .actions, .chatitem:hover .actions { display: flex; } }
+/* A touch screen has no hover: a button on each card shows its actions */
+@media (hover: none) { .chatitem .more { display: inline-block; } }
+.chatshead { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.chatshead h2 { margin: 0; }
+.newwrap { position: relative; }
+#newchat { width: 30px; height: 30px; padding: 0; font-size: 20px; line-height: 1; }
+.screenhead { display: flex; gap: 8px; align-items: center; margin: 0 0 8px; }
+.screenhead h2 { margin: 0; min-width: 0; }
+.screenhead.next { margin-top: 18px; }
+/* The arrow back to the chat list, on a phone */
+.back { display: none; flex: none; width: 34px; height: 34px; padding: 0; align-items: center; justify-content: center; }
 details.more > summary { cursor: pointer; font-size: 13px; color: var(--muted); padding: 6px 2px; }
 details.more[open] > summary { margin-bottom: 4px; }
 .tag { display: inline-block; font-size: 11.5px; padding: 1px 8px; border-radius: 99px; border: 1px solid var(--line); color: var(--muted); }
@@ -119,8 +151,19 @@ details.more[open] > summary { margin-bottom: 4px; }
 .msg.rig { align-self: flex-start; border: 1px solid var(--line); background: var(--inset); border-bottom-left-radius: 4px; }
 .msg .who { font-size: 12px; color: var(--muted); margin-bottom: 3px; }
 .msg .text { white-space: pre-wrap; }
-.msg img, .msg video { max-width: 100%; max-height: 60vh; border-radius: 8px; display: block; margin-top: 6px; }
-.msg img, .out img { cursor: zoom-in; }
+/* Images and videos as thumbnails, opened large in the viewer. --thumb is their height: the slider in the gear's panel
+   sets it, and until then it is this, small on a phone. Outputs' are at most as big as its cards are made for. */
+:root { --thumb: 60vh; --outthumb: min(var(--thumb), 190px); }
+.msg img, .msg video { max-width: 100%; max-height: var(--thumb); border-radius: 8px; display: block; margin-top: 6px; }
+.msg img, .out img, .thumb { cursor: zoom-in; }
+.thumb { position: relative; display: block; width: fit-content; max-width: 100%; }
+.msg .thumb { margin-top: 6px; }
+.msg .thumb video { margin-top: 0; }
+/* A video's play mark: a dark circle with a triangle */
+.thumb::before { content: ""; position: absolute; left: 50%; top: 50%; width: 42px; height: 42px; margin: -21px 0 0 -21px; border-radius: 50%;
+  background: rgba(0, 0, 0, .55); box-shadow: 0 0 0 2px rgba(255, 255, 255, .8); }
+.thumb::after { content: ""; position: absolute; left: 50%; top: 50%; margin: -9px 0 0 -5px; border-style: solid; border-width: 9px 0 9px 15px;
+  border-color: transparent transparent transparent #fff; }
 .msg .error { color: var(--bad); }
 .msg .links a.danger { color: var(--bad); margin-left: auto; }
 .msg .links, .out .links { display: flex; gap: 14px; font-size: 13px; margin-top: 6px; flex-wrap: wrap; }
@@ -138,6 +181,8 @@ details.more[open] > summary { margin-bottom: 4px; }
 .imagehint .choose { color: var(--accent); cursor: pointer; text-decoration: underline; }
 .chat.dropping { outline: 2px dashed var(--accent); outline-offset: -6px; }
 .continuing { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.repeat { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--muted); }
+.repeat input { width: 58px; }
 .continuing label { display: flex; gap: 5px; align-items: center; cursor: pointer; color: var(--text); }
 .continuing input { accent-color: var(--accent); }
 .chat.dropping .imagebox { border-color: var(--accent); }
@@ -154,10 +199,11 @@ kbd { font: inherit; font-size: 12px; color: var(--muted); border: 1px solid var
 
 .outputs { margin: 16px auto; max-width: 1408px; }
 .outputs h2 { margin: 0; }
-.outs { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-top: 12px; }
-.out { border: 1px solid var(--line); border-radius: 10px; padding: 8px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; background: var(--inset); }
+.outs { display: grid; grid-template-columns: repeat(auto-fill, minmax(calc(var(--outthumb) * 1.2), 1fr)); gap: 12px; margin-top: 12px; }
+.out { border: 1px solid var(--line); border-radius: 10px; padding: 8px; font-size: 13px; display: flex; flex-direction: column; gap: 4px; background: var(--inset); min-width: 0; }
 .out.on { border-color: var(--accent); }
-.out img, .out video { max-width: 100%; max-height: 190px; border-radius: 6px; display: block; margin: 0 auto; }
+.out img, .out video { max-width: 100%; max-height: var(--outthumb); border-radius: 6px; display: block; margin: 0 auto; }
+.out .thumb { margin: 0 auto; }
 .out audio { width: 100%; }
 .out .name { overflow-wrap: anywhere; }
 .out .prompt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -188,6 +234,28 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
 .viewer button:hover:not(:disabled) { background: rgba(255, 255, 255, .22); border-color: transparent; }
 .viewer .close { position: absolute; top: 12px; right: 12px; }
 .viewer #viewmedia { display: contents; }
+/* A phone: the chat list, one chat and the models are each a screen of their own (body's data-screen, from the
+   address's #), the viewer has the whole screen and the thumbnails start small */
+@media (max-width: 860px) {
+  :root { --thumb: 120px; }
+  header { padding: 8px 96px 8px 12px; }
+  header .top { gap: 8px; }
+  header h1 { font-size: 16px; }
+  main { grid-template-columns: minmax(0, 1fr); padding: 10px; }
+  .outputs { margin: 10px; }
+  .panel { padding: 12px; }
+  body:not([data-screen=chat]) .chat, body[data-screen=chat] .side { display: none; }
+  body:not([data-screen=models]) .modelsbox, body[data-screen=models] .chatsbox { display: none; }
+  .modelsbox .screenhead.next { margin-top: 0; }
+  .back, .phoneonly { display: inline-flex; }
+  .viewer { padding: 0; }
+  .viewer .body { gap: 6px; padding-bottom: 8px; }
+  .viewer img, .viewer video { max-height: calc(100dvh - 60px); border-radius: 0; box-shadow: none; }
+  .viewer #viewprev, .viewer #viewnext { position: absolute; top: 50%; margin-top: -22px; z-index: 1; background: rgba(0, 0, 0, .4); }
+  .viewer #viewprev { left: 6px; }
+  .viewer #viewnext { right: 6px; }
+  .viewer .close { top: 8px; right: 8px; z-index: 1; background: rgba(0, 0, 0, .4); }
+}
 /* On a screen with the room for it the page itself never scrolls: the chat's messages do, and the side panel when its
    lists are long. A phone or a low window scrolls as one page instead. */
 @media (min-width: 861px) and (min-height: 600px) {
@@ -205,21 +273,40 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
 </head>
 <body>
 <header>
-  <h1>ComfyUI-Hive</h1>
-  <span class="rig" id="rig"><span class="chip">…</span></span>
-  <nav>
-    <label class="toggle" id="rigsbox" hidden title="The chats of the other ComfyUI-Hive rigs on the network in this page's list too, to work in them from here"><input type="checkbox" id="rigson"> Other rigs<span id="rigscount"></span></label>
-    <button class="small veil" id="veil" title="Hide every image and video on the page until this is pressed again (Alt+X)" aria-pressed="false">
-      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-        <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 19 2 12z"/><circle cx="12" cy="12" r="3"/><path class="cross" d="M4 3l16 18"/>
-      </svg>
+  <div class="top">
+    <h1>ComfyUI-Hive</h1>
+    <span class="rig" id="rig"><span class="chip">…</span></span>
+    <button class="small sysbtn" id="sysbtn" aria-expanded="false" aria-controls="sys" title="The rig's GPU, memory, disk and version">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>
     </button>
-    <label class="toggle" title="A short sound when a request of the open chat ends"><input type="checkbox" id="sound"> Sound when done</label>
-    <a id="comfy" href="#" target="_blank" rel="noopener">ComfyUI editor</a>
-    <a href="#" id="showlog">Miner log</a>
-    <a href="#outputs" id="viewlink">Outputs</a>
-  </nav>
+  </div>
+  <div class="sys" id="sys" hidden></div>
 </header>
+<div class="corner">
+  <button class="veil" id="veil" title="Hide every image and video on the page until this is pressed again (Alt+X)" aria-label="Hide images and videos" aria-pressed="false">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 19 2 12z"/><circle cx="12" cy="12" r="3"/><path class="cross" d="M4 3l16 18"/>
+    </svg>
+  </button>
+  <button id="gear" title="Settings and links" aria-label="Settings and links" aria-expanded="false" aria-controls="gearpanel">
+    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>
+    </svg>
+  </button>
+  <div class="panel pop" id="gearpanel" hidden>
+    <label class="toggle" id="rigsbox" hidden title="The chats of the other ComfyUI-Hive rigs on the network in this page's list too, to work in them from here"><input type="checkbox" id="rigson"> Other rigs<span id="rigscount"></span></label>
+    <label class="toggle" title="A short sound when a request of the open chat ends"><input type="checkbox" id="sound"> Sound when done</label>
+    <label class="slider" title="How big the images and videos of the chat and Outputs are shown: click one to see it large">
+      <span>Thumbnails <span id="thumbsize"></span></span>
+      <input type="range" id="thumbs" min="60" max="800" step="10">
+    </label>
+    <hr>
+    <a href="#models" class="phoneonly" id="modelslink">Models</a>
+    <a href="#outputs" id="viewlink">Outputs</a>
+    <a href="#" id="showlog">Miner log</a>
+    <a id="comfy" href="#" target="_blank" rel="noopener">ComfyUI editor</a>
+  </div>
+</div>
 <section class="panel outputs" id="outputsview" hidden>
   <div class="row">
     <h2>Outputs</h2>
@@ -233,20 +320,30 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
 </section>
 <main id="chatview">
   <section class="panel side">
-    <h2 class="row">Chats <span class="row"><select id="newrig" hidden title="The rig the new chat is on"></select><button class="small" id="newchat">New chat</button></span></h2>
-    <div id="chats"></div>
-    <div class="hint"><a href="#" id="showarchived"></a></div>
-    <h2 class="next">Models for this GPU</h2>
-    <div id="models"></div>
-    <div class="hint" id="hidden"></div>
-    <div id="tokenbox" hidden>
-      <div class="hint">Hugging Face token, for models whose download needs one:</div>
-      <div class="token"><input id="token" type="password" placeholder="hf_..." autocomplete="off"><button class="small" id="savetoken">Save</button></div>
+    <div class="chatsbox">
+      <div class="chatshead">
+        <h2>Chats</h2>
+        <span class="newwrap">
+          <button id="newchat" title="New chat" aria-label="New chat" aria-expanded="false">+</button>
+          <div class="panel pop" id="newmenu" hidden></div>
+        </span>
+      </div>
+      <div id="chats"></div>
+      <div class="hint"><a href="#" id="showarchived"></a></div>
     </div>
-    <pre class="log" id="log" hidden></pre>
+    <div class="modelsbox">
+      <div class="screenhead next"><button class="back" data-back title="Back to the chats" aria-label="Back to the chats">←</button><h2>Models for this GPU</h2></div>
+      <div id="models"></div>
+      <div class="hint" id="hidden"></div>
+      <div id="tokenbox" hidden>
+        <div class="hint">Hugging Face token, for models whose download needs one:</div>
+        <div class="token"><input id="token" type="password" placeholder="hf_..." autocomplete="off"><button class="small" id="savetoken">Save</button></div>
+      </div>
+      <pre class="log" id="log" hidden></pre>
+    </div>
   </section>
   <section class="panel chat">
-    <h2 id="chattitle">Chat</h2>
+    <div class="screenhead"><button class="back" data-back title="Back to the chats" aria-label="Back to the chats">←</button><h2 id="chattitle">Chat</h2></div>
     <div class="banner" id="rental" hidden></div>
     <div class="messages" id="messages"></div>
     <div class="toast" id="toast" hidden></div>
@@ -270,8 +367,9 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
         <div id="lorafiles"></div>
       </details>
       <div class="continuing" id="continuing" hidden>
-        <span>Continues that video from its last frame.</span>
-        <label title="When this one is done, the rig also makes one video of the whole row: every video continued up to this one, one after another"><input type="checkbox" id="stitch"> Also make one stitched video of them in a row</label>
+        <span id="continuingtext">Continues that video from its last frame.</span>
+        <label id="chainbox" title="Each of the repeated videos starts from the last frame of the one before it, to go on where it ended. Unticked, they are separate tries of the same prompt"><input type="checkbox" id="chain"> Each continues the one before</label>
+        <label id="stitchbox" title="When each one is done, the rig also makes one video of the whole row: every video continued up to it, one after another"><input type="checkbox" id="stitch"> Also make one stitched video of them in a row</label>
         <button class="small" id="continuestop" title="Keep the image, as a request of its own">Not a continuation</button>
       </div>
       <div class="imagebox" id="imagebox" hidden>
@@ -290,6 +388,7 @@ pre.log { white-space: pre-wrap; font-size: 12px; max-height: 50vh; overflow: au
       <div class="row">
         <button class="primary" id="go">Generate</button>
         <kbd>Ctrl</kbd><kbd>Enter</kbd>
+        <label class="repeat" title="Makes the request this many times: separate tries with a seed each, or videos that each continue the one before">Repeat <input type="number" id="repeat" min="1" max="20" value="1"></label>
         <span class="status" id="status"></span>
       </div>
     </div>
@@ -323,7 +422,8 @@ async function post(path, body, where = rigOf) {
   return data;
 }
 
-const chip = (text, kind) => `<span class="chip ${kind || ""}">${esc(text)}</span>`;
+// The text cut short with … when the header's row has no room for it (a phone)
+const chip = (text, kind, title) => `<span class="chip ${kind || ""}"${title ? ` title="${esc(title)}"` : ""}><span class="cut">${esc(text)}</span></span>`;
 
 // Something to know for a moment, over the chat: the status line under the prompt is cleared by the page's refresh
 let toastTimer = null;
@@ -355,10 +455,7 @@ async function refresh() {
   state = got;
   rigChats.set(rigOf, { name: state.name, chats: state.chats });
   if (!pickChat()) { refresh(); return; }
-  const g = state.gpu;
-  $("rig").innerHTML = (state.name ? chip(state.name, "name") : "") + `<span class="chip"><i class="dot ${state.state === "ready" ? "ok" : ""}"></i>ComfyUI ${esc(state.state)}</span>`
-    + (g ? chip(g.name) + chip(`${g.used_gb} / ${g.vram_gb} GB VRAM`) + chip(`${g.load}% load`) : chip("no GPU found", "bad"))
-    + chip(`RAM ${state.ram_gb ?? "?"} GB`) + chip(`${gb(state.disk_free)} free`) + chip(state.version);
+  drawSystem();
   $("comfy").href = state.comfy_url.replace(/^http:\/\/[^/:]+/, location.protocol + "//" + (rigOf ? rigOf.split(":")[0] : location.hostname));
   const adopt = openSettings();
   if (!picked || !state.models.some(m => m.id === picked)) {
@@ -376,6 +473,42 @@ async function refresh() {
   if (epoch === imageEpoch) syncImage();
   watchJobs();
 }
+
+// --- the rig in the header: its name, with the GPU, memory and disk folded under the arrow -----------------------
+// Folded, the name shows with ComfyUI's state as the colour of its dot, and what is wrong (no GPU, a rental) beside
+// it. The rig only says how much RAM it has and how much disk is free, not the RAM used or the disk's size: those two
+// are text, not bars.
+let sysOpen = false;
+try { sysOpen = localStorage.getItem("sys") === "1"; } catch { /* no storage: folded */ }
+
+const meter = (label, part, whole, text) => `<div class="meter"><span class="label">${label}</span>`
+  + `<div class="bar"><div style="width:${Math.min(100, 100 * part / whole || 0).toFixed(1)}%"></div></div><span class="num">${esc(text)}</span></div>`;
+const fact = (label, html) => `<div class="meter"><span class="label">${label}</span><span class="text">${html}</span></div>`;
+
+function drawSystem() {
+  const g = state.gpu, dot = `<i class="dot ${state.state === "ready" ? "ok" : ""}"></i>`;
+  $("rig").innerHTML = `<span class="chip name" title="ComfyUI ${esc(state.state)}">${dot}<span class="cut">${esc(state.name || "This rig")}</span></span>`
+    + (g ? "" : chip("no GPU", "bad", "No GPU found")) + (state.rental ? chip("rental", "bad", state.rental) : "");
+  $("sys").innerHTML = (g ? meter("VRAM", g.used_gb, g.vram_gb, `${g.used_gb} / ${g.vram_gb} GB`) + meter("GPU load", Number(g.load), 100, `${g.load}%`)
+      + fact("GPU", esc(g.name)) : fact("GPU", "none found"))
+    // A rig of an older version says the RAM it has and the disk left, not how much is used: those stay text
+    + (state.ram_gb && state.ram_used_gb != null ? meter("RAM", state.ram_used_gb, state.ram_gb, `${state.ram_used_gb} / ${state.ram_gb} GB`)
+      : fact("RAM", `${esc(state.ram_gb ?? "?")} GB`))
+    + (state.disk_total ? meter("Disk", state.disk_total - state.disk_free, state.disk_total, `${gb(state.disk_free)} free of ${gb(state.disk_total)}`)
+      : fact("Disk", `${esc(gb(state.disk_free))} free`))
+    + fact("ComfyUI", `<span class="chip">${dot}${esc(state.state)}</span>`) + (state.version ? fact("Version", esc(state.version)) : "");
+}
+
+function showSystem() {
+  $("sys").hidden = !sysOpen;
+  $("sysbtn").setAttribute("aria-expanded", sysOpen);
+}
+$("sysbtn").onclick = () => {
+  sysOpen = !sysOpen;
+  try { localStorage.setItem("sys", sysOpen ? "1" : "0"); } catch { /* as above */ }
+  showSystem();
+};
+showSystem();
 
 // --- chats: each a name over some of the requests, kept on the rig ------------------------------------------------
 // Which chat is open is this browser's own: another PC or phone can be in another chat of the same rig.
@@ -396,7 +529,6 @@ function openChat(id, where = rigOf) {
     id ? localStorage.setItem("chat", id) : localStorage.removeItem("chat");
     localStorage.setItem("rig", where);
   } catch { /* as above */ }
-  $("newrig").value = where;
   $("messages").innerHTML = "";
   shown.clear();
   // The image is the chat's: the one of the chat opened now is shown when the rig answers
@@ -440,6 +572,9 @@ function unseen(list) {
 }
 document.addEventListener("visibilitychange", () => { if (!document.hidden && state) drawChats(); });
 
+// The card whose actions were opened with its ⋯ button (a touch screen), so they stay open when the list is redrawn
+let cardOpen = null;
+
 function drawChats() {
   const box = $("chats");
   const all = chatList();
@@ -453,17 +588,19 @@ function drawChats() {
     box.innerHTML = "";
     if (!list.length) box.innerHTML = `<div class="hint">No chat yet: the first request starts one.</div>`;
     for (const c of list) {
-      const div = document.createElement("div");
-      div.className = "chatitem" + (mine(c) ? " picked" : "");
-      div.innerHTML = `<div class="name"><span>${esc(c.title || "New chat")}</span>${rigChats.size > 1 ? `<span class="tag">${esc(c.rigName)}</span>` : ""}${c.fresh ? `<span class="tag ${c.ended_ok ? "ok" : "bad"}" title="Since this chat was last looked at">${c.ended_ok ? "finished" : "failed"}</span>` : ""}</div>
+      const div = document.createElement("div"), card = c.rig + "|" + c.id;
+      div.className = "chatitem" + (mine(c) ? " picked" : "") + (cardOpen === card ? " open" : "");
+      div.innerHTML = `<div class="name"><span>${esc(c.title || "New chat")}</span>${rigChats.size > 1 ? `<span class="tag">${esc(c.rigName)}</span>` : ""}${c.fresh ? `<span class="tag ${c.ended_ok ? "ok" : "bad"}" title="Since this chat was last looked at">${c.ended_ok ? "finished" : "failed"}</span>` : ""}<button class="small more" data-act="more" title="Rename, archive or delete" aria-label="Rename, archive or delete">⋯</button></div>
         <div class="meta">${c.jobs} ${c.jobs === 1 ? "request" : "requests"}<span class="doing"></span>${c.archived ? " · archived" : ""}</div>
         ${c.busy ? `<div class="bar"><div></div></div>` : ""}
         <div class="actions"><button class="small" data-act="rename">Rename</button><button class="small" data-act="archive">${c.archived ? "Unarchive" : "Archive"}</button><button class="small" data-act="delete">Delete</button></div>`;
       div.onclick = e => {
         const act = e.target.dataset && e.target.dataset.act;
+        if (act === "more") { cardOpen = div.classList.toggle("open") ? card : null; return; }
         if (act) { e.stopPropagation(); chatAction(act, c); return; }
         openChat(c.id, c.rig);
         refresh();
+        go("chat");
       };
       box.appendChild(div);
     }
@@ -500,13 +637,29 @@ async function chatAction(act, c) {
   refreshRigs();
 }
 
-$("newchat").onclick = async () => {
-  const where = $("newrig").hidden ? rigOf : $("newrig").value;
+async function newChat(where) {
+  hidePop();
   // An empty chat that is already there is opened again rather than adding another
   const empty = chatList().find(c => c.rig === where && !c.jobs && !c.archived && !c.title);
   try { openChat(empty ? empty.id : (await post("/api/chat-new", {}, where)).chat, where); } catch (e) { say(e.message, true); }
+  go("chat");
   await refresh();
   $("prompt").focus();
+}
+
+// With other rigs listed, the plus asks on which one; otherwise the chat is on the open chat's rig
+$("newchat").onclick = () => {
+  if (!rigsOn || !rigs.length) { newChat(rigOf); return; }
+  const menu = $("newmenu");
+  menu.innerHTML = `<div class="hint">New chat on</div>`;
+  for (const r of rigOptions()) {
+    const item = document.createElement("button");
+    item.className = "item" + (r.id === rigOf ? " on" : "");
+    item.textContent = r.name;
+    item.onclick = () => newChat(r.id);
+    menu.appendChild(item);
+  }
+  togglePop(menu, $("newchat"));
 };
 $("showarchived").onclick = e => { e.preventDefault(); showArchived = !showArchived; drawChats(); };
 
@@ -528,13 +681,15 @@ function drawRigs() {
   $("rigsbox").hidden = !rigs.length && !rigsOn;
   $("rigson").checked = rigsOn;
   $("rigscount").textContent = rigs.length ? ` (${rigs.length})` : "";
-  fillRigs($("newrig"));
   drawRigPicks();
 }
 
-// A list to choose a rig from: this page's own first, the open chat's chosen
+// The rigs to choose from: this page's own first
+const rigOptions = () => [{ id: "", name: homeName }, ...rigs];
+
+// A list to choose a rig from, the open chat's chosen
 function fillRigs(select) {
-  const options = [{ id: "", name: homeName }, ...rigs];
+  const options = rigOptions();
   const key = JSON.stringify(options);
   if (select.dataset.key !== key) {
     select.dataset.key = key;
@@ -635,8 +790,13 @@ const when = seconds => new Date(seconds * 1000).toLocaleString([], { dateStyle:
 const mb = bytes => bytes >= 1024 ** 3 ? gb(bytes) : (bytes / 1024 ** 2).toFixed(1) + " MB";
 function osay(text, bad) { $("outstatus").textContent = text || ""; $("outstatus").className = "status" + (bad ? " bad" : ""); }
 
+// The page's views by the address's #: Outputs, and on a phone the chat list (none), one chat and the models, each a
+// screen of its own. So the phone's Back goes back from a chat to the list.
+const phone = matchMedia("(max-width: 860px)");
+
 function showView() {
-  const out = location.hash === "#outputs";
+  const screen = location.hash.slice(1) || "list", out = screen === "outputs";
+  document.body.dataset.screen = screen;
   $("outputsview").hidden = !out;
   $("chatview").hidden = out;
   $("viewlink").textContent = out ? "Back to the chat" : "Outputs";
@@ -695,6 +855,75 @@ $("outall").onclick = () => {
 $("outdelete").onclick = () => deleteOutputs([...outPicked]);
 $("outrefresh").onclick = () => { osay(""); loadOutputs(); };
 window.addEventListener("hashchange", showView);
+
+// A screen of the phone, from the top, as a step the phone's Back undoes. A desktop shows them all at once.
+function go(screen) {
+  if (!phone.matches || location.hash === "#" + screen) return;
+  history.pushState({ screen: true }, "", "#" + screen);
+  window.scrollTo(0, 0);
+  showView();
+}
+
+// The arrow: the step back to the screen before, or to the list when this one was opened as it is (a link)
+function goBack() {
+  if (history.state && history.state.screen) { history.back(); return; }
+  history.replaceState(null, "", location.pathname + location.search);
+  showView();
+}
+for (const button of document.querySelectorAll("[data-back]")) button.onclick = goBack;
+$("viewlink").addEventListener("click", () => window.scrollTo(0, 0));
+$("modelslink").onclick = e => { e.preventDefault(); go("models"); };
+// A phone opens on the chat list, even when it was left on a chat
+if (phone.matches && /^#(chat|models)$/.test(location.hash)) history.replaceState(null, "", location.pathname + location.search);
+
+// --- the gear's panel and the plus's rig list: one open at a time, closed by a click elsewhere or Esc ----------
+let popOpen = null;
+
+function hidePop() {
+  if (!popOpen) return;
+  popOpen.panel.hidden = true;
+  popOpen.button.setAttribute("aria-expanded", "false");
+  popOpen = null;
+}
+
+function togglePop(panel, button) {
+  const was = popOpen && popOpen.panel === panel;
+  hidePop();
+  if (was) return;
+  panel.hidden = false;
+  button.setAttribute("aria-expanded", "true");
+  popOpen = { panel, button };
+}
+
+document.addEventListener("click", e => {
+  if (popOpen && !popOpen.panel.contains(e.target) && !popOpen.button.contains(e.target)) hidePop();
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && $("viewer").hidden) hidePop(); });
+$("gear").onclick = () => { showThumb(); togglePop($("gearpanel"), $("gear")); };
+// A link of the panel goes somewhere: the panel closes. Its switches and the slider leave it open.
+$("gearpanel").addEventListener("click", e => { if (e.target.closest("a")) hidePop(); });
+
+// --- the thumbnails' size: --thumb, the CSS's own for the screen until the slider is moved ----------------------
+// The slider shows the size used now, the CSS's own when it wasn't moved: measured, as it can be in vh
+function showThumb() {
+  const probe = document.createElement("div");
+  probe.style.cssText = "position: absolute; visibility: hidden; height: var(--thumb)";
+  document.body.appendChild(probe);
+  $("thumbs").value = probe.offsetHeight;
+  $("thumbsize").textContent = probe.offsetHeight + " px";
+  probe.remove();
+}
+
+function setThumb(px) {
+  document.documentElement.style.setProperty("--thumb", px + "px");
+  showThumb();
+}
+
+$("thumbs").oninput = e => {
+  setThumb(e.target.value);
+  try { localStorage.setItem("thumb", e.target.value); } catch { /* no storage: until the page is closed */ }
+};
+try { const px = Number(localStorage.getItem("thumb")); if (px) setThumb(px); } catch { /* as above */ }
 
 // Those on the rig, downloading or picked are listed; the rest are folded away under them
 let moreOpen = null;
@@ -758,6 +987,7 @@ function current() { return state && state.models.find(m => m.id === picked); }
 
 function drawComposer() {
   const m = current();
+  drawContinuing();
   const open = state.chats.find(c => c.id === chat);
   $("chattitle").textContent = [open ? open.title || "New chat" : "Chat", m && m.name].filter(Boolean).join(" · ");
   const tasks = m ? Object.keys(m.tasks) : [];
@@ -813,8 +1043,10 @@ $("go").onclick = async () => {
     if (!image) { say("Attach an image: drop it, paste it or choose a file", true); return; }
     // One kept on the rig from before isn't sent again: the rig uses its own
     if (image !== true) body.image = image;
-    if (continuing) { body.continues = continuing; body.stitch = $("stitch").checked; }
+    if (continuing) body.continues = continuing;
   }
+  if (repeats() > 1) { body.repeat = repeats(); body.chain = chained(); }
+  if (continuing || chained()) body.stitch = $("stitch").checked;
   if (loraInput(m, task)) body.loras = usedLoras();
   $("go").disabled = true;
   try {
@@ -822,6 +1054,7 @@ $("go").onclick = async () => {
     if (!chat) openChat((await post("/api/chat-new", {})).chat);
     body.chat = chat;
     await post("/api/generate", body); say(""); $("prompt").value = "";
+    $("repeat").value = 1;
     setContinuing(null);
     saveSettings();
   }
@@ -1311,13 +1544,13 @@ const fileExt = path => path.split(".").pop().toLowerCase();
 const fileKind = path => ["mp4", "webm"].includes(fileExt(path)) ? "video" : ["mp3", "flac", "wav"].includes(fileExt(path)) ? "audio" : "image";
 
 // inChat: with the link that attaches an image to start the next request from, and the one that deletes the file
-// (the Outputs view has its own button for that)
+// (the Outputs view has its own button for that). An image or a video is a thumbnail that opens in the viewer: a
+// video as its first picture with a play mark (#t= makes Safari show one), played there.
 function media(path, inChat) {
   const url = fileUrl(path), kind = fileKind(path), at = esc(path);
-  const view = kind === "video" ? `<video src="${url}" controls loop playsinline preload="metadata"></video>`
+  const view = kind === "video" ? `<span class="thumb" data-view="${at}" title="Click to play it large"><video src="${url}#t=0.1" muted playsinline preload="metadata"></video></span>`
     : kind === "audio" ? `<audio src="${url}" controls></audio>` : `<img src="${url}" alt="" data-view="${at}" title="Click to see it large">`;
   return `${view}<div class="links"><a href="${url}?download=1">Download</a><a href="${url}" target="_blank" rel="noopener">Open</a>`
-    + (kind === "video" ? `<a href="#" data-view="${at}">View large</a>` : "")
     + (inChat && ["png", "jpg", "jpeg", "webp"].includes(fileExt(path)) ? `<a href="#" data-input="${at}" title="Attach it: to make a video from it, or to edit it">Use as input</a>` : "")
     + (inChat ? `<a href="#" class="danger" data-delete="${at}" title="Delete this file from the rig">Delete</a>` : "")
     + `</div>`;
@@ -1336,19 +1569,27 @@ function drawViewer() {
   $("viewprev").hidden = $("viewnext").hidden = viewList.length < 2;
 }
 
+// Opened as a step of the browser's history, so a phone's Back closes it rather than leaving the chat
 function openViewer(list, at) {
   viewList = list;
   viewAt = Math.max(0, at);
   if (!list.length) return;
   drawViewer();
+  if (!$("viewer").hidden) return;
   $("viewer").hidden = false;
+  history.pushState({ viewer: true }, "");
 }
 
-function closeViewer() {
+function hideViewer() {
   $("viewer").hidden = true;
   // And a video stops
   $("viewmedia").innerHTML = "";
 }
+
+function closeViewer() {
+  if (history.state && history.state.viewer) history.back(); else hideViewer();
+}
+window.addEventListener("popstate", () => { if (!(history.state && history.state.viewer)) hideViewer(); });
 
 function stepViewer(by) {
   viewAt = (viewAt + by + viewList.length) % viewList.length;
@@ -1445,11 +1686,35 @@ let continuing = null;
 
 function setContinuing(id) {
   continuing = id;
-  $("continuing").hidden = !id;
+  drawContinuing();
 }
 $("continuestop").onclick = () => setContinuing(null);
-try { $("stitch").checked = localStorage.getItem("stitch") === "1"; } catch { /* as above */ }
-$("stitch").onchange = e => { try { localStorage.setItem("stitch", e.target.checked ? "1" : "0"); } catch { /* as above */ } };
+
+// --- a request repeated: so many separate tries of it, or videos that each continue the one before ---------------
+// The rig queues the tries at once; of a row it queues each video when the one before is done, from its last frame.
+const repeats = () => Math.max(1, Math.min(Number($("repeat").max), Math.floor(Number($("repeat").value)) || 1));
+// A row is of videos, by a model that can start one from an image
+function canChain() {
+  const m = current();
+  return repeats() > 1 && !!m && !!task && task.endsWith("2v") && Object.keys(m.tasks).some(t => t.endsWith("2v") && needsImage(m, t));
+}
+const chained = () => canChain() && $("chain").checked;
+
+// The row over the image: what the request sent now continues, and how the repeated ones follow each other
+function drawContinuing() {
+  $("continuingtext").hidden = $("continuestop").hidden = !continuing;
+  $("chainbox").hidden = !canChain();
+  $("stitchbox").hidden = !continuing && !chained();
+  $("continuing").hidden = !continuing && !canChain();
+}
+$("repeat").oninput = drawContinuing;
+for (const name of ["stitch", "chain"]) {
+  try { $(name).checked = localStorage.getItem(name) === "1"; } catch { /* as above */ }
+  $(name).onchange = e => {
+    try { localStorage.setItem(name, e.target.checked ? "1" : "0"); } catch { /* as above */ }
+    drawContinuing();
+  };
+}
 
 // The video a request made: not the stitched one made of it and those before it
 // What the chat shows of a request's files: of a stitched one, the stitched video without the part made for it,
@@ -1650,6 +1915,7 @@ function drawMessages() {
       const set = settingsText(job);
       you.innerHTML = `<div class="who">${esc(job.model_name)} · ${esc(TASKS[job.task] || job.task)}</div><div class="text">${esc(job.prompt)}</div>`
         + (set ? `<div class="hint">${esc(set)}</div>` : "")
+        + (job.rounds ? `<div class="hint">${job.round} of ${job.rounds}${job.row ? " in a row" : ""}</div>` : "")
         + (job.continues ? `<div class="hint">continues a video from its last frame${job.stitch ? ", stitched with it when done" : ""}</div>`
           : job.image ? `<div class="hint">from an image</div>` : "")
         + (job.via ? `<div class="hint">sent from the page of ${esc(job.via)}</div>` : "")
@@ -1680,9 +1946,14 @@ function drawMessages() {
       html += `<div class="hint">Done${took}</div>`
         + shownOutputs(job).map(path => (path === job.stitched ? `<div class="hint" title="The part this request added is in it, and on its own in Outputs">All ${job.parts} in a row, stitched:</div>` : "") + media(path, true)).join("")
         + (job.stitch_error ? `<div class="hint">${esc(job.stitch_error)}</div>` : "")
+        + (job.chain_error ? `<div class="error">${esc(job.chain_error)}</div>` : "")
         + (job.removed ? `<div class="hint">${job.removed === 1 ? "A file it made was" : job.removed + " files it made were"} deleted</div>` : "");
     } else if (job.state === "cancelled") html += `<div class="hint">Cancelled</div>`;
     else html += `<div class="error">${esc(job.error || "Failed")}</div>`;
+    // A row ends with the one that didn't get done: the rest of it was never queued
+    if (job.row && job.round < job.rounds && ["cancelled", "failed"].includes(job.state)) {
+      html += `<div class="hint">The other ${job.rounds - job.round} of the row ${job.rounds - job.round === 1 ? "isn't" : "aren't"} made.</div>`;
+    }
     pair.rig.innerHTML = html;
     const cancel = pair.rig.querySelector("button[data-job]");
     if (cancel) cancel.onclick = () => post("/api/cancel", { job: job.id }).then(refresh);
@@ -1690,11 +1961,17 @@ function drawMessages() {
   if (atBottom) box.scrollTop = box.scrollHeight;
 }
 
+// Under the models: a phone goes to their screen to show it, shown rather than hidden again
 $("showlog").onclick = async e => {
   e.preventDefault();
-  const log = $("log");
-  log.hidden = !log.hidden;
-  if (!log.hidden) { log.textContent = await (await fetch(at("/log"))).text(); log.scrollTop = log.scrollHeight; }
+  const log = $("log"), away = phone.matches && document.body.dataset.screen !== "models";
+  go("models");
+  log.hidden = !away && !log.hidden;
+  if (!log.hidden) {
+    log.textContent = await (await fetch(at("/log"))).text();
+    log.scrollTop = log.scrollHeight;
+    if (away) log.scrollIntoView({ block: "end" });
+  }
 };
 $("savetoken").onclick = async () => {
   try { await post("/api/token", { token: $("token").value.trim() }); $("token").value = ""; say("Token saved on the rig"); }
