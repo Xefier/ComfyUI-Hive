@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.17.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.18.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -82,6 +82,9 @@ versions of this miner.
   rig, after asking.
 - **Every image hidden:** the eye with a line through it at the top (or Alt+X) hides every image and video on the
   page and pauses the videos, until it is pressed again. The browser remembers it.
+- **After a request that failed or was stopped**, the rig has ComfyUI unload its models and give the GPU's memory
+  back, so the next request starts clean: one that ran out of memory used to leave the GPU full, and the next request
+  of the same model failed the same way or never got past loading.
 - **The queue:** a waiting request says how many are before it and, once requests like them have been timed, about
   when it starts.
 - **Without looking:** the tab's title shows how far the open chat's request is ("46% · ComfyUI-Hive"), "Working"
@@ -425,6 +428,10 @@ real request, a row's running one stopped, and any of it on a rig.
 For a LoRA's trigger prompt (v0.17), on a PC with stand-ins for LoRA files: set, added to a prompt once and not
 twice, changed, removed, the asking cancelled, and one for a file that isn't on the rig refused. Not run: with a real
 LoRA, and on a rig.
+
+For the GPU's memory given back after a failed request (v0.18), with ComfyUI's answers played: asked to unload after
+one that ran out of memory, one that was stopped, and one failing with ComfyUI unreachable; not after one that
+finished. Not run: on a rig, where it was reported.
 
 For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
 with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like

@@ -1161,12 +1161,24 @@ class Rig:
                 if job["state"] == "failed":
                     self.failed += 1
                 log(f"Job {job['id']} failed: {error}")
+            if job["state"] != "done":
+                # One that ran out of memory or was stopped half way leaves ComfyUI holding what it had loaded, and
+                # the next request of the same model would start on a full GPU and fail the same way
+                self.free_gpu()
             job["finished"] = time.time()
             job.pop("cancel", None)
             for name in RUN_FIELDS:
                 job.pop(name, None)
             with lock:
                 self.save_jobs()
+
+    def free_gpu(self):
+        """Has ComfyUI unload its models and give the GPU's memory back. The next request loads its model anew."""
+        self.last_model = None
+        try:
+            comfy_post("/free", {"unload_models": True, "free_memory": True})
+        except (OSError, ValueError) as error:
+            log(f"Could not free the GPU's memory: {error}")
 
     def run_job(self, job):
         if read_line(args.state_file) != "ready":
@@ -1192,7 +1204,7 @@ class Rig:
             job["est"] = self.estimate(job)
         if self.last_model and self.last_model != job["model"]:
             # Another model: let go of the last one's memory first rather than squeezing both
-            comfy_post("/free", {"unload_models": True, "free_memory": True})
+            self.free_gpu()
         self.last_model = job["model"]
         client_id = hashlib.sha1(job["id"].encode()).hexdigest()
         watcher = ProgressWatcher(client_id, job, samplers)
