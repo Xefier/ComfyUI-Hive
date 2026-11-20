@@ -42,7 +42,8 @@ header .rig .chip { max-width: 100%; }
 .sysbtn svg { transition: transform .15s; }
 .sysbtn[aria-expanded=true] svg { transform: rotate(180deg); }
 .sys { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 6px 22px; padding: 10px 0 2px; max-width: 1100px; }
-.meter { display: flex; gap: 8px; align-items: center; font-size: 13px; min-width: 0; }
+/* The numbers go under the bar rather than into the next column when the two don't fit side by side */
+.meter { display: flex; flex-wrap: wrap; gap: 2px 8px; align-items: center; font-size: 13px; min-width: 0; }
 .meter .label { color: var(--muted); width: 64px; flex: none; }
 .meter .bar { min-width: 60px; }
 .meter .num { font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -493,7 +494,7 @@ function drawSystem() {
     // A rig of an older version says the RAM it has and the disk left, not how much is used: those stay text
     + (state.ram_gb && state.ram_used_gb != null ? meter("RAM", state.ram_used_gb, state.ram_gb, `${state.ram_used_gb} / ${state.ram_gb} GB`)
       : fact("RAM", `${esc(state.ram_gb ?? "?")} GB`))
-    + (state.disk_total ? meter("Disk", state.disk_total - state.disk_free, state.disk_total, `${gb(state.disk_free)} free of ${gb(state.disk_total)}`)
+    + (state.disk_total ? meter("Disk", state.disk_total - state.disk_free, state.disk_total, `${Math.round(state.disk_free / 1024 ** 3)} of ${Math.round(state.disk_total / 1024 ** 3)} GB free`)
       : fact("Disk", `${esc(gb(state.disk_free))} free`))
     + fact("ComfyUI", `<span class="chip">${dot}${esc(state.state)}</span>`) + (state.version ? fact("Version", esc(state.version)) : "");
 }
