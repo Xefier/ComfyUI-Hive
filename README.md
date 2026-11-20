@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.18.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v0.19.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -433,6 +433,11 @@ LoRA, and on a rig.
 For the GPU's memory given back after a failed request (v0.18), with ComfyUI's answers played: asked to unload after
 one that ran out of memory, one that was stopped, and one failing with ComfyUI unreachable; not after one that
 finished. Not run: on a rig, where it was reported.
+
+For `hub=` (v0.19), the part of `h-run.sh` that fetches the worker program, run in Git Bash against a hub on a PC:
+fetched when the rig has none, left alone at the hub's version, not replaced while a request is being made, replaced
+when idle, and kept when the hub can't be reached. Not run: on a rig, and the page started from the fetched program
+there.
 
 For the progress bar, the page run on a PC against a stand-in for ComfyUI that plays a load, two passes of 4 steps
 with a pause between them, and an end: the first request of a kind fills by its steps and says so; the next one like
