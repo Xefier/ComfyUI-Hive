@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.6.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.7.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -60,8 +60,9 @@ versions of this miner.
   kind fills the bar by its steps, says "a rough guess", and has no estimate before its first step. The bar never
   goes back; when a request takes longer than estimated it waits just short of full.
 - **A LoRA's trigger prompt:** beside a slot's strength, **Set trigger prompt** asks once for the words the slot's
-  LoRA is called up with and keeps them on the rig with the file; from then on **Use trigger prompt** adds them to the
-  end of the prompt (not twice), and **Edit** changes or removes them. Every browser sees the same ones; each rig
+  LoRA is called up with and keeps them on the rig with the file; from then on **Add trigger prompt** adds them to the
+  end of the prompt (not twice), **Use trigger prompt** makes them the whole prompt in place of what is written
+  there, and **Edit** changes or removes them. Every browser sees the same ones; each rig
   keeps its own.
 - **A photo as the image:** on a phone or tablet the image box has **take a photo** beside "choose a file": it
   opens the camera, and the picture taken is attached.
