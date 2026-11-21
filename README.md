@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.10.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.11.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -37,6 +37,13 @@ download it (a GitHub release), then make a flight sheet with miner **Custom**:
 models (17 to 64 GB each), your own LoRAs (in `models/loras`, beside the ones the models bring) and what is made. If no drive is mounted at `/var/lib/docker` the miner waits and says so,
 rather than filling the small OS drive; `data_dir=` puts it all somewhere else. It outlives flight sheet switches and new
 versions of this miner.
+
+**A DOCKER drive that isn't mounted is set up by the miner.** When a drive with the label `DOCKER` is there, formatted
+as XFS, but nothing is mounted at `/var/lib/docker`, the miner installs `xfsprogs` if it is missing, adds
+`LABEL=DOCKER /var/lib/docker xfs defaults,nofail,quota,prjquota,pquota,gquota 0 0` to `/etc/fstab` (once: a line for
+that label that is there already is left as it is) and mounts it. Docker is stopped while the drive comes under its
+folder and started again after. It is not done while a Docker container runs, nor for a drive that isn't XFS: the
+miner says so and waits, as it does when there is no such drive.
 
 ## The page
 

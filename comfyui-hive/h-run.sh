@@ -401,6 +401,46 @@ start_comfyui() {
     return 1
 }
 
+# The DOCKER drive: a rig for rentals keeps Docker's data on a drive of its own with the label DOCKER, mounted at
+# /var/lib/docker, and this miner keeps its own there too. One that is there (an XFS drive with that label) but not
+# mounted is set up for it: its line into /etc/fstab, once, and mounted. Docker is stopped while the drive comes
+# under its folder, so it doesn't go on writing to what is then hidden; not done while a container runs.
+setup_docker_drive() {
+    local root="${COMFYUI_HIVE_TEST_ROOT:-}" device kind was=0
+    local place="$root/var/lib/docker" table="$root/etc/fstab"
+    mountpoint -q "$place" 2>/dev/null && return 0
+    device=$(blkid -L DOCKER 2>/dev/null)
+    [[ -n $device ]] || return 0
+    kind=$(blkid -o value -s TYPE "$device" 2>/dev/null)
+    if [[ $kind != xfs ]]; then
+        notify warn "The drive labelled DOCKER ($device) is ${kind:-not formatted}, not XFS: it is not mounted at /var/lib/docker. Format it as XFS with that label."
+        return 0
+    fi
+    if command -v docker >/dev/null 2>&1 && [[ -n $(docker ps -q 2>/dev/null) ]]; then
+        notify warn "The DOCKER drive ($device) is not mounted at /var/lib/docker, and is not set up now: Docker containers are running."
+        return 0
+    fi
+    log "Setting up the DOCKER drive ($device) at /var/lib/docker"
+    command -v xfs_quota >/dev/null 2>&1 || apt-get install -y xfsprogs >> "$LOG_FILE" 2>&1 \
+        || log "xfsprogs could not be installed: going on without it"
+    mkdir -p "$place"
+    # Once: a line of it that is there already is left as it is
+    grep -qE '^[[:space:]]*LABEL=DOCKER[[:space:]]' "$table" 2>/dev/null \
+        || echo "LABEL=DOCKER /var/lib/docker xfs defaults,nofail,quota,prjquota,pquota,gquota 0 0" >> "$table"
+    if systemctl is-active --quiet docker 2>/dev/null; then
+        was=1
+        systemctl stop docker.socket docker >> "$LOG_FILE" 2>&1
+    fi
+    mount -a >> "$LOG_FILE" 2>&1
+    (( was )) && systemctl start docker >> "$LOG_FILE" 2>&1
+    if mountpoint -q "$place" 2>/dev/null; then
+        notify info "The DOCKER drive ($device) is set up and mounted at /var/lib/docker."
+    else
+        notify warn "The DOCKER drive ($device) could not be mounted at /var/lib/docker. See the miner log."
+    fi
+}
+setup_docker_drive
+
 wait_for_blocker find_settings_problem
 wait_for_blocker find_gpu_user
 
