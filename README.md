@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.14.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.15.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -211,7 +211,7 @@ miner says so and waits, as it does when there is no such drive.
 - **Edit image** (Qwen-Image 2.1 Turbo): attach the image and say in the prompt what to change ("make it night",
   "replace the car with a bicycle", "remove the text"); the result keeps the image's size. A prompt-refining model
   first turns the instruction into a fuller one, as in ComfyUI's own template.
-- **LoRAs:** Wan 2.2 (14B and 5B), HunyuanVideo 1.5, SDXL 1.0, Pony Diffusion V6 XL and SD 1.5 take up to 3 of your own LoRAs per request, in **LoRAs**
+- **LoRAs:** Wan 2.2 (14B and 5B), HunyuanVideo 1.5, LTX-2.5, MiniMax H3 (its videos), SDXL 1.0, Pony Diffusion V6 XL and SD 1.5 take up to 3 of your own LoRAs per request, in **LoRAs**
   under the task buttons: each slot is a file and a strength (1 by default, negative allowed), set with the slider (-5 to 5, for slider LoRAs
   that are used at either side of 0; double-click it to go back to 1) or typed (-10 to 10); a slot left on "none"
   isn't used. They are added on top of what the model's workflow already applies, the Wan 2.2 14B speed-up LoRAs
@@ -319,8 +319,8 @@ pulling a client change, new sessions pick it up; after moving the clone, run `a
 | Wan 2.2 14B | text/image to video, 16 fps | fp8 | fp8 | 64 GB | Both experts and the 4-step speed-up LoRAs, for both tasks. Takes your LoRAs |
 | Wan 2.2 5B | text/image to video, 720p 24 fps | fp16 | fp16 | 17 GB | Takes your LoRAs |
 | HunyuanVideo 1.5 | text/image to video, 720p 24 fps | fp16 run as fp8 | fp16 | 43 GB | Takes your LoRAs |
-| LTX-2.5 | text/image to video with sound | not offered | int8 | 42 GB | Gated: accept the license at [Lightricks/LTX-2.5](https://huggingface.co/Lightricks/LTX-2.5) and give the account's token. Free for organisations under $10M yearly revenue |
-| MiniMax H3 | text/image to video with sound, text to image | pruned w6a8 | pruned int8 | 39 / 44 GB | Commercial use of what it makes needs a MiniMax license (sold through Comfy) |
+| LTX-2.5 | text/image to video with sound | not offered | int8 | 42 GB | Gated: accept the license at [Lightricks/LTX-2.5](https://huggingface.co/Lightricks/LTX-2.5) and give the account's token. Free for organisations under $10M yearly revenue. Takes your LoRAs |
+| MiniMax H3 | text/image to video with sound, text to image | pruned w6a8 | pruned int8 | 39 / 44 GB | Commercial use of what it makes needs a MiniMax license (sold through Comfy). Its videos take your LoRAs |
 | Z-Image Turbo | text to image | bf16 | bf16 | 19 GB | |
 | Qwen-Image 2.1 Turbo | text to image, up to 2K; edit image | int8 | bf16 | 34 / 40 GB | Editing has its own prompt-refining text encoder, included in the download |
 | SDXL 1.0 | text to image, 1024 px | fp16 | fp16 | 6.5 GB | Stability's base model. Takes your LoRAs (SDXL) |
