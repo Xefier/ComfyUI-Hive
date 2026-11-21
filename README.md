@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.13.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.14.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -200,6 +200,14 @@ miner says so and waits, as it does when there is no such drive.
 
   Either way each side is rounded to the model's multiple, and the page says when it scaled or rounded. MiniMax H3's
   image-to-video and Qwen-Image's editing take their size from the image by themselves, so they have neither button.
+- **The end frame:** a model that can end a video on a given picture (Wan 2.2 14B, LTX-2.5 and MiniMax H3) has the task
+  *First and last frame*, with an end frame beside the start frame: side by side where there is room, the start on the
+  left, one over the other on a phone. In *Image to video* on such a model a **+ End frame** box switches to it. The
+  end frame may be left out (the video then ends where the model takes it) and does what the start frame does: drop,
+  paste, choose a file or take a photo, **Remove**, kept in the chat on the rig, back with **Use again**, and **Use as
+  end frame** under an image of the chat. An image dropped on its box goes there, anywhere else to the start frame; a
+  pasted one goes to the box last clicked or filled. **Swap with start** swaps the two, and the end frame's size says
+  when it isn't the video's shape. In a row (*Each continues the one before*) only the last video ends on it.
 - **Edit image** (Qwen-Image 2.1 Turbo): attach the image and say in the prompt what to change ("make it night",
   "replace the car with a bicycle", "remove the text"); the result keeps the image's size. A prompt-refining model
   first turns the instruction into a fuller one, as in ComfyUI's own template.
@@ -375,6 +383,53 @@ others and are downloaded there; clicking one doesn't pick it for the composer.
 - **Not included: ThinkSound.** Its only ComfyUI nodes have been left unmaintained since July 2025, fail with current
   `transformers`, and pin old versions of packages ComfyUI shares.
 
+## Timeline
+
+A page beside the chats (**Timeline** under the gear, **+ Project** over the chats) where clips from the outputs are
+arranged on a timeline and exported as one video. On a rig by itself and on a hub alike.
+
+- **A project** is a saved list of clips with their trims and positions, of one size and frame rate. Nothing changes
+  an output: the export is a new one, in the project's own chat, that can be played, continued and given sound like any
+  other. A project's chat is listed with the chats (marked *timeline*) and opens its timeline.
+- **Edit in timeline**, under every video of the chat and of Outputs, opens that video's own project (made the first
+  time). A stitched video comes as the videos it was made of, each a clip placed as it is in the stitched one: to
+  trim them, fade them into each other or put others between, and export the row again. The stitched video stays.
+- **Tracks:** one video track, and sound tracks laid over each other. A video with sound takes the video track and a
+  sound track; a sound that belongs to a clip moves with it. Each sound has its volume, fade in and fade out. Sound
+  files of your own (WAV, MP3, FLAC, M4A, OGG) are dropped on the timeline or on Media, and are kept with the project.
+- **On the timeline:** drag a clip to move it and its ends to trim it, drag the ruler to scrub, Ctrl and the wheel (or
+  the slider) to zoom. A clip shows its first and last frame, and frames between where there is room. Two clips that
+  meet can be faded into each other (Crossfade into next): they lie over each other for that long.
+- **Filling a gap:** dragging across an empty stretch of the video track makes a gap, and the Composer panel (the
+  chat's own composer, moved in) makes a video for it: from the last frame of the clip before, and, with a model that
+  takes an end frame (Wan 2.2 14B, LTX-2.5 and MiniMax H3, *First and last frame*), to the first frame of the clip after. Only the models that
+  can do what the gap needs, at the project's size, are offered; the others say why not. The gap shows the request's
+  progress and becomes the clip; Another attempt makes one more to switch between. A fill without an end frame is
+  made a little longer and the rest stays past the clip's end, to be dragged out; one with an end frame is kept whole
+  and the clips after it move to fit, since it meets them only on its last frame.
+- **Sizes and frame rates:** a project's size and frames a second are set when it is made (the chat's sizes, or
+  matched to a picture or video), with the models that can't make that size named, and the nearest size the ticked
+  models all make offered. A clip of another shape is shown whole with bars, or cropped. A clip of another frame rate
+  keeps its speed: each frame of the export shows the frame of the clip that is on screen then.
+- **Panels:** Media, Viewer, Inspector, Composer, Chat, Chats, Models and Timeline are arranged by dragging: a tab onto
+  another panel puts the two together as tabs or, at an edge, side by side; the lines between panels resize them. A and
+  B are given layouts; your own are saved by name on the rig or hub.
+- **The preview is approximate.** The viewer plays a small copy of each clip (made once and kept a week under
+  `<data>/timeline/cache`), fetched whole so playing doesn't wait for the rig, and mixes the sound in the browser.
+- **The export** is made by the program itself (PyAV), not by ComfyUI, so it waits for no GPU. It is written with the
+  graphics card's H.264 encoder where PyAV has one that works, else with x264. Continue's Stitch uses the same code.
+
+*First and last frame* is the image-to-video workflow with the end image added (`tools/build.py`, "derive"): for
+Wan 2.2 14B with `WanFirstLastFrameToVideo` in place of `WanImageToVideo`, for MiniMax H3 as its node's `last_frame`.
+For LTX-2.5 the end image is an `LTXVAddGuide` at the last frame (`frame_idx` -1) in each of its two passes, the half
+size one and the upscaled one, with `LTXVCropGuides` taking the guide back out of the latent after each sampling.
+Those nodes can't do without their image, so its `end_image` input names them under `without`, each with what takes
+the place of its outputs: with no end image `page.py` takes them out and the workflow is LTX's image to video exactly.
+Wan's was made for real on a rig (RTX 4090, ComfyUI v0.45.0): 2 seconds at 640 x 368 in 63 s, starting on the start
+image and ending on the end image. MiniMax H3's and LTX-2.5's were only checked against that ComfyUI's node
+definitions, not run.
+Not tried yet: the graphics card's encoder, which the PyAV this was written with doesn't have.
+
 ## What happens on a switch
 
 **Switching to this flight sheet:** it waits while any GPU process or Docker container is running, so it can't take a
@@ -435,7 +490,8 @@ curl -s http://$(cat /run/comfyui-hive/address):8188/system_stats | jq
 ## Files
 
 - `h-run.sh`: start-up checks, the install, then runs ComfyUI and the page
-- `page.py`, `page.html`, `catalog.json`, `workflows/`: the page program, its models and their workflows. They are
+- `page.py`, `page.html`, `timeline*`, `dock.*`, `catalog.json`, `workflows/`: the page program (with its timeline
+  editor, in files of its own), its models and their workflows. They are
   not kept in this repository: `release.sh` puts them into the package from `xefier-comfyui`, where they are made
   (and where `tools/` is)
 - `h-stop.sh`: puts the rig back; safe to run repeatedly
