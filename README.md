@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.8.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.9.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -309,6 +309,28 @@ on, sizes, lengths); only the prompt, image, size, length and seed are set by th
 an estimate** from the files' sizes and the templates' own notes (the Wan 2.2 template measured its fp8 build at 84% of
 a 24 GB card), not yet measured on these rigs. If a model runs out of memory on a card, raise its `min_vram_gb` in
 `tools/catalog-src.json` and build again.
+
+## Lip-sync
+
+**Lip-sync** under a video moves the mouth in it to a speech, with LatentSync 1.6: pick one of the video's sounds, or
+a sound file of yours with the words (WAV, MP3, FLAC, M4A, OGG). What comes of it is a request of its own at the end
+of the chat with its own video; the one it was made from stays as it is.
+
+- **What it does:** only the face is made anew, at 512 pixels, and put back into the picture, so the rest stays. It is
+  for a real face seen from the front, not a drawn one. The video comes out at 25 pictures a second and as long as the
+  speech (a shorter video is played on, forwards and back).
+- **How it runs:** not in ComfyUI but as LatentSync's own program, in a Python environment of its own on the rig, so
+  what it needs (an older PyTorch) never meets what ComfyUI needs. The first request on a rig installs it (a few GB)
+  and fetches its helpers by itself; its two model files (5.1 GB) are downloaded under Models like any other. While
+  it runs ComfyUI gives the GPU's memory back. It needs about 18 GB.
+- **On an RTX 50 card** it is installed with a newer PyTorch than it was made for, which those cards need: not tried.
+- **Not tried on a real rig yet:** the page, the hub and the rig's side were tested with a stand-in for LatentSync
+  (`tools/fake_trainer.py`); its install and a real lip-sync have not run.
+- **The speech from words:** **Add sound** with **Chatterbox** speaks the words you write (English), as one of the
+  video's sounds: kept, picked and merged like the others, and offered by Lip-sync as the speech. With **A voice to
+  copy**, a recording of about 10 seconds, it speaks in that voice; without one it has its own. It runs like
+  LatentSync, as its own program in its own environment: the first request installs it and fetches its voice model
+  (about 4 GB) by itself. Not tried on a real rig yet either.
 
 ## Sound for a video
 
