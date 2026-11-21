@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.7.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.8.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -59,6 +59,11 @@ versions of this miner.
   end took in the last request like it (same model and task; same settings for the end), so the first request of a
   kind fills the bar by its steps, says "a rough guess", and has no estimate before its first step. The bar never
   goes back; when a request takes longer than estimated it waits just short of full.
+- **Negative prompt:** a model that listens to one has a **Negative prompt** line among its settings, filled with
+  the model's own; what you write there is what the picture or video should not have, and an empty line goes back
+  to the model's own. Wan 2.2 5B, HunyuanVideo 1.5, SD 1.5, SDXL, Pony and Qwen's image edit have it. The others
+  run at a guidance of 1 (Wan 2.2 14B with its 4-step LoRAs, Z-Image Turbo, Qwen's text to image), where a
+  negative prompt changes nothing, or guide in a way of their own (LTX, MiniMax): they don't show the line.
 - **A LoRA's trigger prompt:** beside a slot's strength, **Set trigger prompt** asks once for the words the slot's
   LoRA is called up with and keeps them on the rig with the file; from then on **Add trigger prompt** adds them to the
   end of the prompt (not twice), **Use trigger prompt** makes them the whole prompt in place of what is written
