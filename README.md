@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.9.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.10.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -225,6 +225,14 @@ versions of this miner.
 The page and ComfyUI have no login: like Ollama-Hive's API, anything on the LAN that can reach them can use them,
 including starting a download, deleting a model, a chat or an output, and uploading or deleting a LoRA. They listen only on the private LAN address, and `allow=` limits
 which addresses can connect.
+
+## Room on the data drive
+
+A hub's Workers page has **Clean up** on each worker's card: what can go from the rig's data drive, each with how much
+it frees. Everything there can be had again. Files the hub has too, what requests started from, temporary files, the
+installers' cache, models that programs fetched by themselves, LatentSync and Chatterbox, the training files, and
+Docker's unused images, build cache and stopped containers. Docker is only cleaned while the rig isn't rented (no
+container runs and nothing else has the GPU), and never its volumes.
 
 ## Updates
 
