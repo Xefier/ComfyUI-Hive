@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 # Builds the miner's package, comfyui-hive-<version>.tar.gz, from what is committed in two repositories: the Hive
-# scripts of this one, and the page program (page.py, page.html, the catalog and the workflows) of xefier-comfyui,
+# scripts of this one, and the page program (page.py, trainer.py, page.html, the catalog and the workflows) of xefier-comfyui,
 # which is the only place that program is kept. The version is CUSTOM_VERSION of h-manifest.conf.
 #
 #   bash release.sh [folder to put the package in, this one by default]
@@ -13,7 +13,7 @@ cd "$(dirname "${BASH_SOURCE[0]}")"
 here=$(pwd)
 program=${XEFIER_COMFYUI:-../../../xefier-comfyui}
 target=$(cd "${1:-.}" && pwd)
-parts=(comfyui-hive/page.py comfyui-hive/page.html comfyui-hive/catalog.json comfyui-hive/workflows)
+parts=(comfyui-hive/page.py comfyui-hive/trainer.py comfyui-hive/page.html comfyui-hive/catalog.json comfyui-hive/workflows)
 
 git -C "$program" rev-parse --git-dir >/dev/null 2>&1 \
     || { echo "No clone of xefier-comfyui at $program: set XEFIER_COMFYUI to it" >&2; exit 1; }

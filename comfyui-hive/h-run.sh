@@ -12,6 +12,18 @@ cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
 mkdir -p "$CUSTOM_LOG_BASEDIR" "$CH_RUN_DIR"
 touch "$LOG_FILE"
 
+# A run started by the update of v1.0 to v1.4 ignores the signals Hive stops a miner with (it was started with them
+# ignored, and a shell can't take back what it was given so): Hive then can't stop it, and starts another beside it.
+# Started anew here with them as they should be. Python does it: bash and env of an older system can't.
+ch_ignored=$(sed -n 's/^SigIgn:[[:space:]]*//p' "/proc/$$/status" 2>/dev/null)
+if [[ -z ${CH_SIGNALS_RESET:-} ]] && (( 0x${ch_ignored:-0} & 0x4001 )) && command -v python3 >/dev/null 2>&1; then
+    export CH_SIGNALS_RESET=1
+    exec python3 -c 'import os, signal
+for name in (signal.SIGHUP, signal.SIGINT, signal.SIGTERM):
+    signal.signal(name, signal.SIG_DFL)
+os.execvp("bash", ["bash", "./h-run.sh"])'
+fi
+
 on_stop() {
     trap '' INT TERM HUP
     log "Stopping"
@@ -26,6 +38,24 @@ if [[ -f $CH_RUN_DIR/guard.pid ]]; then
     kill "$(< "$CH_RUN_DIR/guard.pid")" 2>/dev/null
     rm -f "$CH_RUN_DIR/guard.pid"
 fi
+# Another run of this miner still going, with its guard: one Hive could not stop (see above). Killed, as it doesn't
+# listen; two of them would each start a ComfyUI and take the other's for a rental. Found by the folder it runs in,
+# which after an update is the old one's name; never this run or what started it.
+stop_other_runs() {
+    local name pid parent=$$ own=" "
+    while [[ -n $parent && $parent -gt 1 ]]; do
+        own+="$parent "
+        parent=$(ps -o ppid= -p "$parent" 2>/dev/null | tr -d ' ')
+    done
+    for name in h-guard.sh h-run.sh; do
+        for pid in $(pgrep -f "$name" 2>/dev/null); do
+            [[ $own == *" $pid "* ]] && continue
+            [[ $(readlink "/proc/$pid/cwd" 2>/dev/null) == "$CH_DIR"* ]] || continue
+            kill -KILL "$pid" 2>/dev/null && log "Another run of this miner was still going ($name, process $pid): stopped"
+        done
+    done
+}
+stop_other_runs
 bash ./h-stop.sh >> "$LOG_FILE" 2>&1
 
 echo "$$" > "$CH_RUN_DIR/run.pid"
@@ -346,6 +376,13 @@ start_comfyui() {
     write_model_paths
     install_packs
 
+    # None of ours left from before: one that outlived its stop keeps the port, so the new one can't start, and the
+    # GPU, which then looks rented
+    if pkill -KILL -f "^$CH_VENV/bin/python $CH_COMFYUI/main.py" 2>/dev/null; then
+        log "A ComfyUI left running from before was stopped"
+        pause 3
+    fi
+
     # Its own process group, so h-stop.sh ends everything it starts
     setsid "$CH_VENV/bin/python" "$CH_COMFYUI/main.py" --listen "$address" --port "$CH_PORT" \
         --extra-model-paths-config "$CH_DATA_DIR/extra_model_paths.yaml" \
@@ -409,7 +446,8 @@ while true; do
             pause 15
         done
     fi
-    kill -TERM -- "-$SERVER_PID" 2>/dev/null
+    # Asked to end, and killed when it doesn't: what it started goes with it
+    ch_stop_group "$SERVER_PID" 15
     notify warn "ComfyUI stopped, restarting in 10 s. See the miner log."
     ch_set_state restarting
     pause 10

@@ -104,6 +104,9 @@ update_restart() {
     bash "$CH_DIR/h-stop.sh" >> "$LOG_FILE" 2>&1
     rm -rf "$CH_DIR.old"
     cd "$CH_DIR" || exit 1
+    # As they were, not ignored: what is started with a signal ignored can never take it again, and Hive could not
+    # stop the miner
+    trap - INT TERM HUP
     exec bash ./h-run.sh
 }
 

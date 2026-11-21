@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.4.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.5.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -231,6 +231,11 @@ miner is kept), and the miner starts again as the same process, which takes abou
 - With it off, the gear says which version is available and offers **Update**.
 - Either way it waits until nothing is being made or downloaded and the rig isn't rented, and says what it waits for.
 - A release that can't be downloaded or isn't whole changes nothing: the miner keeps running as it is and says why.
+- **v1.0 to v1.4 could not be stopped after an update:** the miner an update started ignored the signals Hive stops a
+  miner with, so a miner restart, a switch of flight sheet or a rental's start left it running with ComfyUI on the
+  GPU, and a restart put a second one beside it (each then took the other's ComfyUI for a rental). v1.5 starts
+  without that, sets itself right when it was started so, and stops any older run of itself when it starts. A rig
+  that shows a rental it doesn't have, or two ComfyUIs, needs one reboot to be rid of the old run.
 
 A rig that works for a hub (`hub=`) still gets its worker program from the hub; this update is of the miner's own
 scripts and the program it falls back to.
