@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.3.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.4.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -81,6 +81,12 @@ versions of this miner.
   the moment, and click **Continue from here** under it. The image becomes the frame shown at that second, and a
   stitched video has the continued one up to that frame only. Continue from here on a stitched video finds the
   request whose part that moment is in (one stitched before this was added can only be continued from its end).
+- **A video that ends early:** when the end of a video is bad and the rest is good, open it large, pause it at the
+  last good moment and click **End here**. The video then plays to there and starts over, shows *Ends at … s* under
+  it, and what is made from it takes it to there: Continue starts from that frame, Add sound makes sound for that
+  length, and Download and Open hand out a file cut there. The file itself stays whole, so End here at another
+  moment moves the end and **No end** removes it. **Cut for good**, after an *Are you sure?*, cuts the file itself
+  there: what came after is deleted and can't be brought back.
 - **A request taken to another rig:** with **Other rigs** on, a list of the rigs stands beside Use again (Continue goes by it too),
   set to the open chat's own. With another rig chosen, they start a new chat on that rig, named after this one, with
   the request's prompt, settings and the image it started from (for Continue, the video's last frame). A LoRA that rig
