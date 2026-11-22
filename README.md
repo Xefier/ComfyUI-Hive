@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.20.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.21.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -53,7 +53,8 @@ miner says so and waits, as it does when there is no such drive.
   higher-precision builds than a 24 GB one, and a model no build of which fits isn't shown (the page says how many are
   hidden). Each card shows with icons whether it makes video and sound (green when it does, red and crossed out when
   it doesn't), whether it takes LoRAs, and each thing it does (what goes in, an arrow, what comes out: a picture to a
-  video for image to video), with its build and its size.
+  video for image to video), with its build and its size. Filters above the cards show only the installed ones or
+  those still to download, those that do a task, or those that make video, make sound or take LoRAs.
 - **Nothing is downloaded until you press Download** on a model (or say yes when a Claude session asks, see
   [Claude sessions](#claude-sessions)). It goes into the models folder with a progress bar
   and can be cancelled; a download that was cut off continues where it stopped. Files that two models share are
@@ -92,7 +93,8 @@ miner says so and waits, as it does when there is no such drive.
   which ComfyUI has installed. The chat shows only the stitched video under such a request: the part it added is in
   it, stays on the rig for the next stitching, and is listed in Outputs. **play what this one added**, above it, opens
   it large from where that part starts, and **Skip to the last part** in the large player jumps there; a click on the
-  video plays it from the start. The last frame is taken as the browser plays the video, so a little softer than the
+  video plays it from the start. **Delete** under it deletes the stitched video together with the part this request
+  added (the videos before it stay). The last frame is taken as the browser plays the video, so a little softer than the
   model made it.
 - **Use again on a continued request** continues the same video again: from the same moment (its end, or the second it
   was continued from), with the frame it started from then, and stitched with it when done if it was. Clear the
