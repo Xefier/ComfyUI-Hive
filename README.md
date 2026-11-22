@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.19.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.20.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -49,14 +49,17 @@ miner says so and waits, as it does when there is no such drive.
 
 `http://<rig>:8189/` (the miner log and the Hive dashboard say the link). Open it from any PC or phone on the LAN.
 
-- **Models for this GPU** lists only the models that fit this rig's GPU, each in the build that fits it: a 32 GB card gets
+- **Models**, in the menu, is a page of the models that fit this rig's GPU, each in the build that fits it: a 32 GB card gets
   higher-precision builds than a 24 GB one, and a model no build of which fits isn't shown (the page says how many are
-  hidden). Each card says what it can do, its build and its size.
+  hidden). Each card shows with icons whether it makes video and sound (green when it does, red and crossed out when
+  it doesn't), whether it takes LoRAs, and each thing it does (what goes in, an arrow, what comes out: a picture to a
+  video for image to video), with its build and its size.
 - **Nothing is downloaded until you press Download** on a model (or say yes when a Claude session asks, see
   [Claude sessions](#claude-sessions)). It goes into the models folder with a progress bar
   and can be cancelled; a download that was cut off continues where it stopped. Files that two models share are
   downloaded once. **Delete** frees the space again, keeping files another downloaded model still uses.
-- **The chat:** pick a downloaded model and what to make (text to image, edit image, text to video, image to video), write the
+- **The chat:** pick a downloaded model with the picker beside the tasks (**All models…** at the end of its list opens
+  the Models page; a model that isn't downloaded yet is said above the prompt, with Download) and what to make (text to image, edit image, text to video, image to video), write the
   prompt, and press Generate (or Ctrl+Enter). Size, length and seed can be changed; empty means the model's default
   and a random seed. Requests queue and run one at a time; each shows its progress, then the image or
   video with **Download** and **Open** links, or what went wrong. The history stays on the rig.
@@ -153,8 +156,7 @@ miner says so and waits, as it does when there is no such drive.
 - **One scroll bar:** on a desktop screen the page itself doesn't scroll, only the chat's messages do (and the side
   panel when its lists are longer than the window). A phone scrolls as one page.
 - **On a phone:** the page opens on the list of chats; a chat opens as a screen of its own, with an arrow (or the
-  phone's Back) to return to the list, and the models are a screen reached from the gear. A chat's Rename, Archive and
-  Delete are behind the three dots on its card.
+  phone's Back) to return to the list, and Models is a page reached from the menu.
 - **The top row:** Comfy's mark and the worker's name, which has the row to itself (the page's title is no longer
   written there), with an arrow that opens the rig's state: VRAM, GPU load, RAM
   and disk as bars, the GPU, ComfyUI and the version. Folded to begin with, and a rig that doesn't answer, has no GPU
@@ -172,8 +174,10 @@ miner says so and waits, as it does when there is no such drive.
   Docker container (unless `allow_docker=1`). If there is one, the request is refused with what was found and nothing
   starts. This holds for the Claude Code tools too. The page shows a warning above the chat and turns Generate off
   within about ten seconds of one being found.
-- **Chats:** the requests are kept in chats, listed above the models. **New chat** starts one; it is named after its
-  first prompt until you **Rename** it. Click a chat to open it; which chat is open is each browser's own, so a PC and
+- **Chats:** the requests are kept in chats, listed in the side under **Chats**, which folds its list away with the
+  arrow beside it (and so does **Timelines** below it, the timeline projects). **New chat** starts one; it is named after its
+  first prompt until you **Rename** it (the pencil beside its name). A card's Rename, Archive (an eye crossed out) and
+  Delete (a trash can) are icons on its own row: on the card pointed at, the open one, and always on a phone. Click a chat to open it; which chat is open is each browser's own, so a PC and
   a phone can be in different chats of the same rig. **Archive** takes a chat off the list without removing anything
   (**Show archived** brings the archived ones back to open or unarchive; a new request in one unarchives it).
   **Delete** removes the chat with its requests and the images and videos they made, unless a request is waiting or
@@ -392,7 +396,7 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
 
 - **A project** is a saved list of clips with their trims and positions, of one size and frame rate. Nothing changes
   an output: the export is a new one, in the project's own chat, that can be played, continued and given sound like any
-  other. A project's chat is listed with the chats (marked *timeline*) and opens its timeline.
+  other. A project's chat is listed under **Timelines**, below the chats, and opens its timeline.
 - **Edit in timeline**, under every video of the chat and of Outputs, opens that video's own project (made the first
   time). A stitched video comes as the videos it was made of, each a clip placed as it is in the stitched one: to
   trim them, fade them into each other or put others between, and export the row again. The stitched video stays.
@@ -400,7 +404,10 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
   sound track; a sound that belongs to a clip moves with it. Each sound has its volume, fade in and fade out. Sound
   files of your own (WAV, MP3, FLAC, M4A, OGG) are dropped on the timeline or on Media, and are kept with the project.
 - **On the timeline:** drag a clip to move it and its ends to trim it, drag the ruler to scrub, Ctrl and the wheel (or
-  the slider) to zoom. A clip shows its first and last frame, and frames between where there is room. Two clips that
+  the slider) to zoom. A clip shows its first and last frame, and frames between where there is room. A track's lower
+  edge is dragged to make it higher (the bar's **Height** sets the video track's, whose pictures grow with it).
+  **Snap to start** moves the picked clip back to where the one before it ends, or with none picked, everything back
+  until the first clip starts at the start. Two clips that
   meet can be faded into each other (Crossfade into next): they lie over each other for that long.
 - **Speed and pitch:** the Inspector gives every clip a **Speed**, from 0.25 to 4 times: it shows the same part of its
   file in less or more time, so it gets shorter or longer on the timeline. On the video track the clips after it move
