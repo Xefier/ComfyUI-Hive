@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
-# Puts the rig back as it was: no ComfyUI, page or download running, no firewall rules, watchdog running if it was
-# before. Safe to run any number of times. h-run.sh runs it when stopped, h-guard.sh if h-run.sh is killed outright.
+# Puts the rig back as it was: no ComfyUI, page or download running, no firewall rules. The Hive watchdog stays
+# stopped and disabled. Safe to run any number of times. h-run.sh runs it when stopped, h-guard.sh if h-run.sh is
+# killed outright.
 # Hive itself won't: for a custom miner it looks for h-stop.sh in /hive/miners/custom, not in this folder.
 
 . "$(dirname "${BASH_SOURCE[0]}")/h-common.sh"
@@ -28,9 +29,7 @@ pkill -KILL -f "^$CH_UV " 2>/dev/null
 ch_remove_firewall
 rm -f "$CH_RUN_DIR/address" "$CH_RUN_DIR/page.json"
 
-if [[ -f $CH_RUN_DIR/watchdog-stopped ]]; then
-    systemctl start "$CH_WATCHDOG" && echo "Hive watchdog started"
-    rm -f "$CH_RUN_DIR/watchdog-stopped"
-fi
+# The watchdog stays stopped and disabled (h-run.sh). The marker older versions left to start it again goes
+rm -f "$CH_RUN_DIR/watchdog-stopped"
 
 ch_set_state stopped

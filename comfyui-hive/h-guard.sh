@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 
 # Runs beside h-run.sh in its own session, so it survives h-run.sh being killed outright. Without it, a hard kill would
-# leave ComfyUI holding the GPU under the next flight sheet (a rental, say) and the watchdog off until the next reboot.
+# leave ComfyUI holding the GPU under the next flight sheet (a rental, say). It also keeps the Hive
+# watchdog stopped and disabled, in case something in Hive starts or enables it again.
 
 . "$(dirname "${BASH_SOURCE[0]}")/h-common.sh"
 
@@ -9,10 +10,8 @@ run_pid=$1
 ch_dir="$(dirname "${BASH_SOURCE[0]}")"
 
 while kill -0 "$run_pid" 2>/dev/null; do
-    # Something in Hive may start it again while this flight sheet is active
-    if [[ -f $CH_RUN_DIR/watchdog-stopped ]] && systemctl is-active --quiet "$CH_WATCHDOG"; then
-        systemctl stop "$CH_WATCHDOG"
-    fi
+    systemctl is-active --quiet "$CH_WATCHDOG" && systemctl stop "$CH_WATCHDOG"
+    [[ $(systemctl is-enabled "$CH_WATCHDOG" 2>/dev/null) == enabled ]] && systemctl disable "$CH_WATCHDOG"
     sleep 15
 done
 

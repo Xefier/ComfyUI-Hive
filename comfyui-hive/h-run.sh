@@ -177,12 +177,15 @@ open_firewall() {
 }
 
 # The watchdog's low hashrate, minimum power and load checks all mean something else here: an idle GPU is not a failed
-# miner. h-stop.sh starts it again, and only if it was running.
+# miner. Stopped and disabled for good: nothing here starts or enables it again, not even switching away.
 stop_watchdog() {
     if systemctl is-active --quiet "$CH_WATCHDOG"; then
-        touch "$CH_RUN_DIR/watchdog-stopped"
         systemctl stop "$CH_WATCHDOG"
         log "Hive watchdog stopped"
+    fi
+    if [[ $(systemctl is-enabled "$CH_WATCHDOG" 2>/dev/null) == enabled ]]; then
+        systemctl disable "$CH_WATCHDOG"
+        log "Hive watchdog disabled"
     fi
 }
 

@@ -441,12 +441,13 @@ Not tried yet: the graphics card's encoder, which the PyAV this was written with
 
 **Switching to this flight sheet:** it waits while any GPU process or Docker container is running, so it can't take a
 GPU from a rental (a backstop only: take the node off the market first), and while no DOCKER drive is mounted. Then it
-sets the firewall rules for both ports, stops `hive-watchdog`, installs Python and starts the page, installs ComfyUI and
+sets the firewall rules for both ports, stops and disables `hive-watchdog`, installs Python and starts the page, installs ComfyUI and
 PyTorch the first time (or after a version change), and starts ComfyUI on the private LAN address.
 
 **Switching away (or a stop or reboot):** ComfyUI and the page end, a download in progress stops (it continues next
-time), the firewall rules go, and the watchdog starts again if it was running. `h-guard.sh` does the same if `h-run.sh`
-is killed outright. A request that was running is marked failed.
+time), and the firewall rules go. `h-guard.sh` does the same if `h-run.sh` is killed outright. A request that was
+running is marked failed. The watchdog stays stopped and disabled, on any flight sheet, until you turn it back on
+yourself (`sudo systemctl enable --now hive-watchdog`).
 
 **Dashboard:** while a request runs, the GPU's hashrate is the sampler's speed in steps per second (`it/s`, so a slow
 video model shows a fraction of 1 H/s), and 0 otherwise. The algo field says what the rig is doing (`comfyui ready`,
@@ -503,7 +504,7 @@ curl -s http://$(cat /run/comfyui-hive/address):8188/system_stats | jq
   (and where `tools/` is)
 - `h-stop.sh`: puts the rig back; safe to run repeatedly
 - `h-update.sh`: the miner updating itself to the newest release
-- `h-guard.sh`: runs `h-stop.sh` if `h-run.sh` is killed, and keeps the watchdog off meanwhile
+- `h-guard.sh`: runs `h-stop.sh` if `h-run.sh` is killed, and keeps the watchdog stopped and disabled
 - `h-stats.sh`: dashboard stats
 - `h-config.sh`: checks the flight sheet settings and writes `comfyui-hive.conf`
 - `h-common.sh`, `h-log.sh`: settings, paths and helpers they share
