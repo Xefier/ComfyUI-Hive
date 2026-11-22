@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.16.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.17.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -400,6 +400,13 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
 - **On the timeline:** drag a clip to move it and its ends to trim it, drag the ruler to scrub, Ctrl and the wheel (or
   the slider) to zoom. A clip shows its first and last frame, and frames between where there is room. Two clips that
   meet can be faded into each other (Crossfade into next): they lie over each other for that long.
+- **Speed and pitch:** the Inspector gives every clip a **Speed**, from 0.25 to 4 times: it shows the same part of its
+  file in less or more time, so it gets shorter or longer on the timeline. On the video track the clips after it move
+  by the difference, and a clip's own sound keeps its speed; a sound by itself takes no more room than there is before
+  the next one on its track. A sound keeps its pitch at any speed, and has a **Pitch** of its own, up to an octave
+  (12 semitones) up or down, that leaves its length alone, beside its **Volume** and fades. Both are made on the rig
+  (FFmpeg's `atempo`, and for the pitch the samples played at another rate first), the same for the preview as for
+  the export, so the two sound alike; a sound at a new speed or pitch is heard a moment after it is set.
 - **Filling a gap:** dragging across an empty stretch of the video track makes a gap, and the Composer panel (the
   chat's own composer, moved in) makes a video for it: from the last frame of the clip before, and, with a model that
   takes an end frame (Wan 2.2 14B, LTX-2.5 and MiniMax H3, *First and last frame*), to the first frame of the clip after. Only the models that
