@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.18.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.19.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -87,7 +87,9 @@ miner says so and waits, as it does when there is no such drive.
   row when it is done: every video continued up to this one, one after another, the frame they share left out once,
   with their sound. It is made from the videos themselves each time, never from an earlier stitched one, with PyAV,
   which ComfyUI has installed. The chat shows only the stitched video under such a request: the part it added is in
-  it, stays on the rig for the next stitching, and is listed in Outputs. The last frame is taken as the browser plays the video, so a little softer than the
+  it, stays on the rig for the next stitching, and is listed in Outputs. **play what this one added**, above it, opens
+  it large from where that part starts, and **Skip to the last part** in the large player jumps there; a click on the
+  video plays it from the start. The last frame is taken as the browser plays the video, so a little softer than the
   model made it.
 - **Use again on a continued request** continues the same video again: from the same moment (its end, or the second it
   was continued from), with the frame it started from then, and stitched with it when done if it was. Clear the
