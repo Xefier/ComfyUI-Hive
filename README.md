@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.36.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.37.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -321,7 +321,7 @@ miner says so and waits, as it does when there is no such drive.
     become further trigger prompts of the LoRA, "Example 1", "Example 2" and so on, after its own, which is then
     called "Trigger words"; **Get its example prompts** under **LoRAs** does the same for one made earlier. Each example keeps the picture it
     made, shown small beside it under **LoRAs** (a click shows it large) and in the chat's list; the pictures stay on
-    the site and are loaded from there. The search needs no
+    the site and are loaded from there. A LoRA whose file there is a zip (the Diffusers format) can be downloaded too: the one `.safetensors` inside is taken out under the zip's name, and a zip of several, or of only a `.bin`, is refused with what it holds. The search needs no
     account; a download needs a Civitai API key (made on the site under Account settings, API keys), which an admin
     gives in that window and which is kept in the data folder as `civitai_key` (or `CIVITAI_TOKEN` in the
     environment). Versions in early access, and files that aren't `.safetensors`, can't be downloaded. The rig or
@@ -478,7 +478,7 @@ a 24 GB card), not yet measured on these rigs. If a model runs out of memory on 
 ## Environments
 
 **Environment**, over the prompt, opens the prompt builder at its first step (its steps are along the top:
-Environment, Character, Outfit, Pose and place, and the prompt at the right is what all of them make together). The
+Environment, Character, Outfit, Pose and place, and the prompt at the right is what all of them make together). For a video that starts from an attached image, the builder greys out what the image already shows (the place, who they are, what they wear, where they are, how they are framed) and writes only what moves; before an image is attached everything is offered. The
 step is a picker of places: 113 of them, as tiles with a picture each, under Home, Office and work, Transport, City
 and street, Food and shops, Public places, Leisure and Nature. **Indoors** and **Outdoors**
 narrow the tiles, and the search finds a place by its name. A place picked has its settings beside it, and under them
