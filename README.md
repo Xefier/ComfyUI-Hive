@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.33.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.34.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -238,6 +238,14 @@ miner says so and waits, as it does when there is no such drive.
   makes the shapes and the motion, and gets the low-noise file too. On the video models only the video model is changed, not the
   text encoder (ComfyUI's `LoraLoaderModelOnly`); on SDXL, Pony and SD 1.5 a LoRA changes the text encoder too, at
   the same strength (`LoraLoader`), as LoRAs for those expect. A request in the history says which LoRAs it used.
+  - **Several trigger prompts:** under **LoRAs**, **+ Trigger prompt** gives a LoRA one more (another pose, outfit or
+    way to call it up), each with a name. In the chat, a LoRA with several has **Trigger prompts** on its row: a list
+    of them by name, with a search, where a click adds one to the prompt and **Use** makes it the whole prompt. The
+    first is the LoRA's trigger prompt wherever only one is meant (the scene builder's characters, a training).
+  - **Marking and finding them:** under **LoRAs** each LoRA has the star and the thumbs an output has. A mark hides
+    nothing: the LoRAs are listed by it there and in the chat's picker, the favorites first, then the good ones, the
+    unmarked, and the bad ones last. The row over them lists only those with some words in their name or trigger
+    prompt, with files for one model, or with one mark.
   - **Which model a LoRA is for:** a LoRA works only on the family it was trained for, which its Civitai page gives
     as the base model: "SD 1.5" for SD 1.5, "SDXL 1.0" for SDXL, "Pony" for Pony Diffusion V6 XL, "Wan Video" for Wan
     (a Wan 2.1 14B LoRA works on Wan 2.2 14B too), "HunyuanVideo" for HunyuanVideo. One for another family
@@ -256,7 +264,13 @@ miner says so and waits, as it does when there is no such drive.
     version too. Its picture is one of the
     site's, chosen there. Its trigger prompt starts as the site's trigger words for the versions ticked; the prompts
     its example pictures were made with, what its text seems to give as a prompt, and its lines on strength and
-    settings are offered beside it to add or use, since everybody writes those their own way. The search needs no
+    settings are offered beside it to add or use, since everybody writes those their own way. Where the site has no trigger words for the versions ticked, the box
+    starts with another version's, or else with what the LoRA's text seems to give as one, and says so under it. A
+    LoRA made this way has a link to its page on the site under **LoRAs**, and while it has no trigger prompt,
+    **Get its trigger prompt** there looks for one on that page the same way. With **Keep its example prompts**
+    ticked in the search's window, as it is to begin with, the prompts the versions' example pictures were made with
+    become further trigger prompts of the LoRA, "Example 1", "Example 2" and so on, after its own, which is then
+    called "Trigger words"; **Get its example prompts** under **LoRAs** does the same for one made earlier. The search needs no
     account; a download needs a Civitai API key (made on the site under Account settings, API keys), which an admin
     gives in that window and which is kept in the data folder as `civitai_key` (or `CIVITAI_TOKEN` in the
     environment). Versions in early access, and files that aren't `.safetensors`, can't be downloaded. The rig or
