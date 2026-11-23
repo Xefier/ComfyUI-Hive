@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.28.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.29.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -248,9 +248,49 @@ miner says so and waits, as it does when there is no such drive.
 - The page also links ComfyUI's own editor (`http://<rig>:8188`), for building or changing workflows by hand, and shows
   the end of the miner log.
 
-The page and ComfyUI have no login: like Ollama-Hive's API, anything on the LAN that can reach them can use them,
-including starting a download, deleting a model, a chat or an output, and uploading or deleting a LoRA. They listen only on the private LAN address, and `allow=` limits
-which addresses can connect.
+### Accounts
+
+Without accounts the page and ComfyUI have no login: like Ollama-Hive's API, anything on the LAN that can reach them
+can use them, including starting a download, deleting a model, a chat or an output, and uploading or deleting a LoRA.
+They listen only on the private LAN address, and `allow=` limits which addresses can connect.
+
+With accounts, the page answers only who is logged in:
+
+- **Make yours** in the gear, under **Account**. The first account is the **admin**'s, and everything there is at that
+  moment becomes its own: nothing is moved or rewritten, what has no owner is simply the first admin's. A browser logs
+  in once with the name and the password and stays logged in for a year; **Log out** is in the same box.
+- **An admin** may do everything, and adds the other accounts there, each **an admin**'s or **a user**'s, gives one
+  another password (which logs it out everywhere), makes a user an admin or back, and deletes one. What a deleted
+  account made stays, and is the first admin's from then on.
+- **A user** has only their own things: chats and their requests, outputs, LoRAs, folders of chats and timelines.
+  Nobody else's are listed or can be opened, changed, deleted or used in a request, and two accounts can each have a
+  LoRA of the same name. A user can't download or delete models, or touch the token, updates, clean-up, the log or the
+  accounts.
+- **Looking at an account:** an admin's own lists show only their own things too. **Look**, beside an account, shows
+  the page as that account has it, with a bar at the top that says so and **Back to my own**. What is made meanwhile
+  is that account's.
+- **Your own password** is changed in the same box, with the one of now. Every other browser of the account is logged
+  out by that.
+- **What is kept:** for each account a salted hash of its password in `accounts.json` of the page's data folder, never
+  the password; and a random key in `hive_key.json`, made with the first account, that sessions are signed with.
+- **Forgotten:** put a new password into a file `password.txt` in the page's data folder (`<data_dir>/page`) and start
+  the miner again. It becomes the first admin's and the file is deleted. Where there is no account yet, one named
+  `admin` is made with it.
+- **Taking the lock off:** in the same box, for the one account that is left (delete the others first), with its
+  password. There are no accounts then, and everything on the network can use the page again.
+- **ComfyUI's own port** (8188) can ask nobody to log in. On a rig whose page does (it has accounts, or a
+  `password.txt` to make one of), ComfyUI listens only on the rig itself from the miner's next start, and the page no
+  longer links its editor. Until that start the page says that the port is still open.
+- **The Claude Code tools** log in too, as an account of their own if you make one: `comfyui-hive login` (see Claude
+  sessions).
+- **Wrong passwords:** after five from one address, that address waits a minute. The log names the address.
+- **What it doesn't do:** the page is plain http, so the accounts keep out what can reach the port, not what can read
+  the network's traffic. For the page from outside the LAN, use a VPN into the LAN (WireGuard on the router, for one),
+  never a forwarded port.
+- On a hub the accounts are the whole hive's and its workers take them from the hub; that is the hub's own side.
+
+With or without accounts, a request that a page of another site has a browser send is refused: a website open on a
+PC or phone of the LAN can't work the page behind your back.
 
 ## Room on the data drive
 
@@ -295,6 +335,7 @@ Claude Code and Python 3.8 or newer; nothing to install), then either ask Claude
 | `comfyui-hive add <address>[:port] ...` | Adds rigs; the page's port 8189 unless given. Registers the MCP server on first use |
 | `comfyui-hive remove <address>[:port] ...` | Removes rigs; removing the last one unregisters the server |
 | `comfyui-hive list` | Lists the rigs, whether each answers, and its downloaded models (also what a double-click does) |
+| `comfyui-hive login` | When the page has accounts: asks for an account's name and password, and keeps the session a rig gives for them (never the password itself), good for a year. The tools then work as that account: what they make is its own, and they see only its things. Run it again after that account's password changes |
 | `comfyui-hive unregister` | Removes every rig and the server |
 
 It registers for the current Windows user, in every project. New sessions then get five tools:
