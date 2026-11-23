@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.34.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.35.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -238,6 +238,13 @@ miner says so and waits, as it does when there is no such drive.
   makes the shapes and the motion, and gets the low-noise file too. On the video models only the video model is changed, not the
   text encoder (ComfyUI's `LoraLoaderModelOnly`); on SDXL, Pony and SD 1.5 a LoRA changes the text encoder too, at
   the same strength (`LoraLoader`), as LoRAs for those expect. A request in the history says which LoRAs it used.
+  - **The two halves of a pair:** which half a file is, is told by its name: `high` or `low` as a word
+    (`..._high_noise`, `...-LOW-v1`), run together with noise (`highnoise`, `HighNoise`), or as a word of a name in
+    capitals (`BounceHighWan2_2`); and two files that differ in nothing but `H` and `L` (or `HN` and `LN`) as a word
+    are a pair too. Files added, and versions downloaded from Civitai, are paired by it. **Pair split halves** under
+    **LoRAs** looks for what was left as two LoRAs, one of each half, for the same model and task: by their files'
+    names, by the page they both came from, or by their own names. It says what it found and puts each two together
+    when you agree.
   - **Several trigger prompts:** under **LoRAs**, **+ Trigger prompt** gives a LoRA one more (another pose, outfit or
     way to call it up), each with a name. In the chat, a LoRA with several has **Trigger prompts** on its row: a list
     of them by name, with a search, where a click adds one to the prompt and **Use** makes it the whole prompt. The
