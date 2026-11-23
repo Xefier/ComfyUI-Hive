@@ -19,7 +19,9 @@ parts=(comfyui-hive/page.py comfyui-hive/trainer.py comfyui-hive/rigtools.py com
        comfyui-hive/dock.js comfyui-hive/dock.css
        # The prompt builder of the composer: its places and characters, and what draws and serves them
        comfyui-hive/scene-builder.js comfyui-hive/environments.py comfyui-hive/environments.js comfyui-hive/environments.css comfyui-hive/environments.json
-       comfyui-hive/characters.py comfyui-hive/characters.js comfyui-hive/characters.json)
+       comfyui-hive/characters.py comfyui-hive/characters.js comfyui-hive/characters.json
+       # The LoRAs view's search of Civitai and its downloads
+       comfyui-hive/lorasearch.py comfyui-hive/lorasearch.js comfyui-hive/lorasearch.css)
 
 git -C "$program" rev-parse --git-dir >/dev/null 2>&1 \
     || { echo "No clone of xefier-comfyui at $program: set XEFIER_COMFYUI to it" >&2; exit 1; }
