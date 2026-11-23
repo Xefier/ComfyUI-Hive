@@ -12,6 +12,17 @@ cd "$(dirname "${BASH_SOURCE[0]}")" || exit 1
 mkdir -p "$CUSTOM_LOG_BASEDIR" "$CH_RUN_DIR"
 touch "$LOG_FILE"
 
+# ComfyUI's own port (its editor and API) can ask nobody to log in. On a rig whose page does, it listens only on the
+# rig itself, where the page reaches it, so the accounts aren't got round through it; its editor is then not
+# reachable from the network. Looked at once for the whole run: the page is told where ComfyUI is when it starts, and
+# the two start at different times. A rig that is given its hive's key while this runs closes the port at the miner's
+# next start.
+CH_COMFY_LOCAL=0
+ch_locked && CH_COMFY_LOCAL=1
+ch_comfy_address() {
+    if (( CH_COMFY_LOCAL )); then echo 127.0.0.1; else ch_lan_address; fi
+}
+
 # A run started by the update of v1.0 to v1.4 ignores the signals Hive stops a miner with (it was started with them
 # ignored, and a shell can't take back what it was given so): Hive then can't stop it, and starts another beside it.
 # Started anew here with them as they should be. Python does it: bash and env of an older system can't.
@@ -353,7 +364,7 @@ start_page() {
     name=$(. /hive-config/rig.conf 2>/dev/null; echo "$WORKER_NAME")
     mkdir -p "$CH_PAGE_DATA" "$CH_OUTPUTS" "$CH_INPUTS" "$CH_MODELS"
     HF_TOKEN="$CH_HF_TOKEN" PYTHONUNBUFFERED=1 setsid "$CH_VENV/bin/python" "$program/page.py" \
-        --bind "$address" --port "$CH_PAGE_PORT" --comfy "http://$address:$CH_PORT" --gpu "$CH_GPUS" --allow-docker "$CH_ALLOW_DOCKER" \
+        --bind "$address" --port "$CH_PAGE_PORT" --comfy "http://$(ch_comfy_address):$CH_PORT" --gpu "$CH_GPUS" --allow-docker "$CH_ALLOW_DOCKER" \
         --catalog "$program/catalog.json" --workflows "$program/workflows" --models "$CH_MODELS" \
         --outputs "$CH_OUTPUTS" --inputs "$CH_INPUTS" --data "$CH_PAGE_DATA" \
         --state-file "$CH_RUN_DIR/state" --page-file "$CH_RUN_DIR/page.json" --log "$LOG_FILE" \
@@ -365,11 +376,15 @@ start_page() {
 start_comfyui() {
     # Looked up on every start, in case the rig's DHCP lease changed its address
     local address
-    address=$(ch_lan_address)
-    [[ -n $address ]] || { log "No private LAN address found"; return 1; }
+    [[ -n $(ch_lan_address) ]] || { log "No private LAN address found"; return 1; }
+    address=$(ch_comfy_address)
     echo "$address" > "$CH_RUN_DIR/address"
     CH_API="http://$address:$CH_PORT"
-    log "ComfyUI listening on $address:$CH_PORT"
+    if (( CH_COMFY_LOCAL )); then
+        log "ComfyUI listening on $address:$CH_PORT: only on the rig itself, since the rig's page asks for a login and that port can't"
+    else
+        log "ComfyUI listening on $address:$CH_PORT"
+    fi
 
     export HOME="$CH_DATA_DIR/home"
     export CUDA_VISIBLE_DEVICES="$CH_GPUS"

@@ -51,7 +51,8 @@ CH_WORKER="$CH_DATA_DIR/worker"
 # The page's own records: jobs, downloads, the last model picked
 CH_PAGE_DATA="$CH_DATA_DIR/page"
 
-# The address h-run.sh is serving on. ComfyUI doesn't listen on 127.0.0.1 here, so this is how to reach it on the rig too.
+# The address h-run.sh has ComfyUI listen on, which is how to reach it on the rig too: the LAN address, not 127.0.0.1,
+# but on a rig whose page asks for a login (see h-run.sh).
 CH_ADDRESS=$(cat "$CH_RUN_DIR/address" 2>/dev/null || echo 127.0.0.1)
 CH_API="http://$CH_ADDRESS:$CH_PORT"
 
@@ -107,6 +108,12 @@ ch_stop_group() {
         sleep 1
     done
     kill -KILL -- "-$pid" 2>/dev/null
+}
+
+# Whether the rig's page asks who is asking: it has the key of a hive with accounts (its hub's, or its own), or a
+# password was put into the page's folder by hand (password.txt), which the page makes an account of when it starts.
+ch_locked() {
+    [[ -s $CH_PAGE_DATA/password.txt ]] || grep -q '"key": *"[0-9a-f]' "$CH_PAGE_DATA/hive_key.json" 2>/dev/null
 }
 
 ch_set_state() {
