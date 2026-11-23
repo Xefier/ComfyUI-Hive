@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.30.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.31.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -247,7 +247,9 @@ miner says so and waits, as it does when there is no such drive.
     (picked at its top), by words, by model (only LoRAs for a model of the catalog are listed: each model's `civitai`
     in `tools/catalog-src.json` names the site's base models it stands for), by order and period, with the site's own
     pictures as tiles; **Found LoRAs** in the gear's panel sets how wide they are, and **Mature** whether the pictures
-    the site marks so are hidden (LoRAs marked so aren't listed then), blurred or shown. A LoRA picked shows its
+    the site marks so are hidden (LoRAs marked so aren't listed then), blurred or shown. A picture's mark in its left
+    corner shows it large, with the LoRA's other pictures to go through; a video's mark in the right corner plays it
+    there, one at a time, with its sound unless **Sound** at the window's top is off. A LoRA picked shows its
     versions, one for each model it was trained for: every one ticked is downloaded and the LoRA made here has files
     for each of those models, a high-noise and a low-noise version or file as one pair. Its picture is one of the
     site's, chosen there. Its trigger prompt starts as the site's trigger words for the versions ticked; the prompts
