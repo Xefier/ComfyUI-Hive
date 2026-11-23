@@ -16,7 +16,9 @@ target=$(cd "${1:-.}" && pwd)
 parts=(comfyui-hive/page.py comfyui-hive/trainer.py comfyui-hive/rigtools.py comfyui-hive/cleanup.py comfyui-hive/page.html comfyui-hive/catalog.json comfyui-hive/workflows
        # The timeline editor, in files of its own, and the code Continue's stitching shares with its export
        comfyui-hive/timeline.py comfyui-hive/timeline.js comfyui-hive/timeline-track.js comfyui-hive/timeline-play.js comfyui-hive/timeline.css
-       comfyui-hive/dock.js comfyui-hive/dock.css)
+       comfyui-hive/dock.js comfyui-hive/dock.css
+       # The Environment picker of the composer: its places, and what draws and serves them
+       comfyui-hive/environments.py comfyui-hive/environments.js comfyui-hive/environments.css comfyui-hive/environments.json)
 
 git -C "$program" rev-parse --git-dir >/dev/null 2>&1 \
     || { echo "No clone of xefier-comfyui at $program: set XEFIER_COMFYUI to it" >&2; exit 1; }
