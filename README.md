@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.38.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.39.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -176,6 +176,22 @@ miner says so and waits, as it does when there is no such drive.
   takes from the video itself, so the row goes on with the page closed. With the stitched video ticked too, each one
   from the second on also gives the stitched video of the row so far. Only the one being made is queued, the next
   when it is done: one that fails or is stopped ends the row.
+- **A sequence of prompts:** **+ Next prompt** over the prompt (for a video, with a model that can start one from an
+  image) makes the request a sequence: a row as above, but each video with a prompt, LoRAs and length of its own. A
+  tab for each prompt shows it in the composer; tabs are dragged (or moved with Alt+← / Alt+→) to change the order,
+  and × removes one. The first is made as the composer is set, with its task, start frame and the scene's text; each
+  later one is made with the model's image to video task from the last frame of the one before, so it has no frames
+  or Environment and Character of its own, and its LoRAs are checked against that task. The model, the size and
+  steps, the place and the characters, and a character's LoRA (shown on prompt 1, every prompt's) are the
+  sequence's. A sequence is made once, so Repeat is hidden while there is one (and + Next prompt while Repeat is more
+  than 1); the stitched video works as for a row. It stays in the composer after Generate, kept with the chat.
+- **Templates:** **Save template** beside Generate keeps what the composer has under a name, with a tick for each part:
+  the model and task, the numbers, the seed (unticked at first), the prompt, the LoRAs (not a character's), the
+  place, and the characters with their LoRAs (unticked at first in a sequence). Of a sequence it keeps every prompt,
+  with its LoRAs and length, but never a start or end frame. **Use template** lists them: one fills in only what it
+  keeps and leaves the rest as it is, a sequence's builds the sequence again, and one of a single prompt fills the
+  prompt shown of a sequence. A model or LoRA that isn't here is said. Each account has its own, on the page's own
+  rig or hub (`templates.py`).
 - **A rental is never interrupted by a request:** before a request is taken, and again before one that waited in the
   queue starts, the rig checks what it checks before starting ComfyUI: a GPU process that isn't ComfyUI, or a running
   Docker container (unless `allow_docker=1`). If there is one, the request is refused with what was found and nothing
