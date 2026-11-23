@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.35.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.36.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -225,8 +225,8 @@ miner says so and waits, as it does when there is no such drive.
   "replace the car with a bicycle", "remove the text"); the result keeps the image's size. A prompt-refining model
   first turns the instruction into a fuller one, as in ComfyUI's own template. MOSS-Image edits the same way, with
   the instruction used as written and the image scaled to 1 megapixel.
-- **LoRAs:** Wan 2.2 (14B and 5B), HunyuanVideo 1.5, LTX-2.5, MiniMax H3 (its videos), Z-Image Turbo, SDXL 1.0, Pony Diffusion V6 XL and SD 1.5 take up to 3 of your own LoRAs per request, in **LoRAs**
-  under the task buttons: each slot is a file, picked from a pop-up over its row (the ones for the model picked, those with a picture as tiles and the rest as a list, with a search of their names and trigger prompts), and a strength (1 by default, negative allowed), set with the slider (-5 to 5, for slider LoRAs
+- **LoRAs:** Wan 2.2 (14B and 5B), HunyuanVideo 1.5, LTX-2.5, MiniMax H3 (its videos), Z-Image Turbo, SDXL 1.0, Pony Diffusion V6 XL and SD 1.5 take up to 8 of your own LoRAs per request, in **LoRAs**
+  under the task buttons: each slot is a file, picked from a pop-up over its row (the ones for the model picked, those with a picture as tiles and the rest as a list, with a search of their names and trigger prompts), and a strength (1 by default, negative allowed), set with the slider (-10 to 10, for slider LoRAs
   that are used at either side of 0; double-click it to go back to 1) or typed (-10 to 10); a slot left on "none"
   isn't used. They are added on top of what the model's workflow already applies, the Wan 2.2 14B speed-up LoRAs
   included. Wan 2.2 14B is two models, a high-noise and a low-noise one, and every LoRA goes to both: a LoRA that comes
@@ -238,6 +238,23 @@ miner says so and waits, as it does when there is no such drive.
   makes the shapes and the motion, and gets the low-noise file too. On the video models only the video model is changed, not the
   text encoder (ComfyUI's `LoraLoaderModelOnly`); on SDXL, Pony and SD 1.5 a LoRA changes the text encoder too, at
   the same strength (`LoraLoader`), as LoRAs for those expect. A request in the history says which LoRAs it used.
+  - **Turning an image:** the start frame and the end frame each have **Turn** once an image is attached: a slider
+    and a number, by any angle either way, and **Level** to go back. It is the clip cutter's turn: what is kept is
+    the largest level part of the image's own shape that the turned image holds (the whole of one turned onto its
+    side), turned each time from the image as it was attached. The turned image is the one the chat keeps and the
+    request starts from.
+  - **The first frame from the prompt:** a video that starts from an image can have that image made first. With no
+    start frame attached, the start frame's box offers **Make the first frame** with a model that makes images: a
+    request of the chat for a picture of the prompt as it is written, at the video's size, with the LoRAs of the
+    scene's characters and of the rows that have files for that model. The picture is shown in the box when it is
+    there, to **Use as the first frame**, to **Retry**, or to **Discard**; Generate then makes the video from it. So a
+    character whose LoRA is for an image model can be in a video of a model the LoRA has no files for.
+  - **Motion and detail:** Wan 2.2 14B is two models, one for the first steps of a video, which settle the layout,
+    the shapes and the motion (its high-noise part), and one for the later steps, which draw the faces, the textures
+    and the likeness (its low-noise part). A LoRA's row has a strength for each there, **Motion** and **Detail**,
+    both the same until one is moved; at 0 the LoRA isn't put into that part at all. So a LoRA of a motion can be
+    kept out of the detail, and a LoRA of somebody out of the motion, where the two get in each other's way. Under
+    **LoRAs** the two files are the **Motion file** and the **Detail file**.
   - **The two halves of a pair:** which half a file is, is told by its name: `high` or `low` as a word
     (`..._high_noise`, `...-LOW-v1`), run together with noise (`highnoise`, `HighNoise`), or as a word of a name in
     capitals (`BounceHighWan2_2`); and two files that differ in nothing but `H` and `L` (or `HN` and `LN`) as a word
@@ -245,14 +262,39 @@ miner says so and waits, as it does when there is no such drive.
     **LoRAs** looks for what was left as two LoRAs, one of each half, for the same model and task: by their files'
     names, by the page they both came from, or by their own names. It says what it found and puts each two together
     when you agree.
+  - **Those for the task:** the chat's list of LoRAs has those for the task picked. One whose files for the model
+    are said to be for another of its tasks (image to video, while text to video is picked) is left out; **Other
+    tasks** over the list brings those in for that once. A LoRA for image to video is listed for a video from a first
+    and a last frame too.
+  - **Categories:** a LoRA is a character (somebody), a slider, clothing, or none of these: **Category** under
+    **LoRAs** says it, and in the search of Civitai's window before a download. Not said, it is told by itself: a
+    slider by "slider" in its name or its file's, clothing by "outfit", "clothing" or "clothes" there. The chat's list
+    of LoRAs has a switch for each category over it, to show only the sliders or all but them, kept in the browser;
+    the **LoRAs** view lists one category with its filter. In the scene builder the sliders stand over everything of
+    the Character step, each with a slider of its own (0: not used), and the clothing LoRAs lead the Outfit step, put
+    on and taken off with a click; a character's are among the request's LoRAs, pinned, at the strength set there,
+    and what it wears of them adds its trigger prompt to the character's part of the prompt. A preset keeps its
+    sliders, and its clothing LoRAs with what it wears. You can have categories of your own besides: **Categories…** over
+    the LoRAs makes one by a name and takes one away, and from then on it is among the others on every LoRA, in the
+    view's filter and over the chat's list. Each account has its own. A LoRA of a category that is taken away is of
+    none, and told by itself again.
+  - **The character first:** a LoRA of somebody is a character preset (**Character preset** under **LoRAs**, or in
+    the search of Civitai's window before it is downloaded). In a request made from words alone (text to video, text
+    to image), where one is for the model picked, the LoRAs' rows start with the **Character**'s, whose list has
+    those only, and the rows under it are **Modifier**s, whose list has the others. Elsewhere every row lists all. A
+    character of the scene builder that is made with a LoRA has that LoRA's row among the request's from the moment
+    it is in the scene, and the row is pinned: it can't be removed or given another LoRA until the character is taken
+    out of the scene or its LoRA off the character.
   - **Several trigger prompts:** under **LoRAs**, **+ Trigger prompt** gives a LoRA one more (another pose, outfit or
     way to call it up), each with a name. In the chat, a LoRA with several has **Trigger prompts** on its row: a list
-    of them by name, with a search, where a click adds one to the prompt and **Use** makes it the whole prompt. The
+    of them by name, with a search, where a click adds one to the prompt and **Use** makes it the whole prompt. No two of a LoRA's say the same (whatever
+    their capitals, spaces and commas): one written a second time is not kept. The
     first is the LoRA's trigger prompt wherever only one is meant (the scene builder's characters, a training).
   - **Marking and finding them:** under **LoRAs** each LoRA has the star and the thumbs an output has. A mark hides
     nothing: the LoRAs are listed by it there and in the chat's picker, the favorites first, then the good ones, the
     unmarked, and the bad ones last. The row over them lists only those with some words in their name or trigger
-    prompt, with files for one model, or with one mark.
+    prompt, with files for one model or for one task (text to video, image to video and so on), the
+    characters or the others, or with one mark.
   - **Which model a LoRA is for:** a LoRA works only on the family it was trained for, which its Civitai page gives
     as the base model: "SD 1.5" for SD 1.5, "SDXL 1.0" for SDXL, "Pony" for Pony Diffusion V6 XL, "Wan Video" for Wan
     (a Wan 2.1 14B LoRA works on Wan 2.2 14B too), "HunyuanVideo" for HunyuanVideo. One for another family
@@ -277,7 +319,9 @@ miner says so and waits, as it does when there is no such drive.
     **Get its trigger prompt** there looks for one on that page the same way. With **Keep its example prompts**
     ticked in the search's window, as it is to begin with, the prompts the versions' example pictures were made with
     become further trigger prompts of the LoRA, "Example 1", "Example 2" and so on, after its own, which is then
-    called "Trigger words"; **Get its example prompts** under **LoRAs** does the same for one made earlier. The search needs no
+    called "Trigger words"; **Get its example prompts** under **LoRAs** does the same for one made earlier. Each example keeps the picture it
+    made, shown small beside it under **LoRAs** (a click shows it large) and in the chat's list; the pictures stay on
+    the site and are loaded from there. The search needs no
     account; a download needs a Civitai API key (made on the site under Account settings, API keys), which an admin
     gives in that window and which is kept in the data folder as `civitai_key` (or `CIVITAI_TOKEN` in the
     environment). Versions in early access, and files that aren't `.safetensors`, can't be downloaded. The rig or
