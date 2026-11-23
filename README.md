@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.29.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.30.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -75,6 +75,11 @@ miner says so and waits, as it does when there is no such drive.
   to the model's own. Wan 2.2 5B, HunyuanVideo 1.5, SD 1.5, SDXL, Pony and Qwen's image edit have it. The others
   run at a guidance of 1 (Wan 2.2 14B with its 4-step LoRAs, Z-Image Turbo, Qwen's text to image), where a
   negative prompt changes nothing, or guide in a way of their own (LTX, MiniMax): they don't show the line.
+- **A prompt put together rather than written:** **Environment** and **Character**, over the prompt, open the
+  prompt builder: a place picked from pictures (a kitchen, a bus stop, a forest) with settings for the time of day,
+  the weather, the lights and more, then who is in it, set like a game's character or taken from a preset or a LoRA,
+  what they wear, and how and where in that place they are. It writes that part of the prompt. See
+  [Environments](#environments) and [Characters](#characters).
 - **A LoRA's trigger prompt:** beside a slot's strength, **Set trigger prompt** asks once for the words the slot's
   LoRA is called up with and keeps them on the rig with the file; from then on **Add trigger prompt** adds them to the
   end of the prompt (not twice), **Use trigger prompt** makes them the whole prompt in place of what is written
@@ -218,9 +223,10 @@ miner says so and waits, as it does when there is no such drive.
   when it isn't the video's shape. In a row (*Each continues the one before*) only the last video ends on it.
 - **Edit image** (Qwen-Image 2.1 Turbo): attach the image and say in the prompt what to change ("make it night",
   "replace the car with a bicycle", "remove the text"); the result keeps the image's size. A prompt-refining model
-  first turns the instruction into a fuller one, as in ComfyUI's own template.
+  first turns the instruction into a fuller one, as in ComfyUI's own template. MOSS-Image edits the same way, with
+  the instruction used as written and the image scaled to 1 megapixel.
 - **LoRAs:** Wan 2.2 (14B and 5B), HunyuanVideo 1.5, LTX-2.5, MiniMax H3 (its videos), Z-Image Turbo, SDXL 1.0, Pony Diffusion V6 XL and SD 1.5 take up to 3 of your own LoRAs per request, in **LoRAs**
-  under the task buttons: each slot is a file and a strength (1 by default, negative allowed), set with the slider (-5 to 5, for slider LoRAs
+  under the task buttons: each slot is a file, picked from a pop-up over its row (the ones for the model picked, those with a picture as tiles and the rest as a list, with a search of their names and trigger prompts), and a strength (1 by default, negative allowed), set with the slider (-5 to 5, for slider LoRAs
   that are used at either side of 0; double-click it to go back to 1) or typed (-10 to 10); a slot left on "none"
   isn't used. They are added on top of what the model's workflow already applies, the Wan 2.2 14B speed-up LoRAs
   included. Wan 2.2 14B is two models, a high-noise and a low-noise one, and every LoRA goes to both: a LoRA that comes
@@ -237,6 +243,20 @@ miner says so and waits, as it does when there is no such drive.
     (a Wan 2.1 14B LoRA works on Wan 2.2 14B too), "HunyuanVideo" for HunyuanVideo. One for another family
     fails no request: ComfyUI finds nothing it fits and it simply changes nothing. Pony and SDXL LoRAs load on each
     other's model but work poorly there.
+  - **Finding one on Civitai:** under **LoRAs**, **Find on Civitai** opens a search of civitai.com or civitai.red
+    (picked at its top), by words, by model (only LoRAs for a model of the catalog are listed: each model's `civitai`
+    in `tools/catalog-src.json` names the site's base models it stands for), by order and period, with the site's own
+    pictures as tiles; **Found LoRAs** in the gear's panel sets how wide they are, and **Mature** whether the pictures
+    the site marks so are hidden (LoRAs marked so aren't listed then), blurred or shown. A LoRA picked shows its
+    versions, one for each model it was trained for: every one ticked is downloaded and the LoRA made here has files
+    for each of those models, a high-noise and a low-noise version or file as one pair. Its picture is one of the
+    site's, chosen there. Its trigger prompt starts as the site's trigger words for the versions ticked; the prompts
+    its example pictures were made with, what its text seems to give as a prompt, and its lines on strength and
+    settings are offered beside it to add or use, since everybody writes those their own way. The search needs no
+    account; a download needs a Civitai API key (made on the site under Account settings, API keys), which an admin
+    gives in that window and which is kept in the data folder as `civitai_key` (or `CIVITAI_TOKEN` in the
+    environment). Versions in early access, and files that aren't `.safetensors`, can't be downloaded. The rig or
+    hub asks the site, not the browser, which only loads the pictures (`lorasearch.py`, `lorasearch.js`).
   - **Adding one:** drop a `.safetensors` file on the chat or choose it in the LoRAs box; it uploads into the rig's
     `models/loras` folder with a progress bar and can be cancelled. 8 GB at most each, `.safetensors` only, and
     the name keeps only letters, digits, spaces and `. _ - + ( )`. A file copied into that folder by hand (in a
@@ -372,6 +392,7 @@ pulling a client change, new sessions pick it up; after moving the clone, run `a
 | MiniMax H3 | text/image to video with sound, text to image | pruned w6a8 | pruned int8 | 39 / 44 GB | Commercial use of what it makes needs a MiniMax license (sold through Comfy). Its videos take your LoRAs |
 | Z-Image Turbo | text to image | bf16 | bf16 | 19 GB | Takes your LoRAs |
 | Qwen-Image 2.1 Turbo | text to image, up to 2K; edit image | int8 | bf16 | 34 / 40 GB | Editing has its own prompt-refining text encoder, included in the download |
+| MOSS-Image | text to image, 0.25 to 4 megapixels; edit image | bf16 | bf16 | 17 GB | The SFT model. It likes a long, detailed prompt: **Enhance prompt** (off unless you turn it on) has its text encoder rewrite a short one into that first, as ComfyUI's template does, which takes longer. Good at English and Chinese text in the image. The page also sets the steps and CFG. An int8 build (12 GB) for cards under 16 GB. Editing is its edit LoRA, included in the download. Takes your LoRAs |
 | SDXL 1.0 | text to image, 1024 px | fp16 | fp16 | 6.5 GB | Stability's base model. Takes your LoRAs (SDXL) |
 | Pony Diffusion V6 XL | text to image, 1024 px | fp16 | fp16 | 6.5 GB | SDXL-based, prompted with tags: start with `score_9, score_8_up, score_7_up`. Clip skip 2 and Euler a, as its author advises. Takes your LoRAs (Pony) |
 | SD 1.5 | text to image, 512 px | fp16 | fp16 | 2 GB | Takes your LoRAs (SD 1.5) |
@@ -384,6 +405,125 @@ on, sizes, lengths); only the prompt, image, size, length and seed are set by th
 an estimate** from the files' sizes and the templates' own notes (the Wan 2.2 template measured its fp8 build at 84% of
 a 24 GB card), not yet measured on these rigs. If a model runs out of memory on a card, raise its `min_vram_gb` in
 `tools/catalog-src.json` and build again.
+
+## Environments
+
+**Environment**, over the prompt, opens the prompt builder at its first step (its steps are along the top:
+Environment, Character, Outfit, Pose and place, and the prompt at the right is what all of them make together). The
+step is a picker of places: 113 of them, as tiles with a picture each, under Home, Office and work, Transport, City
+and street, Food and shops, Public places, Leisure and Nature. **Indoors** and **Outdoors**
+narrow the tiles, and the search finds a place by its name. A place picked has its settings beside it, and under them
+the prompt they make, written anew with every change:
+
+- **Time and weather:** the time of day, the season, the weather (rain, fog and snow with a slider for how much), the
+  wind and the temperature. Indoors they are what the windows show, and a place no daylight reaches (a basement, a
+  subway station) has none of them. Wind and temperature are outdoors only, and the temperature says only what a
+  camera sees of it: frost and breath, or heat haze.
+- **Snow and the temperature** can't contradict each other, and the one touched last stays: the slider moved to
+  Freezing turns rain into snow, and to Warm turns snow into rain; Snow picked while it is hot puts the temperature
+  back to mild, and Rain picked while it is freezing makes it cold. The line under the settings says what gave way.
+- **Light:** the lights that are on (lamps, fluorescent tubes, candles, neon; street lamps or floodlights outdoors),
+  how bright, and their colour from a colour picker. The prompt names the colour ("a deep blue", "a warm white"): a
+  model doesn't read a colour's number.
+- **Condition:** clean to dirty and new to run-down, two sliders, since a spotless place can be derelict and a new one
+  filthy. From Messy on, the prompt also says what that place has lying about (a kitchen: dishes piled in the sink).
+  Wealth, from poor to luxurious, and for a room its decor (modern, rustic, industrial, ...).
+- **Where and when:** the country, which the buildings, fittings and signs follow (or the land, for a landscape), and
+  the period, from medieval to the far future.
+- **People and mood:** nobody, a few, busy or packed, and the mood (cozy, eerie, sterile, ...).
+- **Picture:** where it is seen from (a wide shot, a low angle, through the doorway, from the air), the look (a
+  photograph, a film still, anime, a watercolour, ...), and how much of the place is described (**Detail**: 3, 6 or
+  all 8 of the things it has). For a video task, also how the camera moves, and the prompt ends with what keeps
+  moving: the rain, the view from a train's windows.
+
+Every setting starts at saying nothing, and a setting that says nothing adds no words: the prompt is the place alone
+until something is set. A landscape has no decor, wear or period, and a setting that means nothing for the place
+picked isn't shown.
+
+**Written as** the model picked in the chat reads best: sentences for the models that read a description, tags for
+those trained on them (SD 1.5, SDXL and Pony: `"prompt_style": "tags"` in the catalog), or as chosen there.
+
+**Add to the prompt** puts the text after what the prompt has; **Use as the prompt** puts it in place of all of it;
+**Copy** takes it elsewhere. The chat keeps the place and its settings with its other settings, on the rig: the
+button names the place, the picker opens on it again, and once its text is in the prompt the button is **Update it
+in the prompt**, which replaces that text with the new one rather than adding a second (as long as it wasn't edited
+by hand in between). **×** beside the buttons forgets the place and the characters and leaves the prompt as it is. **Reset** puts
+back what the open step sets, and nothing of the other steps.
+
+**The pictures** are made once, by an admin: the bar under the places says how many have one, and **Make the …
+missing** makes the rest with the text-to-image model chosen beside it (Z-Image Turbo when it is there). Each is a
+request of its own, a few at a time, waiting its turn like any other, in a working chat that isn't listed and is
+deleted with its files at the end; the page makes each result small (512 × 288) and the rig or hub keeps it in its
+data folder (`environment_pictures`). The page has to stay open meanwhile: loaded again, it goes on where it was, and
+**Stop** ends it with what was made kept. **Make its picture again** and **Remove its picture**, under a place's
+picture, are for one place. A place without a picture shows its first letter. The Outfit step's garments and the
+Pose step's poses get their pictures the same way, each from the bar under its own step: a garment as a product
+photograph, a pose as a grey mannequin.
+
+One set of pictures serves every model: a picture says which place a tile is, not what a model would make of the
+prompt, and a set for each model would be a hundred requests per model, minutes each for the video models. They are
+the hive's, not an account's: every account sees them, and only an admin makes or removes one.
+
+The places and every word a setting adds are in `comfyui-hive/environments.json`, which says how it is laid out:
+a place is added there, as a name, what the scene shows, what a dirty one has lying about and where in it somebody
+can be; an option of a setting with its sentence for indoors and outdoors, and its tags.
+
+## Characters
+
+**Character**, over the prompt, opens the prompt builder at its second step. The three steps after Environment are
+about who is in the picture: up to three characters, chosen by the chips beside the steps (**+ Character** adds one,
+**Remove** takes the one shown out). A character nothing was set of says nothing. Every setting starts at saying
+nothing, as the places' do, and a character's part of the prompt comes before the place, which is then said as their
+setting.
+
+- **Character** is who they are, under Basics, Body, Face, Hair and Details at the left:
+  - **Basics:** gender, age (an adult's: twenties to elderly), ethnicity, the kind of being for another world's story
+    (an elf, an orc, an android), the skin's tone and whether it is freckled or lined.
+  - **Body:** height, with the upper body's and the legs' length apart from it; body fat for the whole body, and
+    muscle; then what can be set apart from the body fat: shoulders, breast size (a woman's), waist, belly, hip
+    width, ass size and thighs.
+  - **Face:** its shape; the eyes' size, shape and colour; the eyebrows' thickness and colour; the nose's size and
+    shape; the lips' thickness and colour; cheeks and jaw; facial hair (a man's).
+  - **Hair:** length (bald to waist-length), type, colour, style and fringe.
+  - **Details:** makeup, nails, tattoos, piercings and scars.
+
+  A colour is one of the named ones or any other from the picker, which the prompt names. What is only a woman's or
+  a man's is offered to them, and to a character whose gender isn't said. The prompt joins what belongs together:
+  size, shape and colour are one thing said of the eyes ("large almond-shaped green eyes").
+- **Presets:** the first thing the Character step shows is what to start from: a new character, one of your
+  presets, or one of your LoRAs that is marked as a character. At the right are the character's name (which tells
+  two characters apart in the prompt), its LoRA, and **Save as a preset**, which keeps who they are under that
+  name for any chat; ticked, **with what they wear** keeps the outfit too. A character started from a preset can be
+  changed freely: **Save the preset** keeps the change, **Save as another** makes a second preset of it. How they
+  are in one scene (the pose, where, the expression) is never part of a preset. **Make its picture** makes a
+  portrait of the preset from its own prompt, with the model picked in the chat when that one makes images. The
+  presets are each account's own, kept by the rig or hub whose page it is.
+- **A LoRA as a character:** under Manage LoRAs, **Character preset** on a LoRA marks it as somebody's, and the
+  Character step then offers it among the presets, with its picture. A preset made here can name any of your LoRAs
+  as well. Either way the LoRA's trigger prompt starts that character's part of the prompt, what is set here adds
+  to it (other hair, a build), and when the prompt is put in the composer the LoRA is added to the request's LoRA
+  rows if it isn't there: the page says so, or says why not (the model takes none, or the LoRA has no files for
+  it).
+- **Outfit** is what they wear, by part of the body at the left: head (hats, glasses, earrings), neck (chokers and
+  necklaces, scarves and ties), upper body (shirts and tops, jackets and coats, bras and bikini tops), whole body
+  (dresses, suits, one-pieces), hands (gloves, rings, wrists), lower body (trousers, shorts and skirts, underwear
+  and swimwear, belts), legs (socks and stockings), feet (shoes) and bags: 135 things as tiles with a picture each.
+  One of a kind at a time: a click puts it on, another takes it off. What can't be worn together gives way: a dress
+  takes the place of the shirt and the trousers, and **Topless**, **Bottomless** and **Barefoot** are among the
+  tops, the bottoms and the shoes, each taking off what would cover the same. What is picked is listed at the
+  right, each with its colour (**None** beside it takes it off again), pattern and material. With nothing picked the prompt says
+  nothing of their clothes, and the model dresses them.
+- **Pose and place** is how they are in this scene: a **pose** (standing, sitting, lying, moving, or doing
+  something: 36, with a picture each), **where** in the place picked in the first step (a living room offers on the
+  sofa, in the armchair, by the window; every place has its own), or just where in the picture, and under
+  **Expression and view** their expression, where they look, from where they are seen, and how much of them the
+  picture shows (said first, for the whole picture). For a video, a pose that goes on (walking, dancing) is also
+  said at the end as what keeps happening. A spot of one place isn't said in another: change the place and it
+  waits until a place has it again.
+
+What a character can be set to, the garments, the poses and every word each adds are in
+`comfyui-hive/characters.json`, which says how it is laid out; the spots of each place are with the place, in
+`environments.json`.
 
 ## Lip-sync
 
@@ -527,7 +667,10 @@ The miner ships ready-made API workflows (`comfyui-hive/workflows/`) and `comfyu
    is one workflow per task whatever the number of LoRAs. Give it `clip` (the text encoder's output) for LoRAs that
    change the text encoder too. A model with no template of its own can use another's: `files` puts its file in
    place of the template's (a checkpoint for the SDXL template), a task's `set` changes the template's settings
-   (the negative prompt, the sampler) and `clip_skip` skips the text encoder's last layers. Models sharing a task
+   (the negative prompt, the sampler) and `clip_skip` skips the text encoder's last layers. An input of kind `bool` is a switch of the template, shown as on or off with its
+   `title` as the hint (the task's `set` gives what it is when a request doesn't say). A model trained on tags
+   rather than descriptions says `"prompt_style": "tags"`, which the Environment picker writes its prompt by.
+   Models sharing a task
    name it once in `tasks` and refer to it with `like`.
 3. `python tools/build.py --templates <templates folder> --object-info <object_info.json>` converts the templates
    (`tools/convert.py` expands their subgraphs into the API format), works out which files each workflow loads and their
