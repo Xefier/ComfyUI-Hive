@@ -22,6 +22,8 @@ parts=(comfyui-hive/page.py comfyui-hive/trainer.py comfyui-hive/rigtools.py com
        comfyui-hive/characters.py comfyui-hive/characters.js comfyui-hive/characters.json
        # The props of the builder's Props step: its built-in list, and each account's own
        comfyui-hive/props.py comfyui-hive/props.js comfyui-hive/props.json
+       # The Scene library page: the builder's characters, props and places outside any chat
+       comfyui-hive/scene-library.js
        # The account's own lists the characters' presets are kept in, and the composer's templates, kept on one
        comfyui-hive/presets.py comfyui-hive/templates.py
        # The LoRAs view's search of Civitai and its downloads
