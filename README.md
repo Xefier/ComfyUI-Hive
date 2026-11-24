@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.45.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.46.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -53,7 +53,9 @@ miner says so and waits, as it does when there is no such drive.
   higher-precision builds than a 24 GB one, and a model no build of which fits isn't shown (the page says how many are
   hidden). Each card shows with icons whether it makes video and sound (green when it does, red and crossed out when
   it doesn't), whether it takes LoRAs, and each thing it does (what goes in, an arrow, what comes out: a picture to a
-  video for image to video), with its build and its size. Filters above the cards show only the installed ones or
+  video for image to video), with its build and its size. Under the icons a card says the largest size the model does well (and the one it does
+  best, when smaller) and its frame rate or the sound it makes, and an aperture and a brush say how it makes photoreal
+  and stylized pictures: green when good at it, grey when usable, red and crossed out when weak. Filters above the cards show only the installed ones or
   those still to download, those that do a task, or those that make video, make sound or take LoRAs.
 - **Nothing is downloaded until you press Download** on a model (or say yes when a Claude session asks, see
   [Claude sessions](#claude-sessions)). It goes into the models folder with a progress bar
@@ -159,7 +161,8 @@ miner says so and waits, as it does when there is no such drive.
   it is and the time left, or "waiting its turn" behind another request: every rig's work at a glance.
 - **Finished, until looked at:** when a chat's request ends, its card in the list gets a mark beside its name,
   **finished** or **failed**, which goes away when the chat is opened. The open chat gets none, unless it ended while
-  the browser's tab was in the background. Each browser keeps its own account of what was looked at, and only what
+  the browser's tab was in the background. Each browser keeps its own account of what was looked at, which its tabs
+  share (a chat opened in one loses its mark in the others), and only what
   ends after a chat was first seen there is marked.
 - **One scroll bar:** on a desktop screen the page itself doesn't scroll, only the chat's messages do (and the side
   panel when its lists are longer than the window). A phone scrolls as one page.
@@ -300,15 +303,18 @@ miner says so and waits, as it does when there is no such drive.
     **LoRAs** says it, and in the search of Civitai's window before a download. Not said, it is told by itself: a
     slider by "slider" in its name or its file's, clothing by "outfit", "clothing" or "clothes" there. The chat's list
     of LoRAs has a switch for each category over it, to show only the sliders or all but them, kept in the browser;
-    the **LoRAs** view lists one category with its filter. In the scene builder the sliders are the Character step's
+    the **LoRAs** page lists its categories down the left (All first), and a click lists the LoRAs of one. In the scene builder the sliders are the Character step's
     **Sliders** section (after Basics, Body, Face, Hair and Details, with how many are set), each with a slider of its
     own (0: not used) and its reset (the circular arrow) while it is off 0, and **Reset all** over them; the clothing LoRAs lead the Outfit step, put
     on and taken off with a click; a character's are among the request's LoRAs, pinned, at the strength set there,
     and what it wears of them adds its trigger prompt to the character's part of the prompt. A preset keeps its
-    sliders, and its clothing LoRAs with what it wears. You can have categories of your own besides: **Categories…** over
-    the LoRAs makes one by a name and takes one away, and from then on it is among the others on every LoRA, in the
-    view's filter and over the chat's list. Each account has its own. A LoRA of a category that is taken away is of
+    sliders, and its clothing LoRAs with what it wears. You can have categories of your own besides: **+ New category**, last in the
+    list at the left (or at the foot of a LoRA's own Category list), makes one by a name; its pencil renames it and its
+    LoRAs stay in it, and × takes it away. A LoRA dragged by its grip onto a category is put in it. From then on it is
+    among the others on every LoRA, in the page's list and over the chat's list. Each account has its own. A LoRA of a category that is taken away is of
     none, and told by itself again.
+  - **Style:** a character LoRA's card has a **Style** beside its Category, Realistic or Stylized, the same style the
+    Character step lists it by (see Characters).
   - **The character first:** a LoRA of somebody is a character preset (**Character preset** under **LoRAs**, or in
     the search of Civitai's window before it is downloaded). In a request made from words alone (text to video, text
     to image), where one is for the model picked, the LoRAs' rows start with the **Character**'s, whose list has
@@ -342,7 +348,7 @@ miner says so and waits, as it does when there is no such drive.
     for each of those models, a high-noise and a low-noise version or file as one pair. Any of them can be ticked together: a LoRA has one
     version's files for a model, so a further version for the same model becomes a LoRA of its own, named after its
     version too. Its picture is one of the
-    site's, chosen there. Its trigger prompt starts as the site's trigger words for the versions ticked; the prompts
+    site's, chosen there; **a button in the corner of an example picture** makes it the LoRA's picture. Its trigger prompt starts as the site's trigger words for the versions ticked; the prompts
     its example pictures were made with, what its text seems to give as a prompt, and its lines on strength and
     settings are offered beside it to add or use, since everybody writes those their own way. Where the site has no trigger words for the versions ticked, the box
     starts with another version's, or else with what the LoRA's text seems to give as one, and says so under it. A
@@ -632,7 +638,9 @@ setting.
   a man's is offered to them, and to a character whose gender isn't said. The prompt joins what belongs together:
   size, shape and colour are one thing said of the eyes ("large almond-shaped green eyes").
 - **Presets:** the first thing the Character step shows is what to start from: a new character, one of your
-  presets, or one of your LoRAs that is marked as a character. At the right are the character's name (which tells
+  presets, or one of your LoRAs that is marked as a character. A preset or LoRA can be marked **realistic** or
+  **stylized** on its card, and the list has Realistic and Stylized chips that start at the style the model picked
+  does best (Pony stylized, Z-Image realistic, both when it does them alike). At the right are the character's name (which tells
   two characters apart in the prompt), its LoRA, and **Save as a preset**, which keeps the character under that
   name for any chat: all of them but where they are in a place (who they are, their LoRA and sliders, what they
   wear, their pose and expression, and their words).
