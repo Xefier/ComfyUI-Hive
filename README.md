@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.43.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.44.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -549,7 +549,7 @@ opens the builder there. With nothing picked, the card is **Add a character** or
 **Words of your own** can go **before** and **after** a part, under the builder's settings: the place has a pair, and
 so does each character. **Done** closes the builder; **Copy** takes every part elsewhere. The chat keeps the place,
 the characters and your words with its other settings, on the rig. A character preset keeps its character's
-words too, when it is saved, so a character started from it in any chat has them. **Reset all** forgets the place and the
+words too, and a chat's character of that preset has them as the preset has them now, until the chat changes them for itself. **Reset all** forgets the place and the
 characters; **Reset** puts back what the open step sets, and nothing of the other steps.
 
 **The pictures** are made once, by an admin: the bar under the places says how many have one, and **Make the …
@@ -627,10 +627,17 @@ setting.
   size, shape and colour are one thing said of the eyes ("large almond-shaped green eyes").
 - **Presets:** the first thing the Character step shows is what to start from: a new character, one of your
   presets, or one of your LoRAs that is marked as a character. At the right are the character's name (which tells
-  two characters apart in the prompt), its LoRA, and **Save as a preset**, which keeps who they are under that
-  name for any chat; ticked, **with what they wear** keeps the outfit too. A character started from a preset can be
-  changed freely: **Save the preset** keeps the change, **Save as another** makes a second preset of it. How they
-  are in one scene (the pose, where, the expression) is never part of a preset. Its picture is one of your own,
+  two characters apart in the prompt), its LoRA, and **Save as a preset**, which keeps the character under that
+  name for any chat: all of them but where they are in a place (who they are, their LoRA and sliders, what they
+  wear, their pose and expression, and their words).
+- **A chat follows the preset:** a chat's character of a preset has all of it as the preset has it now, so a change
+  to the preset shows in every chat that has them. What a chat changes is that chat's own: the row is marked with a
+  bar at its left, and the link icon beside it puts it back to the preset's. The card says how many things are the
+  chat's own, with **Back to the preset** for all of them and **Save to the preset**, which makes them the preset's.
+  **Save as another** makes a second preset of what is set now.
+- **Warnings:** a LoRA trigger prompt that says what the builder sets (a framing like "cowboy shot", a pose, a gaze,
+  an expression or a facing) fights what is set: the card and the Pose and place step warn of each such word.
+- **A preset's picture:** it is one of your own,
   given as anywhere on the page: dropped on it, pasted (Ctrl+V) while the Character step is shown, or **Choose a
   picture**; or **Make its picture** makes a portrait of the preset from its own prompt, with the model picked in the
   chat when that one makes images. The presets are each account's own, kept by the rig or hub whose page it is.
@@ -653,7 +660,8 @@ setting.
   something: 36, with a picture each), **where** in the place picked in the first step (a living room offers on the
   sofa, in the armchair, by the window; every place has its own), or just where in the picture, and under
   **Expression and view** their expression, where they look, from where they are seen, and how much of them the
-  picture shows (said first, for the whole picture). For a video, a pose that goes on (walking, dancing) is also
+  picture shows, and **Size in the frame**: how much of the frame's height they take (fills it, most of it, about
+  half, or small and far off). Both are the whole picture's, said first. For a video, a pose that goes on (walking, dancing) is also
   said at the end as what keeps happening. A spot of one place isn't said in another: change the place and it
   waits until a place has it again.
 
@@ -668,11 +676,12 @@ chat isn't the only way to look after them. Its tabs are **Characters** (your pr
 character presets, each with the props it usually has), **Props** (yours, then the built-in ones) and **Places**,
 with a search over the tab.
 
-A tile opens the prompt builder at that step, as in a chat, but on a scene of the page's own: a preset is changed,
-saved, given a picture or deleted there, a prop of yours likewise (**+ New character** and **+ New prop** start one),
-and a place is shown with its settings and the prompt they write, to look at. What you save there (a preset, a prop,
-a preset's usual props) is kept as from a chat; the scene itself isn't kept anywhere, and no chat's composer or
-settings change. For an admin, the **Places** and **Props** tabs each have a bar that makes that tab's missing
+A tile opens the prompt builder at that step, with every step and section a chat has, on a scene of the
+page's own. A character there is the preset itself: every change to it is the preset's, kept as you make it, without a
+Save, and shows in every chat that has them but where a chat changed it for itself. A new character (**+ New
+character**) is kept once it is saved as a preset. A prop of yours is changed, given a picture or deleted there
+likewise (**+ New prop** starts one), and a place is shown with its settings and the prompt they write, to look at.
+The scene itself isn't kept anywhere, and no chat's composer or settings change. For an admin, the **Places** and **Props** tabs each have a bar that makes that tab's missing
 built-in pictures in one go.
 
 ## Lip-sync
