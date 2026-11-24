@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.40.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.41.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -75,10 +75,11 @@ miner says so and waits, as it does when there is no such drive.
   to the model's own. Wan 2.2 5B, HunyuanVideo 1.5, SD 1.5, SDXL, Pony and Qwen's image edit have it. The others
   run at a guidance of 1 (Wan 2.2 14B with its 4-step LoRAs, Z-Image Turbo, Qwen's text to image), where a
   negative prompt changes nothing, or guide in a way of their own (LTX, MiniMax): they don't show the line.
-- **A prompt put together rather than written:** **Environment** and **Character**, over the prompt, open the
-  prompt builder: a place picked from pictures (a kitchen, a bus stop, a forest) with settings for the time of day,
+- **A prompt put together rather than written:** the **Character** card over the prompt and the **Environment**
+  card under it open the prompt builder: a place picked from pictures (a kitchen, a bus stop, a forest) with settings for the time of day,
   the weather, the lights and more, then who is in it, set like a game's character or taken from a preset or a LoRA,
-  what they wear, and how and where in that place they are. It writes that part of the prompt. See
+  what they wear, and how and where in that place they are. Their parts of the prompt are added by themselves
+  around the words you write: who, what happens, where. See
   [Environments](#environments) and [Characters](#characters).
 - **A LoRA's trigger prompt:** beside a slot's strength, **Set trigger prompt** asks once for the words the slot's
   LoRA is called up with and keeps them on the rig with the file; from then on **Add trigger prompt** adds them to the
@@ -499,7 +500,7 @@ a 24 GB card), not yet measured on these rigs. If a model runs out of memory on 
 
 ## Environments
 
-**Environment**, over the prompt, opens the prompt builder at its first step (its steps are along the top:
+**Environment**, the card under the prompt, opens the prompt builder at its first step (its steps are along the top:
 Environment, Character, Outfit, Pose and place, and the prompt at the right is what all of them make together). For a video that starts from an attached image, the builder greys out what the image already shows (the place, who they are, what they wear, where they are, how they are framed) and writes only what moves; before an image is attached everything is offered. The
 step is a picker of places: 113 of them, as tiles with a picture each, under Home, Office and work, Transport, City
 and street, Food and shops, Public places, Leisure and Nature. **Indoors** and **Outdoors**
@@ -534,12 +535,19 @@ picked isn't shown.
 **Written as** the model picked in the chat reads best: sentences for the models that read a description, tags for
 those trained on them (SD 1.5, SDXL and Pony: `"prompt_style": "tags"` in the catalog), or as chosen there.
 
-**Add to the prompt** puts the text after what the prompt has; **Use as the prompt** puts it in place of all of it;
-**Copy** takes it elsewhere. The chat keeps the place and its settings with its other settings, on the rig: the
-button names the place, the picker opens on it again, and once its text is in the prompt the button is **Update it
-in the prompt**, which replaces that text with the new one rather than adding a second (as long as it wasn't edited
-by hand in between). **×** beside the buttons forgets the place and the characters and leaves the prompt as it is. **Reset** puts
-back what the open step sets, and nothing of the other steps.
+**The prompt is put together by itself.** What the builder writes never goes in the prompt box: the box holds your
+own words, and a request is sent with the characters' part before them and the place's part after them, in that
+order: who, what happens, where. A later prompt of a sequence starts from the last frame of the one before, which
+shows them already: its words go alone.
+
+The two parts are **cards** of the composer, the Character card over the prompt and the Environment card under it. A
+click on a card shows its part of the prompt (locked: it changes only with the settings), and the pencil beside it
+opens the builder there. With nothing picked, the card is **Add a character** or **Add an environment**.
+
+**Words of your own** can go **before** and **after** a part, under the builder's settings: the place has a pair, and
+so does each character. **Done** closes the builder; **Copy** takes every part elsewhere. The chat keeps the place,
+the characters and your words with its other settings, on the rig. **Reset all** forgets the place and the
+characters; **Reset** puts back what the open step sets, and nothing of the other steps.
 
 **The pictures** are made once, by an admin: the bar under the places says how many have one, and **Make the …
 missing** makes the rest with the text-to-image model chosen beside it (Z-Image Turbo when it is there). Each is a
@@ -561,7 +569,7 @@ can be; an option of a setting with its sentence for indoors and outdoors, and i
 
 ## Characters
 
-**Character**, over the prompt, opens the prompt builder at its second step. The three steps after Environment are
+**Character**, the card over the prompt, opens the prompt builder at its second step. The three steps after Environment are
 about who is in the picture: up to three characters, chosen by the chips beside the steps (**+ Character** adds one,
 **Remove** takes the one shown out). A character nothing was set of says nothing. Every setting starts at saying
 nothing, as the places' do, and a character's part of the prompt comes before the place, which is then said as their
@@ -592,7 +600,7 @@ setting.
 - **A LoRA as a character:** under Manage LoRAs, **Character preset** on a LoRA marks it as somebody's, and the
   Character step then offers it among the presets, with its picture. A preset made here can name any of your LoRAs
   as well. Either way the LoRA's trigger prompt starts that character's part of the prompt, what is set here adds
-  to it (other hair, a build), and when the prompt is put in the composer the LoRA is added to the request's LoRA
+  to it (other hair, a build), and the LoRA is added to the request's LoRA
   rows if it isn't there: the page says so, or says why not (the model takes none, or the LoRA has no files for
   it).
 - **Outfit** is what they wear, by part of the body at the left: head (hats, glasses, earrings), neck (chokers and
