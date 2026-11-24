@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.42.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.43.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -142,7 +142,7 @@ miner says so and waits, as it does when there is no such drive.
 - **A result marked or hidden:** under each image and video, beside its links, are a star (a favorite, gold), a
   thumbs up (green) and a thumbs down (red). One of them at most: the one chosen stays there alone until it is clicked
   again, which takes the mark off and brings the other two back. **Hide** folds only that image or video away, its
-  links staying, until **Show**; a thumbs down hides it too. **Favorites** and **Liked**, under the gear and as tabs of
+  links staying, until **Show**; a thumbs down hides it too. **Favorites** and **Liked**, in the menu (☰) and as tabs of
   the Outputs view, list everything with the star and with the thumbs up; a mark can be taken off there as well. The
   marks are kept on the rig, so every device sees them.
 - **The prompt being written** is kept with the chat like its other settings.
@@ -168,8 +168,9 @@ miner says so and waits, as it does when there is no such drive.
 - **The top row:** Comfy's mark and the worker's name, which has the row to itself (the page's title is no longer
   written there), with an arrow that opens the rig's state: VRAM, GPU load, RAM
   and disk as bars, the GPU, ComfyUI and the version. Folded to begin with, and a rig that doesn't answer, has no GPU
-  or may be rented still shows. The gear at the top right holds Other rigs, Sound when done, Thumbnails, Outputs, the
-  miner log and the ComfyUI editor; it and the eye stay in their corner when the page scrolls. **+** starts a chat,
+  or may be rented still shows. The gear at the top right holds the settings (Other rigs, Sound when done, Thumbnails, updates,
+  Account) and the menu (☰) beside it the places to go (Models, LoRAs, Scene library, Outputs, the miner log, the
+  ComfyUI editor, …); they and the eye stay in their corner when the page scrolls. **+** starts a chat,
   with a choice of the rig when Other rigs is on.
 - **A request repeated:** **Repeat** beside Generate makes the request that many times (20 at most). As it is, they
   are separate tries of the prompt, each with a seed of its own, all queued at once. For a video, with **Each
@@ -293,8 +294,9 @@ miner says so and waits, as it does when there is no such drive.
     **LoRAs** says it, and in the search of Civitai's window before a download. Not said, it is told by itself: a
     slider by "slider" in its name or its file's, clothing by "outfit", "clothing" or "clothes" there. The chat's list
     of LoRAs has a switch for each category over it, to show only the sliders or all but them, kept in the browser;
-    the **LoRAs** view lists one category with its filter. In the scene builder the sliders stand over everything of
-    the Character step, each with a slider of its own (0: not used), and the clothing LoRAs lead the Outfit step, put
+    the **LoRAs** view lists one category with its filter. In the scene builder the sliders are the Character step's
+    **Sliders** section (after Basics, Body, Face, Hair and Details, with how many are set), each with a slider of its
+    own (0: not used) and its reset (the circular arrow) while it is off 0, and **Reset all** over them; the clothing LoRAs lead the Outfit step, put
     on and taken off with a click; a character's are among the request's LoRAs, pinned, at the strength set there,
     and what it wears of them adds its trigger prompt to the character's part of the prompt. A preset keeps its
     sliders, and its clothing LoRAs with what it wears. You can have categories of your own besides: **Categories…** over
@@ -546,15 +548,20 @@ opens the builder there. With nothing picked, the card is **Add a character** or
 
 **Words of your own** can go **before** and **after** a part, under the builder's settings: the place has a pair, and
 so does each character. **Done** closes the builder; **Copy** takes every part elsewhere. The chat keeps the place,
-the characters and your words with its other settings, on the rig. **Reset all** forgets the place and the
+the characters and your words with its other settings, on the rig. A character preset keeps its character's
+words too, when it is saved, so a character started from it in any chat has them. **Reset all** forgets the place and the
 characters; **Reset** puts back what the open step sets, and nothing of the other steps.
 
 **The pictures** are made once, by an admin: the bar under the places says how many have one, and **Make the …
-missing** makes the rest with the text-to-image model chosen beside it (Z-Image Turbo when it is there). Each is a
-request of its own, a few at a time, waiting its turn like any other, in a working chat that isn't listed and is
-deleted with its files at the end; the page makes each result small (512 × 288) and the rig or hub keeps it in its
-data folder (`environment_pictures`). The page has to stay open meanwhile: loaded again, it goes on where it was, and
-**Stop** ends it with what was made kept. **Make its picture again** and **Remove its picture**, under a place's
+missing** makes the rest with the text-to-image model chosen beside it (Z-Image Turbo when it is there): only those
+without a picture, never one that has one. Each is asked at the size it is shown at (512 × 288 for a place, 384 × 384
+for a prop or a garment, 336 × 448 for a pose, or the nearest the model takes) and is a request of its own, a few at a
+time, in the background: the hub, or a rig on its own, gives out every other request waiting first, so a chat's
+request doesn't wait behind them. They are made in a working chat that isn't listed and is deleted with its files at
+the end, and the rig or hub keeps each in its data folder (`environment_pictures`). The page has to stay open
+meanwhile: loaded again, it goes on where it was. **Stop** sends no more and cancels those sent and not done yet, with
+what was made kept. The [Scene library](#scene-library) has the same bar on its Places and Props tabs, one tab at a
+time. **Make its picture again** and **Remove its picture**, under a place's
 picture, are for one place. A place without a picture shows its first letter. The Outfit step's garments and the
 Pose step's poses get their pictures the same way, each from the bar under its own step: a garment as a product
 photograph, a pose as a grey mannequin.
@@ -574,19 +581,24 @@ place. A prop is described once, by the words the prompt says of it, so the word
 just say "she picks up the broom" and the model knows which broom.
 
 - **The built-in props** (115, from Everyday and Food and drink to Tools and work, Sport and play and Fantasy and
-  costume) are everybody's. Their pictures are made once by an admin, like the garments', with the bar under them.
+  costume) are everybody's. Their pictures are made once by an admin, like the garments', with the bar under them, or one at a
+  time with **Make its picture** beside a prop (also **Make its picture again** and **Remove its picture**).
 - **Your own props** are your account's: **+ New prop**, or **Make your own from it** on a built-in one. A prop of
   your own has a name, what the prompt says of it with every detail, optionally one of your LoRAs it is made with
-  (it is among the request's LoRA rows while the prop is in the scene), and a picture: dropped on it, chosen, or
-  made from its words with **Make its picture**.
+  (it is among the request's LoRA rows while the prop is in the scene), and a picture: dropped on it, pasted (Ctrl+V) while it is
+  shown, chosen, or made from its words with **Make its picture**. While the builder is open, a pasted picture is the
+  builder's: it never goes to the composer's start frame behind it.
 - **Where it is:** a click on a prop puts it in the scene, then **In the scene** says where: about the place, or in
   a character's hand: **in hand**, **right hand**, **left hand** or **both hands**. Image models often swap left and
   right, so in hand is the one to use when the side doesn't matter. A hand holds one thing, and a prop is in one
   place at a time.
 - **In the prompt:** what a character holds is in their part, what is about the place is in the place's part. A video
   that starts from an image shows them already, so they aren't said then, nor in the later prompts of a sequence.
-- **Usual here** lists first what each of the 113 places usually has (a classroom: chalk, notebooks, pencils) and
-  what a character preset usually has.
+- **The usual ones come first:** a tab for each character whose preset has usual props, named after them
+  (**Mira's**), then one for the place's, named after it (**Classroom**: chalk, notebooks, pencils…). The step opens
+  on the first character's, and a prop picked from a character's tab goes in their hand. A preset's usual props are
+  set on its card in the Character step (**Usual props**: **+ Add a usual prop…**, and × on one to take it off), or
+  with **usually Mira's** on a prop in the Props step.
 
 The built-in props and the words they are said in are `comfyui-hive/props.json`; a place's usual props are with the
 place, in `environments.json`.
@@ -618,9 +630,10 @@ setting.
   two characters apart in the prompt), its LoRA, and **Save as a preset**, which keeps who they are under that
   name for any chat; ticked, **with what they wear** keeps the outfit too. A character started from a preset can be
   changed freely: **Save the preset** keeps the change, **Save as another** makes a second preset of it. How they
-  are in one scene (the pose, where, the expression) is never part of a preset. **Make its picture** makes a
-  portrait of the preset from its own prompt, with the model picked in the chat when that one makes images. The
-  presets are each account's own, kept by the rig or hub whose page it is.
+  are in one scene (the pose, where, the expression) is never part of a preset. Its picture is one of your own,
+  given as anywhere on the page: dropped on it, pasted (Ctrl+V) while the Character step is shown, or **Choose a
+  picture**; or **Make its picture** makes a portrait of the preset from its own prompt, with the model picked in the
+  chat when that one makes images. The presets are each account's own, kept by the rig or hub whose page it is.
 - **A LoRA as a character:** under Manage LoRAs, **Character preset** on a LoRA marks it as somebody's, and the
   Character step then offers it among the presets, with its picture. A preset made here can name any of your LoRAs
   as well. Either way the LoRA's trigger prompt starts that character's part of the prompt, what is set here adds
@@ -647,6 +660,20 @@ setting.
 What a character can be set to, the garments, the poses and every word each adds are in
 `comfyui-hive/characters.json`, which says how it is laid out; the spots of each place are with the place, in
 `environments.json`.
+
+## Scene library
+
+**Scene library**, in the menu (☰), is a page of its own for the builder's characters, props and places, so that a
+chat isn't the only way to look after them. Its tabs are **Characters** (your presets, and the LoRAs marked as
+character presets, each with the props it usually has), **Props** (yours, then the built-in ones) and **Places**,
+with a search over the tab.
+
+A tile opens the prompt builder at that step, as in a chat, but on a scene of the page's own: a preset is changed,
+saved, given a picture or deleted there, a prop of yours likewise (**+ New character** and **+ New prop** start one),
+and a place is shown with its settings and the prompt they write, to look at. What you save there (a preset, a prop,
+a preset's usual props) is kept as from a chat; the scene itself isn't kept anywhere, and no chat's composer or
+settings change. For an admin, the **Places** and **Props** tabs each have a bar that makes that tab's missing
+built-in pictures in one go.
 
 ## Lip-sync
 
@@ -697,7 +724,7 @@ others and are downloaded there; clicking one doesn't pick it for the composer.
 
 ## Timeline
 
-A page beside the chats (**Timeline** under the gear, **+ Project** over the chats) where clips from the outputs are
+A page beside the chats (**Timeline** in the menu (☰), **+ Project** over the chats) where clips from the outputs are
 arranged on a timeline and exported as one video. On a rig by itself and on a hub alike.
 
 - **A project** is a saved list of clips with their trims and positions, of one size and frame rate. Nothing changes
