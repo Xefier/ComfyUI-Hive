@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.44.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.45.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -60,7 +60,7 @@ miner says so and waits, as it does when there is no such drive.
   and can be cancelled; a download that was cut off continues where it stopped. Files that two models share are
   downloaded once. **Delete** frees the space again, keeping files another downloaded model still uses.
 - **The chat:** pick a downloaded model with the picker beside the tasks (**All models…** at the end of its list opens
-  the Models page; a model that isn't downloaded yet is said above the prompt, with Download) and what to make (text to image, edit image, text to video, image to video), write the
+  the Models page; a model that isn't downloaded yet is said above the prompt, with Download) and what to make (text to image, image to image, edit image, text to video, image to video), write the
   prompt, and press Generate (or Ctrl+Enter). Size, length and seed can be changed; empty means the model's default
   and a random seed. Requests queue and run one at a time; each shows its progress, then the image or
   video with **Download** and **Open** links, or what went wrong. The history stays on the rig.
@@ -224,10 +224,10 @@ miner says so and waits, as it does when there is no such drive.
   selected**; the page says how much the selection takes. A request whose file was deleted says so in its chat.
 - **Size:** the **Size** list has common sizes by shape (16:9, 9:16, 1:1, 4:3, 3:4, 21:9), only those the model takes,
   each rounded to the multiple it needs (16 or 32); Width and Height can also be typed.
-- **The image for image to video or to edit:** drop it on the chat, paste it (Ctrl+V, from a screenshot or a copied image), or
+- **The image for image to video, image to image or to edit:** drop it on the chat, paste it (Ctrl+V, from a screenshot or a copied image), or
   choose a file. A preview shows it with its size; it stays attached across task and model switches until **Remove**.
   Pasting or dropping an image while on a text task switches to the model's task that starts from one (image to
-  video, or edit image for Qwen-Image). Images other than
+  video, image to image for SDXL, Pony, SD 1.5 and Z-Image, or edit image for Qwen-Image). Images other than
   PNG, JPEG and WebP are turned into PNG first. Two buttons fit the video's size to the image:
   - **Use image size**: the image's own width and height, so the video starts from the exact image. A bigger image
     than the model takes is scaled down to fit, keeping its shape.
@@ -236,7 +236,7 @@ miner says so and waits, as it does when there is no such drive.
     1280 × 720 with a portrait image becomes 720 × 1280.
 
   Either way each side is rounded to the model's multiple, and the page says when it scaled or rounded. MiniMax H3's
-  image-to-video and Qwen-Image's editing take their size from the image by themselves, so they have neither button.
+  image-to-video, Qwen-Image's editing and image to image take their size from the image by themselves, so they have neither button.
 - **The end frame:** a model that can end a video on a given picture (Wan 2.2 14B, LTX-2.5 and MiniMax H3) has the task
   *First and last frame*, with an end frame beside the start frame: side by side where there is room, the start on the
   left, one over the other on a phone. In *Image to video* on such a model a **+ End frame** box switches to it. The
@@ -249,6 +249,12 @@ miner says so and waits, as it does when there is no such drive.
   "replace the car with a bicycle", "remove the text"); the result keeps the image's size. A prompt-refining model
   first turns the instruction into a fuller one, as in ComfyUI's own template. MOSS-Image edits the same way, with
   the instruction used as written and the image scaled to 1 megapixel.
+- **Image to image** (SDXL 1.0, Pony Diffusion V6 XL, SD 1.5 and Z-Image Turbo): attach a picture and describe in the
+  prompt the whole picture to make of it ("a watercolour of a red cottage in a meadow"), not the change. It is scaled
+  to the model's size in its own shape (about 1 megapixel, a quarter of that for SD 1.5) and redrawn. **Strength**
+  (0.05 to 1) says how much of it is made anew: low keeps it and changes the style and detail, high keeps only its
+  layout and colours. It starts at 0.6, and at 0.8 for Z-Image Turbo, which changes less at the same strength. The
+  negative prompt, steps, CFG and LoRAs are those of text to image.
 - **LoRAs:** Wan 2.2 (14B and 5B), HunyuanVideo 1.5, LTX-2.5, MiniMax H3 (its videos), Z-Image Turbo, SDXL 1.0, Pony Diffusion V6 XL and SD 1.5 take up to 8 of your own LoRAs per request, in **LoRAs**
   under the task buttons: each slot is a file, picked from a pop-up over its row (the ones for the model picked, those with a picture as tiles and the rest as a list, with a search of their names and trigger prompts), and a strength (1 by default, negative allowed), set with the slider (-10 to 10, for slider LoRAs
   that are used at either side of 0; double-click it to go back to 1) or typed (-10 to 10); a slot left on "none"
@@ -484,12 +490,12 @@ pulling a client change, new sessions pick it up; after moving the clone, run `a
 | HunyuanVideo 1.5 | text/image to video, 720p 24 fps | fp16 run as fp8 | fp16 | 43 GB | Takes your LoRAs |
 | LTX-2.5 | text/image to video with sound | not offered | int8 | 42 GB | Gated: accept the license at [Lightricks/LTX-2.5](https://huggingface.co/Lightricks/LTX-2.5) and give the account's token. Free for organisations under $10M yearly revenue. Takes your LoRAs |
 | MiniMax H3 | text/image to video with sound, text to image | pruned w6a8 | pruned int8 | 39 / 44 GB | Commercial use of what it makes needs a MiniMax license (sold through Comfy). Its videos take your LoRAs |
-| Z-Image Turbo | text to image | bf16 | bf16 | 19 GB | Takes your LoRAs |
+| Z-Image Turbo | text to image; image to image | bf16 | bf16 | 19 GB | Takes your LoRAs |
 | Qwen-Image 2.1 Turbo | text to image, up to 2K; edit image | int8 | bf16 | 34 / 40 GB | Editing has its own prompt-refining text encoder, included in the download |
 | MOSS-Image | text to image, 0.25 to 4 megapixels; edit image | bf16 | bf16 | 17 GB | The SFT model. It likes a long, detailed prompt: **Enhance prompt** (off unless you turn it on) has its text encoder rewrite a short one into that first, as ComfyUI's template does, which takes longer. Good at English and Chinese text in the image. The page also sets the steps and CFG. An int8 build (12 GB) for cards under 16 GB. Editing is its edit LoRA, included in the download. Takes your LoRAs |
-| SDXL 1.0 | text to image, 1024 px | fp16 | fp16 | 6.5 GB | Stability's base model. Takes your LoRAs (SDXL) |
-| Pony Diffusion V6 XL | text to image, 1024 px | fp16 | fp16 | 6.5 GB | SDXL-based, prompted with tags: start with `score_9, score_8_up, score_7_up`. Clip skip 2 and Euler a, as its author advises. Takes your LoRAs (Pony) |
-| SD 1.5 | text to image, 512 px | fp16 | fp16 | 2 GB | Takes your LoRAs (SD 1.5) |
+| SDXL 1.0 | text to image, 1024 px; image to image | fp16 | fp16 | 6.5 GB | Stability's base model. Takes your LoRAs (SDXL) |
+| Pony Diffusion V6 XL | text to image, 1024 px; image to image | fp16 | fp16 | 6.5 GB | SDXL-based, prompted with tags: start with `score_9, score_8_up, score_7_up`. Clip skip 2 and Euler a, as its author advises. Takes your LoRAs (Pony) |
+| SD 1.5 | text to image, 512 px; image to image | fp16 | fp16 | 2 GB | Takes your LoRAs (SD 1.5) |
 | MMAudio | sound for a video, 44.1 kHz | fp16 | fp16 | 5 GB | Needs its node pack, which the miner installs. Weights for non-commercial use |
 | HunyuanVideo-Foley | sound for a video, 48 kHz | fp16 | fp16 | 11 GB | Needs its node pack; fetches two encoders (2.3 GB) on first use. An fp8 build (6 GB) for cards under 16 GB |
 
