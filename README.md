@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.41.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.42.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -78,9 +78,9 @@ miner says so and waits, as it does when there is no such drive.
 - **A prompt put together rather than written:** the **Character** card over the prompt and the **Environment**
   card under it open the prompt builder: a place picked from pictures (a kitchen, a bus stop, a forest) with settings for the time of day,
   the weather, the lights and more, then who is in it, set like a game's character or taken from a preset or a LoRA,
-  what they wear, and how and where in that place they are. Their parts of the prompt are added by themselves
+  what they wear, how and where in that place they are, and what they hold. Their parts of the prompt are added by themselves
   around the words you write: who, what happens, where. See
-  [Environments](#environments) and [Characters](#characters).
+  [Environments](#environments), [Characters](#characters) and [Props](#props).
 - **A LoRA's trigger prompt:** beside a slot's strength, **Set trigger prompt** asks once for the words the slot's
   LoRA is called up with and keeps them on the rig with the file; from then on **Add trigger prompt** adds them to the
   end of the prompt (not twice), **Use trigger prompt** makes them the whole prompt in place of what is written
@@ -501,7 +501,7 @@ a 24 GB card), not yet measured on these rigs. If a model runs out of memory on 
 ## Environments
 
 **Environment**, the card under the prompt, opens the prompt builder at its first step (its steps are along the top:
-Environment, Character, Outfit, Pose and place, and the prompt at the right is what all of them make together). For a video that starts from an attached image, the builder greys out what the image already shows (the place, who they are, what they wear, where they are, how they are framed) and writes only what moves; before an image is attached everything is offered. The
+Environment, Character, Outfit, Pose and place, Props, and the prompt at the right is what the open step writes). For a video that starts from an attached image, the builder greys out what the image already shows (the place, who they are, what they wear, where they are, how they are framed) and writes only what moves; before an image is attached everything is offered. The
 step is a picker of places: 113 of them, as tiles with a picture each, under Home, Office and work, Transport, City
 and street, Food and shops, Public places, Leisure and Nature. **Indoors** and **Outdoors**
 narrow the tiles, and the search finds a place by its name. A place picked has its settings beside it, and under them
@@ -566,6 +566,30 @@ the hive's, not an account's: every account sees them, and only an admin makes o
 The places and every word a setting adds are in `comfyui-hive/environments.json`, which says how it is laid out:
 a place is added there, as a name, what the scene shows, what a dirty one has lying about and where in it somebody
 can be; an option of a setting with its sentence for indoors and outdoors, and its tags.
+
+## Props
+
+**Props**, the builder's step after Pose and place, are things in the picture: in a character's hands or about the
+place. A prop is described once, by the words the prompt says of it, so the words you write in the composer can
+just say "she picks up the broom" and the model knows which broom.
+
+- **The built-in props** (115, from Everyday and Food and drink to Tools and work, Sport and play and Fantasy and
+  costume) are everybody's. Their pictures are made once by an admin, like the garments', with the bar under them.
+- **Your own props** are your account's: **+ New prop**, or **Make your own from it** on a built-in one. A prop of
+  your own has a name, what the prompt says of it with every detail, optionally one of your LoRAs it is made with
+  (it is among the request's LoRA rows while the prop is in the scene), and a picture: dropped on it, chosen, or
+  made from its words with **Make its picture**.
+- **Where it is:** a click on a prop puts it in the scene, then **In the scene** says where: about the place, or in
+  a character's hand: **in hand**, **right hand**, **left hand** or **both hands**. Image models often swap left and
+  right, so in hand is the one to use when the side doesn't matter. A hand holds one thing, and a prop is in one
+  place at a time.
+- **In the prompt:** what a character holds is in their part, what is about the place is in the place's part. A video
+  that starts from an image shows them already, so they aren't said then, nor in the later prompts of a sequence.
+- **Usual here** lists first what each of the 113 places usually has (a classroom: chalk, notebooks, pencils) and
+  what a character preset usually has.
+
+The built-in props and the words they are said in are `comfyui-hive/props.json`; a place's usual props are with the
+place, in `environments.json`.
 
 ## Characters
 
