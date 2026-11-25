@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.46.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.47.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -276,12 +276,15 @@ miner says so and waits, as it does when there is no such drive.
     the largest level part of the image's own shape that the turned image holds (the whole of one turned onto its
     side), turned each time from the image as it was attached. The turned image is the one the chat keeps and the
     request starts from.
-  - **The first frame from the prompt:** a video that starts from an image can have that image made first. With no
-    start frame attached, the start frame's box offers **Make the first frame** with a model that makes images: a
-    request of the chat for a picture of the prompt as it is written, at the video's size, with the LoRAs of the
-    scene's characters and of the rows that have files for that model. The picture is shown in the box when it is
-    there, to **Use as the first frame**, to **Retry**, or to **Discard**; Generate then makes the video from it. So a
-    character whose LoRA is for an image model can be in a video of a model the LoRA has no files for.
+  - **Changing a frame:** a video's start or end frame has **Change…** beside it (**Make…** while it has none, or
+    **Make from the start frame…** for an end frame), which opens the chat's composer in a dialog with only the image
+    models and tasks that make or change a picture. Each picture previewed there goes into the frame at once, and **Back
+    to the original** undoes it. The dialog's model, prompt and LoRAs are kept with the chat, apart from the video's. A
+    model that is given a size makes the frame at the video's size, or as near to it as it makes in the same shape. While
+    it paints over a picture, the scene builder writes what was changed as instructions, and warns of changes only an
+    edit makes, with **Use Edit image** beside it. A video continued from a frame that was changed is sent as a cut. A
+    gap of the timeline can start or end on a changed frame the same way, in the fill panel. So a character whose LoRA is
+    for an image model can be in a video of a model the LoRA has no files for.
   - **Motion and detail:** Wan 2.2 14B is two models, one for the first steps of a video, which settle the layout,
     the shapes and the motion (its high-noise part), and one for the later steps, which draw the faces, the textures
     and the likeness (its low-noise part). A LoRA's row has a strength for each there, **Motion** and **Detail**,
