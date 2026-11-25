@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.47.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.48.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -324,7 +324,7 @@ miner says so and waits, as it does when there is no such drive.
     those only, and the rows under it are **Modifier**s, whose list has the others. Elsewhere every row lists all. A
     character of the scene builder that is made with a LoRA has that LoRA's row among the request's from the moment
     it is in the scene, and the row is pinned: it can't be removed or given another LoRA until the character is taken
-    out of the scene or its LoRA off the character.
+    out of the scene or its LoRA off the character, and a character given another LoRA or preset, or taken out, takes the rows it pinned (its LoRA, sliders, clothing, a prop's) with it.
   - **Several trigger prompts:** under **LoRAs**, **+ Trigger prompt** gives a LoRA one more (another pose, outfit or
     way to call it up), each with a name. In the chat, a LoRA with several has **Trigger prompts** on its row: a list
     of them by name, with a search, where a click adds one to the prompt and **Use** makes it the whole prompt. No two of a LoRA's say the same (whatever
@@ -762,6 +762,12 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
 - **Tracks:** one video track, and sound tracks laid over each other. A video with sound takes the video track and a
   sound track; a sound that belongs to a clip moves with it. Each sound has its volume, fade in and fade out. Sound
   files of your own (WAV, MP3, FLAC, M4A, OGG) are dropped on the timeline or on Media, and are kept with the project.
+- **Stills:** an image from Media's **Images** tab (the outputs' pictures, or PNG, JPEG and WebP files of your own dropped
+  on the timeline or on Media, kept with the project) goes on the video track as a clip of one frame. Its ends drag out
+  to hold it for any length; it has no speed or sound, and is drawn, previewed and exported fitted like a video's frame.
+  A gap right before or after it starts or ends on it as on any clip.
+- **Several clips:** Ctrl-click adds a clip to those picked or takes it out, Shift-click picks a span of the video
+  track. **Remove** takes them out as one Undo step and a drag moves them together.
 - **On the timeline:** drag a clip to move it and its ends to trim it, drag the ruler to scrub, Ctrl and the wheel (or
   the slider) to zoom. A clip shows its first and last frame, and frames between where there is room. A track's lower
   edge is dragged to make it higher (the bar's **Height** sets the video track's, whose pictures grow with it).
@@ -782,6 +788,17 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
   progress and becomes the clip; Another attempt makes one more to switch between. A fill without an end frame is
   made a little longer and the rest stays past the clip's end, to be dragged out; one with an end frame is kept whole
   and the clips after it move to fit, since it meets them only on its last frame.
+- **Gap drafts:** each gap keeps its own setup of the composer (model, prompt, scene, LoRAs, numbers, Repeat, frames
+  ticked) as its draft, which the composer shows while the gap is picked; it is kept with the project, without an Undo
+  step. A gap's prompt can have words **Before** and **After** it for what many clips share. **Fill between** in the
+  bar puts a gap with both ends ticked in every empty stretch between two clips (within those picked, if several are),
+  and a gap nothing was asked for yet reads *Unfinished*. With several gaps picked the composer edits all their drafts
+  at once: a field that differs reads mixed and a change sets that field alone on each, the prompt is read-only until
+  **Replace on all…**, and **Make identical** copies the shown draft to the others. **Generate** sends each its own
+  request and says which weren't sent and why; **Generate unfinished** sends every gap nothing is being made for (asking
+  first over 8), one at a time, and a gap that starts or ends on a gap still to be made waits for it.
+- **Sound after a fill:** a fill made to end on the clip after moves every sound that starts where its gap ended or later
+  by the same amount as the video clips after it, so all of it still lines up; a sound running across the gap stays.
 - **Sizes and frame rates:** a project's size and frames a second are set when it is made (the chat's sizes, or
   matched to a picture or video), with the models that can't make that size named, and the nearest size the ticked
   models all make offered. A clip of another shape is shown whole with bars, or cropped. A clip of another frame rate
