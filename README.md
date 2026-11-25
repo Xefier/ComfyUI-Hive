@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.48.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.49.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -91,7 +91,8 @@ miner says so and waits, as it does when there is no such drive.
 - **A photo as the image:** on a phone or tablet the image box has **take a photo** beside "choose a file": it
   opens the camera, and the picture taken is attached.
 - **A request again:** **Use again** under a request puts its prompt, model, task, numbers, seed, LoRAs and image
-  back in the composer (clear Seed for a different result). **Use as input** under an image the rig made attaches it,
+  back in the composer with a new seed; the same arrows with an S inside them, beside it, bring it back with its
+  seed, for the same result again. **Use as input** under an image the rig made attaches it,
   switching to the model's task that starts from an image. Each request shows the size and numbers it was made with.
 - **A video continued:** **Continue**, under a video beside Download, does the same as Use again but starts
   from the last frame of that video, with a new seed: to go on where it ended. The request made this way is a video of
@@ -251,7 +252,8 @@ miner says so and waits, as it does when there is no such drive.
 - **Edit image** (Qwen-Image 2.1 Turbo): attach the image and say in the prompt what to change ("make it night",
   "replace the car with a bicycle", "remove the text"); the result keeps the image's size. A prompt-refining model
   first turns the instruction into a fuller one, as in ComfyUI's own template. MOSS-Image edits the same way, with
-  the instruction used as written and the image scaled to 1 megapixel.
+  the instruction used as written and the image kept at its own size when that is between 0.25 and 4 megapixels
+  (scaled into that range otherwise).
 - **Image to image** (SDXL 1.0, Pony Diffusion V6 XL, SD 1.5 and Z-Image Turbo): attach a picture and describe in the
   prompt the whole picture to make of it ("a watercolour of a red cottage in a meadow"), not the change. It is scaled
   to the model's size in its own shape (about 1 megapixel, a quarter of that for SD 1.5) and redrawn. **Strength**
@@ -697,7 +699,13 @@ A tile opens the prompt builder at that step, with every step and section a chat
 page's own. A character there is the preset itself: every change to it is the preset's, kept as you make it, without a
 Save, and shows in every chat that has them but where a chat changed it for itself. A new character (**+ New
 character**) is kept once it is saved as a preset. A prop of yours is changed, given a picture or deleted there
-likewise (**+ New prop** starts one), and a place is shown with its settings and the prompt they write, to look at.
+likewise (**+ New prop** starts one), and **+ New place** makes a place of your own (a name, indoors or outdoors, the words the prompt says of it, a LoRA if
+you like and a picture), which a built-in one can start. The pictures of the builder's things are each a model's: a tile
+shows the one made with the model picked, else the one it had before; **Pictures** opens a dialog that switches that
+model and makes the pictures of the kinds ticked, with **Stop**. A character preset can have **variants** (**Save as a
+variant** on its card): a variant is its base but for what it overrides, always with the base's LoRA; a base with
+variants is one tile with a badge that opens to them. **Make character**, under an image of the chat, makes a character
+preset of it, asking its name and LoRA.
 The scene itself isn't kept anywhere, and no chat's composer or settings change. For an admin, the **Places** and **Props** tabs each have a bar that makes that tab's missing
 built-in pictures in one go.
 
