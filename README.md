@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.49.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.50.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -160,8 +160,8 @@ miner says so and waits, as it does when there is no such drive.
   needs this version, and with `allow=` set, the rigs' own addresses must be in it for them to reach each other.
 - **Progress in the list of chats:** a chat with a request under way has a bar on its card in the list, with how far
   it is and the time left, or "waiting its turn" behind another request: every rig's work at a glance.
-- **Finished, until looked at:** when a chat's request ends, its card in the list gets a mark beside its name,
-  **finished** or **failed**, which goes away when the chat is opened. The open chat gets none, unless it ended while
+- **Finished, until looked at:** when a chat's request ends, its card in the list gets an icon beside its name,
+  **finished** (a tick in a circle with a dot, green) or **failed** (an X in place of the tick, red), which goes away when the chat is opened. The open chat gets none, unless it ended while
   the browser's tab was in the background. Each browser keeps its own account of what was looked at, which its tabs
   share (a chat opened in one loses its mark in the others), and only what
   ends after a chat was first seen there is marked.
@@ -502,6 +502,7 @@ pulling a client change, new sessions pick it up; after moving the clone, run `a
 | LTX-2.5 | text/image to video with sound | not offered | int8 | 42 GB | Gated: accept the license at [Lightricks/LTX-2.5](https://huggingface.co/Lightricks/LTX-2.5) and give the account's token. Free for organisations under $10M yearly revenue. Takes your LoRAs |
 | MiniMax H3 | text/image to video with sound, text to image | pruned w6a8 | pruned int8 | 39 / 44 GB | Commercial use of what it makes needs a MiniMax license (sold through Comfy). Its videos take your LoRAs |
 | Z-Image Turbo | text to image; image to image | bf16 | bf16 | 19 GB | Takes your LoRAs |
+| Z-Image Base | text to image | bf16 | bf16 | 19 GB | 25 steps at CFG 4, with a negative prompt. Takes your LoRAs, those of Z-Image Base and not Turbo |
 | Qwen-Image 2.1 Turbo | text to image, up to 2K; edit image | int8 | bf16 | 34 / 40 GB | Editing has its own prompt-refining text encoder, included in the download |
 | MOSS-Image | text to image, 0.25 to 4 megapixels; edit image | bf16 | bf16 | 17 GB | The SFT model. It likes a long, detailed prompt: **Enhance prompt** (off unless you turn it on) has its text encoder rewrite a short one into that first, as ComfyUI's template does, which takes longer. Good at English and Chinese text in the image. The page also sets the steps and CFG. An int8 build (12 GB) for cards under 16 GB. Editing is its edit LoRA, included in the download. Takes your LoRAs |
 | SDXL 1.0 | text to image, 1024 px; image to image | fp16 | fp16 | 6.5 GB | Stability's base model. Takes your LoRAs (SDXL) |
