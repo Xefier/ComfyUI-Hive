@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.51.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.52.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -260,6 +260,10 @@ miner says so and waits, as it does when there is no such drive.
   (0.05 to 1) says how much of it is made anew: low keeps it and changes the style and detail, high keeps only its
   layout and colours. It starts at 0.6, and at 0.8 for Z-Image Turbo, which changes less at the same strength. The
   negative prompt, steps, CFG and LoRAs are those of text to image.
+  **Mask…** beside **Crop** opens a dialog to paint the part of the picture to make anew, with a brush, an eraser and
+  **Smart select**, which picks out the thing clicked (Segment Anything, run in the browser and fetched once from the
+  internet), and a soft edge that blends it in. Only the masked part changes; the rest stays to the pixel. The mask is
+  sent with the request and **Use again** brings it back with the image.
 - **LoRAs:** Wan 2.2 (14B and 5B), HunyuanVideo 1.5, LTX-2.5, MiniMax H3 (its videos), Z-Image Turbo, SDXL 1.0, Pony Diffusion V6 XL and SD 1.5 take up to 8 of your own LoRAs per request, in **LoRAs**
   under the task buttons: each slot is a file, picked from a pop-up over its row (the ones for the model picked, those with a picture as tiles and the rest as a list, with a search of their names and trigger prompts), and a strength (1 by default, negative allowed), set with the slider (-10 to 10, for slider LoRAs
   that are used at either side of 0; double-click it to go back to 1) or typed (-10 to 10); a slot left on "none"
