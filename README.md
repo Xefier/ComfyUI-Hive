@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.52.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.53.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -124,6 +124,18 @@ miner says so and waits, as it does when there is no such drive.
   the request's prompt, settings and the image it started from (for Continue, the video's last frame). A LoRA that rig
   doesn't have is left out and said; a model it doesn't offer leaves the prompt and image for another model. A video
   continued on another rig isn't stitched with this one: each rig only has its own files.
+- **A request and what it made, as a pair:** in the chat they are framed together with a rail down the left. Its grip
+  moves the pair to another chat of the rig (dragged onto one in the list, or clicked or tapped for a list of the chats
+  and a new one, which is the way on a phone), and the arrow under it folds the pair to one line (its prompt, small
+  pictures of what it made, how it ended), kept by the browser.
+- **Changing an image, editing a video:** an image in the chat has **Change…** (a pencil) beside Use as input, which opens the
+  frame dialog on that picture, so it is changed with a model, LoRAs and a prompt set there while the composer is left as
+  it is; each picture made is kept in the chat and the outputs. **Edit video** (was Crop) under a video, in the chat, the
+  Outputs view and the viewer, is a dialog that trims, crops and turns it, and makes a video of its own as a request in the chat.
+- **Stitch afterwards:** a done video that continues another and wasn't stitched with it has **Stitch with the videos before it**
+  under it, which makes the row's stitched video in the background.
+- **Picking another model** takes out the LoRA rows that have no files for it, and says which; a scene character's row comes
+  back by itself when a model it has files for is picked again.
 - **A file deleted from the chat:** **Delete** at the right of a file's links under a request deletes it from the
   rig, after asking.
 - **Every image hidden:** the eye with a line through it at the top (or Alt+X) hides every image and video on the
@@ -812,6 +824,15 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
   first over 8), one at a time, and a gap that starts or ends on a gap still to be made waits for it.
 - **Sound after a fill:** a fill made to end on the clip after moves every sound that starts where its gap ended or later
   by the same amount as the video clips after it, so all of it still lines up; a sound running across the gap stays.
+- **Stitch and Unstitch:** **Stitch** makes the picked clips of the video track one clip, a video of them as they are there
+  with their sounds, made in the project's chat as an export is and put in their place once made (one Undo step).
+  **Unstitch** takes a stitched video apart again, into the clips and sounds stitched here as they were, or into the videos
+  of a row Continue stitched in the chat.
+- **On a phone:** the timeline editor has a layout of its own: the picture over the timeline, whose playhead stays in the
+  middle while a finger drags the clips under it, a bar under them of what can be done with what is picked, and the other
+  panels as sheets that come up over part of the screen. A tap picks a clip, which then has handles to trim it; holding
+  a clip picks it up to move it, and holding and letting go calls up a menu of what Ctrl, Shift, Alt or a double click do.
+  Where a picture goes into a box (the start and end frames, a LoRA's picture), a finger held there brings up the phone's own Paste.
 - **Sizes and frame rates:** a project's size and frames a second are set when it is made (the chat's sizes, or
   matched to a picture or video), with the models that can't make that size named, and the nearest size the ticked
   models all make offered. A clip of another shape is shown whole with bars, or cropped. A clip of another frame rate
