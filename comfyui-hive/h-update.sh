@@ -23,11 +23,12 @@ update_newer() {
 }
 
 # For the page: this version, the newest release, and why an update waits ($1). The texts are this script's own, so
-# nothing in them needs escaping.
+# nothing in them needs escaping. follows_lock: this miner starts again by itself when the lock changes (follow_lock in
+# h-run.sh), so the page can say when ComfyUI's port closes.
 update_status() {
     local newer=false
     [[ -n $CH_UPDATE_LATEST ]] && update_newer "$CH_UPDATE_LATEST" "$CUSTOM_VERSION" && newer=true
-    printf '{"current": "%s", "latest": "%s", "newer": %s, "waiting": "%s", "error": "%s", "checked": %s}\n' \
+    printf '{"current": "%s", "latest": "%s", "newer": %s, "waiting": "%s", "error": "%s", "checked": %s, "follows_lock": true}\n' \
         "$CUSTOM_VERSION" "$CH_UPDATE_LATEST" "$newer" "$1" "$CH_UPDATE_ERROR" "$CH_UPDATE_CHECKED" > "$CH_UPDATE_STATUS.tmp" \
         && mv "$CH_UPDATE_STATUS.tmp" "$CH_UPDATE_STATUS"
 }
@@ -45,8 +46,10 @@ update_check() {
     CH_UPDATE_ERROR=""
 }
 
-# Why an update has to wait, or nothing when the rig is idle and not rented. The page says both in page.json.
-update_blocker() {
+# Why the miner can't start again now (for an update, or for a change of the lock: h-run.sh's follow_lock), or nothing
+# when the rig is idle and not rented. The page says both in page.json: "activity" is "ready" only while nothing is
+# being made, downloaded or trained.
+busy_reason() {
     local page="$CH_RUN_DIR/page.json"
     if ! page_running || [[ ! -f $page ]]; then
         echo "the page is starting"
@@ -55,7 +58,7 @@ update_blocker() {
     elif ! grep -q '"rental": *false' "$page"; then
         echo "the rig may be rented"
     elif ! grep -q '"activity": *"ready"' "$page"; then
-        echo "a request or a download is running"
+        echo "a request, a download or a training is running"
     fi
 }
 
@@ -96,9 +99,10 @@ update_install() {
     return 1
 }
 
-# Everything stopped as when the flight sheet is switched, then this script again from the new folder, as the same
-# process: Hive sees the miner keep running.
-update_restart() {
+# Everything stopped as when the flight sheet is switched, then h-run.sh again from the miner's folder (the new one
+# after an update), as the same process: Hive sees the miner keep running. For an update, and for a change of the lock
+# (h-run.sh's follow_lock).
+restart_miner() {
     trap '' INT TERM HUP
     rm -f "$CH_RUN_DIR/run.pid" "$CH_UPDATE_STATUS"
     bash "$CH_DIR/h-stop.sh" >> "$LOG_FILE" 2>&1
@@ -130,7 +134,7 @@ self_update() {
         update_status ""
         return 0
     fi
-    [[ -n $start ]] || blocker=$(update_blocker)
+    [[ -n $start ]] || blocker=$(busy_reason)
     if [[ -n $blocker ]]; then
         update_status "$blocker"
         return 0
@@ -139,7 +143,7 @@ self_update() {
     rm -f "$CH_UPDATE_ASKED"
     if update_install "$CH_UPDATE_LATEST"; then
         notify info "Updated from $CUSTOM_VERSION to $CH_UPDATE_LATEST: starting again"
-        update_restart
+        restart_miner
     fi
     # Not tried again before the next look for a release
     CH_UPDATE_LATEST=""

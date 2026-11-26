@@ -15,12 +15,42 @@ touch "$LOG_FILE"
 # ComfyUI's own port (its editor and API) can ask nobody to log in. On a rig whose page does, it listens only on the
 # rig itself, where the page reaches it, so the accounts aren't got round through it; its editor is then not
 # reachable from the network. Looked at once for the whole run: the page is told where ComfyUI is when it starts, and
-# the two start at different times. A rig that is given its hive's key while this runs closes the port at the miner's
-# next start.
+# the two start at different times. When the lock changes while this runs (the rig is given its hive's key, or the
+# lock is taken off), follow_lock starts the miner again once the rig is idle.
 CH_COMFY_LOCAL=0
 ch_locked && CH_COMFY_LOCAL=1
 ch_comfy_address() {
     if (( CH_COMFY_LOCAL )); then echo 127.0.0.1; else ch_lan_address; fi
+}
+
+# Called on every turn of the loops below. When the lock on the drive is no longer the one this run started with, the
+# miner starts again as for an update (restart_miner, h-update.sh), and with it ComfyUI and the page on the address
+# that lock wants; not while the rig is busy or may be rented (busy_reason), whose reason is logged once, not every
+# turn. After the start the two agree, so it is done once per change of the lock. The page makes a key of
+# password.txt and deletes it when it starts, which leaves the rig locked as before; one it can't take leaves it
+# unlocked, which is followed the same way.
+CH_LOCK_WAITING=""
+follow_lock() {
+    local locked=0 reason
+    ch_locked && locked=1
+    if (( locked == CH_COMFY_LOCAL )); then
+        CH_LOCK_WAITING=""
+        return 0
+    fi
+    reason=$(busy_reason)
+    if [[ -n $reason ]]; then
+        if [[ $reason != "$CH_LOCK_WAITING" ]]; then
+            log "The lock of the rig's page changed: the miner starts again once it can, waiting because $reason"
+            CH_LOCK_WAITING=$reason
+        fi
+        return 0
+    fi
+    if (( locked )); then
+        notify info "The rig's page asks for a login now: starting again, with ComfyUI's port only on the rig itself"
+    else
+        notify info "The rig's page no longer asks for a login: starting again, with ComfyUI's port on the LAN"
+    fi
+    restart_miner
 }
 
 # A run started by the update of v1.0 to v1.4 ignores the signals Hive stops a miner with (it was started with them
@@ -494,6 +524,7 @@ check_gpu_tuning
 while true; do
     ch_set_state starting
     start_page
+    follow_lock
     if start_comfyui; then
         ch_set_state ready
         notify info "ComfyUI is ready: the page is at http://$(ch_lan_address):$CH_PAGE_PORT/"
@@ -501,6 +532,7 @@ while true; do
         while kill -0 "$SERVER_PID" 2>/dev/null; do
             start_page
             self_update
+            follow_lock
             pause 15
         done
     fi
