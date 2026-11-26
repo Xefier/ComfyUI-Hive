@@ -15,7 +15,7 @@ program=${XEFIER_COMFYUI:-../../../xefier-comfyui}
 target=$(cd "${1:-.}" && pwd)
 parts=(comfyui-hive/page.py comfyui-hive/trainer.py comfyui-hive/rigtools.py comfyui-hive/cleanup.py comfyui-hive/page.html comfyui-hive/catalog.json comfyui-hive/workflows
        # The timeline editor, in files of its own, and the code Continue's stitching shares with its export
-       comfyui-hive/timeline.py comfyui-hive/timeline.js comfyui-hive/timeline-track.js comfyui-hive/timeline-play.js comfyui-hive/timeline.css
+       comfyui-hive/timeline.py comfyui-hive/timeline.js comfyui-hive/timeline-track.js comfyui-hive/timeline-play.js comfyui-hive/timeline-phone.js comfyui-hive/timeline.css
        comfyui-hive/dock.js comfyui-hive/dock.css
        # The prompt builder of the composer: its places and characters, and what draws and serves them
        comfyui-hive/scene-builder.js comfyui-hive/environments.py comfyui-hive/environments.js comfyui-hive/environments.css comfyui-hive/environments.json
@@ -30,7 +30,9 @@ parts=(comfyui-hive/page.py comfyui-hive/trainer.py comfyui-hive/rigtools.py com
        comfyui-hive/lorasearch.py comfyui-hive/lorasearch.js comfyui-hive/lorasearch.css
        # The composer's dialogs for an image a request starts from: cropping it, and painting the part image to image
        # makes anew
-       comfyui-hive/image-crop.js comfyui-hive/image-crop.css comfyui-hive/image-mask.js comfyui-hive/image-mask.css)
+       comfyui-hive/image-crop.js comfyui-hive/image-crop.css comfyui-hive/image-mask.js comfyui-hive/image-mask.css
+       # The cutter of a stretch of a video, and the viewer's dialog that cuts an output's video with it
+       comfyui-hive/clip-cutter.js comfyui-hive/clip-cutter.css comfyui-hive/video-cut.js)
 
 git -C "$program" rev-parse --git-dir >/dev/null 2>&1 \
     || { echo "No clone of xefier-comfyui at $program: set XEFIER_COMFYUI to it" >&2; exit 1; }
