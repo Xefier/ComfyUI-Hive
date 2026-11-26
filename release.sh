@@ -27,7 +27,10 @@ parts=(comfyui-hive/page.py comfyui-hive/trainer.py comfyui-hive/rigtools.py com
        # The account's own lists the characters' presets are kept in, and the composer's templates, kept on one
        comfyui-hive/presets.py comfyui-hive/templates.py
        # The LoRAs view's search of Civitai and its downloads
-       comfyui-hive/lorasearch.py comfyui-hive/lorasearch.js comfyui-hive/lorasearch.css)
+       comfyui-hive/lorasearch.py comfyui-hive/lorasearch.js comfyui-hive/lorasearch.css
+       # The composer's dialogs for an image a request starts from: cropping it, and painting the part image to image
+       # makes anew
+       comfyui-hive/image-crop.js comfyui-hive/image-crop.css comfyui-hive/image-mask.js comfyui-hive/image-mask.css)
 
 git -C "$program" rev-parse --git-dir >/dev/null 2>&1 \
     || { echo "No clone of xefier-comfyui at $program: set XEFIER_COMFYUI to it" >&2; exit 1; }
