@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.54.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.55.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -826,6 +826,9 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
   first over 8), one at a time, and a gap that starts or ends on a gap still to be made waits for it.
 - **Sound after a fill:** a fill made to end on the clip after moves every sound that starts where its gap ended or later
   by the same amount as the video clips after it, so all of it still lines up; a sound running across the gap stays.
+- **Reverse:** **Reverse** (the timeline's bar, a clip's menu, the More menu on a phone, or a tick in the Inspector) plays the
+  picked videos and sounds from the last frame of what they show to the first, where they are and as long, with a video's
+  sound reversed with it; such a clip has a rewind badge. Split, trim, gap ends and volume curves follow its direction.
 - **Stitch and Unstitch:** **Stitch** makes the picked clips of the video track one clip, a video of them as they are there
   with their sounds, made in the project's chat as an export is and put in their place once made (one Undo step).
   **Unstitch** takes a stitched video apart again, into the clips and sounds stitched here as they were, or into the videos
