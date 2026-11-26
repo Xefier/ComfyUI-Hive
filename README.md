@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.53.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.54.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -392,8 +392,10 @@ miner says so and waits, as it does when there is no such drive.
     LoRAs a model brings aren't in this list.
 - **Switching model** is picking another card. The rig lets go of the last model's memory first, so the first request
   on a new model takes longer while it loads.
-- The page also links ComfyUI's own editor (`http://<rig>:8188`), for building or changing workflows by hand, and shows
-  the end of the miner log.
+- The page also links ComfyUI's own editor, for building or changing workflows by hand, and shows
+  the end of the miner log. The editor is also a view of the page, at `/comfy/` (on a hub, a worker's at
+  `/rig/<worker>/comfy/`, from the worker's card): it asks for the page's login, so ComfyUI's own port can stay closed.
+  With accounts it is for an admin only, and another rig's opens only once that rig has shown it has the hive's key.
 
 ### Accounts
 
@@ -419,7 +421,7 @@ With accounts, the page answers only who is logged in:
 - **Your own password** is changed in the same box, with the one of now. Every other browser of the account is logged
   out by that.
 - **What is kept:** for each account a salted hash of its password in `accounts.json` of the page's data folder, never
-  the password; and a random key in `hive_key.json`, made with the first account, that sessions are signed with.
+  the password; and a random key in `hive_key.json`, made with the first account, that sessions are signed with. Keep a copy of the hub's `hive_key.json` and `accounts.json`: a rig that loses the key it was given makes none of its own and is open again, for its hub to lock with one press.
 - **Forgotten:** put a new password into a file `password.txt` in the page's data folder (`<data_dir>/page`) and start
   the miner again. It becomes the first admin's and the file is deleted. Where there is no account yet, one named
   `admin` is made with it.
