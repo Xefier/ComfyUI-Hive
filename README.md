@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.56.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.57.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -861,6 +861,10 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
   the one liked goes in. **Match colours** works on a still of the video track too.
 - **Viewer:** **Loop**, and a **Quality** for how sharp the preview is (Low 640, Standard 960, High 1920 or Full), made by the
   rig the first time it is asked for; the export is not changed by it.
+- **Try again, Cancel and Play the picked:** a clip made already can be made again with **Try again** (its menu, a double click,
+  the Inspector): a sound or lip-sync opens its box with what it was made with and the new one takes its place once done; a
+  video clip becomes a gap set up as it was made, with **Put the old clip back**. A sound or lip-sync being made says how far
+  it is on the clip and has **Cancel**. The Viewer's **Play the picked**, beside Loop, plays only the picked clips' stretch.
 - **Stitch and Unstitch:** **Stitch** makes the picked clips of the video track one clip, a video of them as they are there
   with their sounds, made in the project's chat as an export is and put in their place once made (one Undo step).
   **Unstitch** takes a stitched video apart again, into the clips and sounds stitched here as they were, or into the videos
