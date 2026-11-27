@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.59.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.60.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -859,6 +859,9 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
   their pictures, a **+** in each tab (New video, New image, New sound), the requests being made, and **Find in media** in a clip's
   menu. A click on a tile shows the file in the **Selected** panel, with the swipe viewer, its links (**Put at playhead**, **Put
   at the end**) and its own keys; a video's tile plays in the Viewer. A file dropped on the timeline goes in at the playhead.
+  **Delete** (its tile, its menu, Selected, the viewer) deletes a sound or image file of yours after asking, for good; not one a clip uses.
+  An image of Media goes into the composer's Start or End frame: dropped on it, copied and pasted into it, or **Use as start frame** /
+  **Use as end frame** in its tile's menu.
 - **Repeat in a gap:** a gap sent with Repeat over 1 has its videos picked from: **Pick one…** rates them in the swipe viewer and
   the one liked goes in. **Match colours** works on a still of the video track too.
 - **Viewer:** **Loop**, and a **Quality** for how sharp the preview is (Low 640, Standard 960, High 1920 or Full), made by the
