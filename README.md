@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.55.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.56.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -124,6 +124,20 @@ miner says so and waits, as it does when there is no such drive.
   the request's prompt, settings and the image it started from (for Continue, the video's last frame). A LoRA that rig
   doesn't have is left out and said; a model it doesn't offer leaves the prompt and image for another model. A video
   continued on another rig isn't stitched with this one: each rig only has its own files.
+- **What Generate keeps:** the icon on Generate's right opens a list of what the composer keeps after it: **New prompt** (the
+  prompt, Repeat and the video continued are cleared), **Use again** (everything stays but the seed), **Use again with seed**
+  (an empty seed becomes the one the request was made with) and **Continue** (after a request of one video, the next goes on
+  from it, so each Generate adds the next part). Each browser keeps its own; the timeline's composer and the frame dialog keep
+  Generate alone.
+- **The swipe viewer:** an output opened large swipes left for a thumbs down (Undo brings it back), right for a thumbs up, up
+  for a sheet with the request's details and links, down to close, a double tap for full screen on a phone, the sides to step.
+  **Rate**, beside the chat's filters and in Outputs, goes through what is new, then everything unrated.
+- **Show chips:** the chat's Show chips also have **Images** and **Videos**, each chat keeping its own choice. A request folded
+  to one line has Delete, as the one under the request does.
+- **Keep colours:** on unless a request turns it off, among the numbers of Edit image, Image to image and First and last frame:
+  what a model made from a picture is brought back to that picture's colours once the model is done, since each gives it back a
+  little brighter and warmer; the request says what was taken out. **Match colours** under an image makes a copy of it in the
+  colours of another picture you pick, as a request of its own.
 - **A request and what it made, as a pair:** in the chat they are framed together with a rail down the left. Its grip
   moves the pair to another chat of the rig (dragged onto one in the list, or clicked or tapped for a list of the chats
   and a new one, which is the way on a phone), and the arrow under it folds the pair to one line (its prompt, small
@@ -343,6 +357,11 @@ miner says so and waits, as it does when there is no such drive.
     character of the scene builder that is made with a LoRA has that LoRA's row among the request's from the moment
     it is in the scene, and the row is pinned: it can't be removed or given another LoRA until the character is taken
     out of the scene or its LoRA off the character, and a character given another LoRA or preset, or taken out, takes the rows it pinned (its LoRA, sliders, clothing, a prop's) with it.
+  - **Recommended LoRAs:** a LoRA's card has recommended ones (a chip of each, with the strength it is added at; ⇄ makes them
+    list each other). When it is on a request, the chat offers those not on it yet that have files for the model picked, added with
+    one click or all at once; × stops offering them in that chat.
+  - **A range for the detail part:** with **Motion / Detail** ticked, the detail (low-noise) part gets its own Min, Max and Default,
+    and the chat's Detail slider keeps to them.
   - **Several trigger prompts:** under **LoRAs**, **+ Trigger prompt** gives a LoRA one more (another pose, outfit or
     way to call it up), each with a name. In the chat, a LoRA with several has **Trigger prompts** on its row: a list
     of them by name, with a search, where a click adds one to the prompt and **Use** makes it the whole prompt. No two of a LoRA's say the same (whatever
@@ -829,6 +848,19 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
 - **Reverse:** **Reverse** (the timeline's bar, a clip's menu, the More menu on a phone, or a tick in the Inspector) plays the
   picked videos and sounds from the last frame of what they show to the first, where they are and as long, with a video's
   sound reversed with it; such a clip has a rewind badge. Split, trim, gap ends and volume curves follow its direction.
+- **Lips and sound tracks:** a **Lips** track sits above the video track, and sound tracks can be added (+ under the last) and
+  deleted (the trash beside a name, once confirmed; Undo brings it back). Alt and dragging across an empty stretch of a sound
+  track or the Lips track (or **Make a sound here**, **Make a lip-sync here** in the menu) makes an unfinished clip, set up in a
+  box on the clip: a sound is made by a sound model for the picture over its time, a lip-sync by a lip-sync model from the
+  picture there and the sound tracks mixed, and a lip-sync shows instead of the video under it in the viewer and the export.
+- **Media and Selected:** Media has the chat's mark chips, a green dot on new files, ratings on its tiles, tiles in the shape of
+  their pictures, a **+** in each tab (New video, New image, New sound), the requests being made, and **Find in media** in a clip's
+  menu. A click on a tile shows the file in the **Selected** panel, with the swipe viewer, its links (**Put at playhead**, **Put
+  at the end**) and its own keys; a video's tile plays in the Viewer. A file dropped on the timeline goes in at the playhead.
+- **Repeat in a gap:** a gap sent with Repeat over 1 has its videos picked from: **Pick one…** rates them in the swipe viewer and
+  the one liked goes in. **Match colours** works on a still of the video track too.
+- **Viewer:** **Loop**, and a **Quality** for how sharp the preview is (Low 640, Standard 960, High 1920 or Full), made by the
+  rig the first time it is asked for; the export is not changed by it.
 - **Stitch and Unstitch:** **Stitch** makes the picked clips of the video track one clip, a video of them as they are there
   with their sounds, made in the project's chat as an export is and put in their place once made (one Undo step).
   **Unstitch** takes a stitched video apart again, into the clips and sounds stitched here as they were, or into the videos
