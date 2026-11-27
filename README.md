@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.58.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.59.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -767,7 +767,9 @@ of the chat with its own video; the one it was made from stays as it is.
   video's sounds: kept, picked and merged like the others, and offered by Lip-sync as the speech. With **A voice to
   copy**, a recording of about 10 seconds, it speaks in that voice; without one it has its own. It runs like
   LatentSync, as its own program in its own environment: the first request installs it and fetches its voice model
-  (about 4 GB) by itself. Not tried on a real rig yet either.
+  (about 4 GB) by itself. **Chatterbox Turbo** is a model of its own that also makes sounds written in brackets
+  (`[laugh]`, `[gasp]`); the **(i)** beside a model picker shows its tips. On the timeline a sound to speak has a **Voice**
+  in its box: its own, a sound from Media, or a recording of yours. Not tried on a real rig yet either.
 
 ## Sound for a video
 
