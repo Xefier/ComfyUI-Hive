@@ -17,6 +17,8 @@ parts=(comfyui-hive/page.py comfyui-hive/trainer.py comfyui-hive/rigtools.py com
        # The timeline editor, in files of its own, and the code Continue's stitching shares with its export
        comfyui-hive/timeline.py comfyui-hive/timeline.js comfyui-hive/timeline-track.js comfyui-hive/timeline-play.js comfyui-hive/timeline-phone.js comfyui-hive/timeline.css
        comfyui-hive/dock.js comfyui-hive/dock.css
+       # Keep colours: what a model made from a picture, brought back to that picture's colours
+       comfyui-hive/colours.py
        # The prompt builder of the composer: its places and characters, and what draws and serves them
        comfyui-hive/scene-builder.js comfyui-hive/environments.py comfyui-hive/environments.js comfyui-hive/environments.css comfyui-hive/environments.json
        comfyui-hive/characters.py comfyui-hive/characters.js comfyui-hive/characters.json
