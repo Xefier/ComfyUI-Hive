@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.63.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.64.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -535,7 +535,7 @@ pulling a client change, new sessions pick it up; after moving the clone, run `a
 
 | Model | Makes | 4090 (24 GB) | 5090 (32 GB) | Download | Notes |
 |---|---|---|---|---|---|
-| Wan 2.2 14B | text/image to video, 16 fps | fp8 | fp8 | 64 GB | Both experts and the 4-step speed-up LoRAs, for both tasks. Takes your LoRAs |
+| Wan 2.2 14B | text/image to video, 16 fps | fp8 | fp8 | 64 GB | Both experts and the 4-step speed-up LoRAs, for both tasks, each half's strength and steps settable. Up to 5 seconds (81 frames). Takes your LoRAs |
 | Wan 2.2 5B | text/image to video, 720p 24 fps | fp16 | fp16 | 17 GB | Takes your LoRAs |
 | HunyuanVideo 1.5 | text/image to video, 720p 24 fps | fp16 run as fp8 | fp16 | 43 GB | Takes your LoRAs |
 | LTX-2.5 | text/image to video with sound | not offered | int8 | 42 GB | Gated: accept the license at [Lightricks/LTX-2.5](https://huggingface.co/Lightricks/LTX-2.5) and give the account's token. Free for organisations under $10M yearly revenue. Takes your LoRAs |
@@ -870,7 +870,7 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
   An image of Media goes into the composer's Start or End frame: dropped on it, copied and pasted into it, or **Use as start frame** /
   **Use as end frame** in its tile's menu.
 - **Repeat in a gap:** a gap sent with Repeat over 1 has its videos picked from: **Pick one…** rates them in the swipe viewer and
-  the one liked goes in. **Match colours** works on a still of the video track too.
+  the one liked goes in. A gap with attempts to pick from has a **Rate** button on its clip, which opens them in the swipe viewer (attempts already marked are skipped). **Match colours** works on a still of the video track too.
 - **Viewer:** **Loop**, and a **Quality** for how sharp the preview is (Low 640, Standard 960, High 1920 or Full), made by the
   rig the first time it is asked for; the export is not changed by it.
 - **Try again, Cancel and Play the picked:** a clip made already can be made again with **Try again** (its menu, a double click,
