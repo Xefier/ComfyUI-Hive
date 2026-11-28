@@ -10,7 +10,7 @@ nothing of it runs or holds GPU memory.
 
 ## Flight sheet
 
-One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.62.tar.gz` somewhere the rigs can
+One flight sheet for every rig: no model is chosen in it. Host `comfyui-hive-v1.63.tar.gz` somewhere the rigs can
 download it (a GitHub release), then make a flight sheet with miner **Custom**:
 
 - **Miner name:** `comfyui-hive`
@@ -131,7 +131,9 @@ miner says so and waits, as it does when there is no such drive.
   Generate alone.
 - **The swipe viewer:** an output opened large swipes left for a thumbs down (Undo brings it back), right for a thumbs up, up
   for a sheet with the request's details and links, down to close, a double tap for full screen on a phone, the sides to step.
-  **Rate**, beside the chat's filters and in Outputs, goes through what is new, then everything unrated.
+  **Rate**, beside the chat's filters and in Outputs, goes through what is new, then everything unrated. At the end of a pile of
+  attempts (Edit image's, a gap made with Repeat) **Try again?** is a card of its own, answered by a thumbs up (another attempt, with
+  a new seed) or a thumbs down (no); a thumbs down on every attempt no longer makes another by itself.
 - **Show chips:** the chat's Show chips also have **Images** and **Videos**, each chat keeping its own choice. A request folded
   to one line has Delete, as the one under the request does.
 - **Keep colours:** on unless a request turns it off, among the numbers of Edit image, Image to image and First and last frame:
@@ -807,6 +809,9 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
 - **Edit in timeline**, under every video of the chat and of Outputs, opens that video's own project (made the first
   time). A stitched video comes as the videos it was made of, each a clip placed as it is in the stitched one: to
   trim them, fade them into each other or put others between, and export the row again. The stitched video stays.
+  **Edit in timeline** under an image opens a project of its own with the image as its first clip, a still to start a video from.
+  The form for a new project can also start from a picture or a video, a file of yours (chosen, dropped or pasted on the projects'
+  screen) or an output; videos of yours can be added to a project like its sounds and images, and pasted onto the timeline.
 - **Tracks:** one video track, and sound tracks laid over each other. A video with sound takes the video track and a
   sound track; a sound that belongs to a clip moves with it. Each sound has its volume, fade in and fade out. Sound
   files of your own (WAV, MP3, FLAC, M4A, OGG) are dropped on the timeline or on Media, and are kept with the project.
@@ -858,7 +863,9 @@ arranged on a timeline and exported as one video. On a rig by itself and on a hu
 - **Media and Selected:** Media has the chat's mark chips, a green dot on new files, ratings on its tiles, tiles in the shape of
   their pictures, a **+** in each tab (New video, New image, New sound), the requests being made, and **Find in media** in a clip's
   menu. A click on a tile shows the file in the **Selected** panel, with the swipe viewer, its links (**Put at playhead**, **Put
-  at the end**) and its own keys; a video's tile plays in the Viewer. A file dropped on the timeline goes in at the playhead.
+  at the end**) and its own keys; a video's tile plays in the Viewer. Sounds show their marks too (a star or thumb on the tile, the chips
+  **Liked or better** and **Favorites**), and a sound's tile menu marks it, as a phone needs. An image of yours has the links of an
+  output's image (**Download**, **Change…**, **Use as start frame**, **Use as end frame**). A file dropped on the timeline goes in at the playhead.
   **Delete** (its tile, its menu, Selected, the viewer) deletes a sound or image file of yours after asking, for good; not one a clip uses.
   An image of Media goes into the composer's Start or End frame: dropped on it, copied and pasted into it, or **Use as start frame** /
   **Use as end frame** in its tile's menu.
